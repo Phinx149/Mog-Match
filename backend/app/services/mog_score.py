@@ -115,14 +115,19 @@ def tier_floor(tier: str) -> int | None:
 def _esoteric(profile: dict[str, Any]) -> int:
     used = {tech.lower() for project in profile["projects"] for tech in project["technologies"]}
     listed = {skill.lower() for skill in profile["skills"]}
-    points = 0.0
+    used_points = listed_points = 0.0
     for language in used | listed:
         rarity = _RARITY_BY_KEY.get(language)
         if rarity is None:
             continue  # frameworks, tools and specialties aren't languages
-        full = RARITY_POINTS[rarity]
-        points += full if language in used else full / 2
-    return round(points)
+        if language in used:
+            used_points += RARITY_POINTS[rarity]
+        else:
+            listed_points += RARITY_POINTS[rarity] / 2
+    # Listing alone can earn at most half the component, so a long list of arcane
+    # languages never beats actually shipping something in them.
+    listed_points = min(listed_points, WEIGHTS["esoteric"] / 2)
+    return round(used_points + listed_points)
 
 
 def _descriptions(projects: list[dict]) -> int:

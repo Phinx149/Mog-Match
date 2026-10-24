@@ -118,3 +118,10 @@ def test_discover_rejects_unknown_tier(client):
     response = client.get("/api/profiles?min_tier=Sigma")
     assert response.status_code == 400
     assert "min_tier" in response.get_json()["error"]["fields"]
+
+
+def test_listing_arcane_languages_cannot_max_esoteric():
+    faker = compute_mog_score(make_profile(skills=ARCANE * 2 + ["Lisp", "Verilog", "VHDL", "Pascal"]))
+    shipper = compute_mog_score(make_profile(projects=[project(ARCANE)]))
+    assert faker["breakdown"]["esoteric"] <= WEIGHTS["esoteric"] // 2
+    assert shipper["breakdown"]["esoteric"] == WEIGHTS["esoteric"]

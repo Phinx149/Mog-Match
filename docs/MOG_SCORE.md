@@ -8,7 +8,7 @@ Implementation: `backend/app/services/mog_score.py` (pure functions, no DB or HT
 
 | Component | Max | How it's computed |
 |---|---|---|
-| **Language esotericness** | 25 | Each language in your skills or project technologies earns points by rarity (below). **Full points only if it's used in a project**; listed only as a skill = half. Summed, rounded, capped at 25. |
+| **Language esotericness** | 25 | Each language in your skills or project technologies earns points by rarity (below). **Full points only if it's used in a project**; listed only as a skill = half, and listed-only languages add at most 12.5 in total. Summed, rounded, capped at 25. |
 | **Skill breadth** | 10 | 1 per skill, capped at 10 skills |
 | **Links** | 6 | 2 per link, capped at 3 |
 | **Projects** | 15 | 5 per project, capped at 3 |
@@ -85,6 +85,6 @@ def complementarity(a_skills: list[str], b_skills: list[str]) -> int:
 ## Testing checklist (pytest)
 - Empty profile → score < 50, tier Hello World, 3 tips.
 - Maxed profile → exactly 100, never above.
-- Esoteric languages beat mainstream ones; a language used in a project beats one only listed.
+- Esoteric languages beat mainstream ones; a language used in a project beats one only listed; listing many arcane languages can't max the component.
 - Two identical full-stack devs score lower as a team than a Frontend + Backend pair with the same individual scores.
 - Same input → same output (no clock, randomness or I/O inside the scorer).
