@@ -1,110 +1,84 @@
 ---
 name: new-feature
-description: Build a new Blazor page, component, or service in MogMatch following project conventions, from branch to PR. Use when a developer wants to add a feature, screen, button, form, or service (e.g. "add the onboarding form", "make a profile card", "build the discover page").
+description: Build a new MogMatch feature end-to-end — Flask endpoint, service, React page/component, API client, types and tests — following project conventions, from branch to PR. Use when a developer wants to add a feature, page, component, button, form, or API endpoint.
 ---
 
 # New Feature
 
-Guide the developer through these steps. Explain briefly *why* at each step — many teammates are beginners.
+Explain briefly *why* at each step — several teammates are beginners. Keep the change small.
 
 ## 1. Branch
 ```bash
-git checkout main && git pull
+git checkout dev && git pull
 git checkout -b feat/<short-name>
 ```
 
-## 2. Decide where code goes
+## 2. Where code goes
 | Building… | Location |
 |---|---|
-| A page (has a URL) | `src/MogMatch.Web/Components/Pages/Name.razor` with `@page "/route"` |
-| Reusable UI piece | `src/MogMatch.Web/Components/Shared/Name.razor` |
-| DB / HTTP work | a service in `src/MogMatch.Web/Services/`, registered in `Program.cs` |
-| Pure logic (scoring, ranking, formatting) | `src/MogMatch.Core/...` + xUnit test in `tests/MogMatch.Core.Tests/` |
-| Real-time stuff | `Hubs/ChatHub.cs` (see `realtime-chat` skill) |
-| Schema change | `db-migration` skill |
+| DB table/column | `backend/app/models/` → then the `db-migration` skill |
+| Business logic, validation, serialization | `backend/app/services/<area>_service.py` |
+| HTTP endpoint | `backend/app/routes/<area>.py` (Blueprint, register it in `app/__init__.py`) |
+| Backend test | `backend/tests/test_<area>.py` (fixtures `app`, `client` in `conftest.py`) |
+| Response types | `frontend/src/types/` — snake_case, must match the Flask JSON |
+| API call | `frontend/src/services/api.ts` (use the `request<T>()` helper) |
+| Page (has a route) | `frontend/src/pages/` + route in `App.tsx` |
+| Reusable UI | `frontend/src/components/<area>/` |
 
-Check `docs/PRODUCT.md` for expected behavior and `docs/ARCHITECTURE.md` for the data model.
+## 3. Backend patterns
+```python
+# routes/<area>.py — thin: parse request, call service, return JSON
+bp = Blueprint("swipes", __name__, url_prefix="/api/swipes")
 
-## 3. Patterns
-
-**Service (does the DB work)**
-```csharp
-public class ProfileService(IDbContextFactory<AppDbContext> dbFactory)
-{
-    public async Task<Profile?> GetByUserIdAsync(string userId)
-    {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        return await db.Profiles.Include(p => p.Skills)
-                                .AsNoTracking()
-                                .FirstOrDefaultAsync(p => p.UserId == userId);
-    }
-}
-// Program.cs
-builder.Services.AddScoped<ProfileService>();
+@bp.post("", strict_slashes=False)
+def create_swipe():
+    me = profile_service.get_demo_profile()          # identity comes from the server, never the client
+    if me is None:
+        abort(404, description="Demo profile not found.")
+    try:
+        result = swipe_service.record(me, request.get_json(silent=True))
+    except ValidationError as error:
+        return jsonify({"error": {"message": error.message, "fields": error.fields}}), 400
+    return jsonify(result), 201
 ```
+- Validate every incoming field (type, length, allowed values). Reject unknown fields.
+- Error shape: `{"error": {"message": "...", "fields": {...}}}`. Use 400 / 404 / 409 appropriately.
+- Test: happy path, 404, and invalid input at minimum.
 
-**Page that uses it**
-```razor
-@page "/profile/me"
-@attribute [Authorize]
-@inject ProfileService Profiles
-@inject AuthenticationStateProvider Auth
-
-@if (profile is null) { <p>Loading…</p> }
-else
-{
-    <h1>@profile.DisplayName</h1>
-    <MogBadge Score="profile.MogScore" />
-}
-
-@code {
-    private Profile? profile;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var user = (await Auth.GetAuthenticationStateAsync()).User;
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        profile = await Profiles.GetByUserIdAsync(userId);
-    }
+## 4. Frontend patterns
+```ts
+// services/api.ts
+export function createSwipe(targetId: string, action: SwipeDecision) {
+  return request<Swipe>("/api/swipes", { method: "POST", body: JSON.stringify({ target_id: targetId, action }) });
 }
 ```
-
-**Reusable component with a parameter + event**
-```razor
-@* Components/Shared/ProfileCard.razor *@
-<div class="card p-3">
-    <h5>@Profile.DisplayName</h5>
-    <button class="btn btn-success" @onclick="() => OnLike.InvokeAsync(Profile.Id)">❤️</button>
-</div>
-
-@code {
-    [Parameter, EditorRequired] public Profile Profile { get; set; } = default!;
-    [Parameter] public EventCallback<Guid> OnLike { get; set; }
-}
+```tsx
+// in a page: load with AbortController, show loading / error / empty states
+useEffect(() => {
+  const controller = new AbortController();
+  getThing(controller.signal).then(setThing).catch((err) => {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    setError(err instanceof Error ? err.message : "Something went wrong");
+  });
+  return () => controller.abort();
+}, []);
 ```
+- Reuse `LoadingState`, `ErrorState`, `EmptyState` (`components/common/States.tsx`), `SkillBadge`, `TagInput`, `Navbar`.
+- Style with Tailwind + theme tokens (`bg-surface`, `bg-surface-raised`, `border-line`, `text-muted`, violet/cyan accents). Form inputs use the `field` class.
+- Icons from `lucide-react` with `aria-hidden`; icon-only buttons need `aria-label`.
 
-**Forms:** use `<EditForm Model="model" OnValidSubmit="SaveAsync">` with `<DataAnnotationsValidator />` and `[Required]`, `[StringLength(80)]` on the model.
-
-Rules:
-- Get the current user from `AuthenticationStateProvider` on the server — never from a query string or hidden field.
-- Use `IDbContextFactory` + `await using` (one short context per operation). Don't inject `AppDbContext` directly into components.
-- Pages that need login get `@attribute [Authorize]`.
-- Handle loading (`null` check) and empty states.
-- Add `@using` lines to `Components/_Imports.razor` instead of repeating them.
-
-## 4. Verify
+## 5. Verify
 ```bash
-dotnet build && dotnet test
-dotnet watch --project src/MogMatch.Web
+cd backend && pytest
+cd frontend && npm run build
 ```
-Click through the feature. Check the terminal for exceptions.
+Then click through the feature with both servers running.
 
-## 5. Commit + PR
+## 6. Commit + PR
 ```bash
-dotnet format
 git add -A
 git commit -m "feat: <what it does>"
 git push -u origin feat/<short-name>
-gh pr create --fill   # or open the PR on GitHub
+gh pr create --base dev --fill
 ```
-PR description: what changed, screenshot if UI, how to test.
+PR description: what changed, screenshot for UI, how to test.

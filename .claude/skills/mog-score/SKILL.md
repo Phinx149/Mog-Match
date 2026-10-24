@@ -1,91 +1,57 @@
 ---
 name: mog-score
-description: Implement, tune, or debug the individual Mog Score, Team Mog Score, or recommendation ranking in C#. Use for anything touching MogMatch.Core/Scoring, MogMatch.Core/Matching, docs/MOG_SCORE.md, scoring weights, tiers, GitHub stats, or "why is my score X".
+description: Implement, tune, or debug the Mog Score, Team Mog Score, or pair compatibility/Intersect calculations in MogMatch's Python backend. Use for anything touching docs/MOG_SCORE.md, backend/app/services/mog_score.py or intersect logic, scoring weights, tiers, or "why is my score X".
 ---
 
-# Mog Score
+# Mog Score & pair scoring
 
-Source of truth for the formula: `docs/MOG_SCORE.md`. Read it first. **If you change the formula, update the doc in the same PR.**
+The formula's source of truth is `docs/MOG_SCORE.md`. Read it first. **If you change the formula, update the doc in the same PR.** This is a later milestone. Check `docs/ROADMAP.md` before starting, and confirm with the user if earlier milestones are unfinished.
 
-## Files
-- `src/MogMatch.Core/Scoring/MogScoreCalculator.cs` — `MogResult Calculate(DeveloperProfile profile, GitHubStats? stats)`
-- `src/MogMatch.Core/Scoring/TeamScoreCalculator.cs` — `TeamResult Calculate(IReadOnlyList<ScoredProfile> members)`
-- `src/MogMatch.Core/Scoring/Weights.cs` — all maxes/weights as `const`s
-- `src/MogMatch.Core/Scoring/MogTiers.cs` — score → tier name
-- `src/MogMatch.Core/Matching/RecommendationRanker.cs`
-- `src/MogMatch.Web/Services/GitHubStatsService.cs` — fetches + caches stats (24h)
-- `tests/MogMatch.Core.Tests/Scoring/*Tests.cs`
+## Files (to create)
+- `backend/app/services/mog_score.py`: `compute_mog_score(profile_data: dict, github_stats: dict | None) -> dict` and `compute_team_score(members: list[dict]) -> dict`
+- `backend/tests/test_mog_score.py`
+- API: `GET /api/profiles/<id>/score` or a `mog` field added in `profile_service.to_dict`
 
 ## Rules
-1. **Core stays pure.** Calculators take Core model objects (not EF entities) and return records. No `DbContext`, `HttpClient`, `DateTime.Now`, or `Random` inside. The Web project maps entities → Core models.
-2. **One private method per component** (`CompletenessPoints`, `DepthPoints`, …), each `Math.Clamp`ed to its max; the total is clamped to `0..1000`.
-3. **Return the breakdown + tips**, not just the number — the UI shows them.
-4. **Deterministic.** The optional LLM bio rating is computed once, stored on the profile (`BioRating`), and passed in — the calculator never calls an API.
-5. Static classes are fine for calculators (`public static class MogScoreCalculator`) — no state, easy to test.
+1. **Pure functions.** Take plain dicts (e.g. `profile_service.to_dict(profile)`), return plain dicts. No DB queries, HTTP, `datetime.now()` or randomness inside, so tests are trivial and results are deterministic.
+2. **One helper per component** (`_completeness`, `_breadth`, ...), each clamped to its max. Clamp the total to `0..1000`.
+3. **Return `score`, `tier`, `breakdown`, `tips`.** The UI shows all four.
+4. Put all weights in one `WEIGHTS` dict at the top so tuning is a one-line change.
+5. Compare skills case-insensitively (`.lower()`), the same way `list_profiles` filtering does.
+6. Expensive inputs (GitHub stats, LLM bio rating) are fetched elsewhere, cached on the profile, and passed in.
 
 ## Skeleton
-```csharp
-namespace MogMatch.Core.Scoring;
+```python
+WEIGHTS = {"completeness": 150, "breadth": 200, "projects": 200, "github": 250, "experience": 100, "bio": 100}
+TIERS = [(850, "Gigamogger"), (650, "Senior Mogger"), (450, "Mid Mogger"), (250, "Junior Mogger"), (0, "Hello World")]
 
-public static class MogScoreCalculator
-{
-    public static MogResult Calculate(DeveloperProfile p, GitHubStats? stats)
-    {
-        var breakdown = new MogBreakdown(
-            Completeness: CompletenessPoints(p),
-            Depth:        DepthPoints(p.Skills),
-            Breadth:      BreadthPoints(p.Skills),
-            GitHub:       stats is null ? 0 : GitHubPoints(stats),
-            Experience:   ExperiencePoints(p),
-            Bio:          BioPoints(p));
-
-        var score = Math.Clamp(breakdown.Total, 0, 1000);
-        return new MogResult(score, MogTiers.For(score), breakdown, BuildTips(breakdown));
+def compute_mog_score(profile: dict, github_stats: dict | None = None) -> dict:
+    breakdown = {
+        "completeness": _completeness(profile),
+        "breadth": min(len(profile["skills"]), 10) * 20,
+        "projects": _projects(profile["projects"]),
+        "github": _github(github_stats) if github_stats else 0,
+        "experience": _experience(profile.get("experience_level")),
+        "bio": _bio(profile),
     }
-
-    private static int DepthPoints(IReadOnlyList<Skill> skills)
-    {
-        var top5 = skills.OrderByDescending(s => s.Level).Take(5).Sum(s => s.Level * s.Level);
-        return (int)Math.Round(top5 / 125.0 * Weights.DepthMax);
-    }
-    // ...other components
-}
+    score = max(0, min(1000, sum(breakdown.values())))
+    tier = next(name for floor, name in TIERS if score >= floor)
+    return {"score": score, "tier": tier, "breakdown": breakdown, "tips": _tips(breakdown)}
 ```
 
-## Test first (xUnit)
-```csharp
-public class MogScoreCalculatorTests
-{
-    [Fact]
-    public void EmptyProfile_ScoresNearZero_WithThreeTips()
-    {
-        var result = MogScoreCalculator.Calculate(TestProfiles.Empty, stats: null);
-        Assert.True(result.Score < 50);
-        Assert.Equal(3, result.Tips.Count);
-    }
+## Tests first
+```python
+from app.services.mog_score import compute_mog_score
 
-    [Fact]
-    public void MaxedProfile_NeverExceeds1000()
-    {
-        var result = MogScoreCalculator.Calculate(TestProfiles.Maxed, TestProfiles.MaxedStats);
-        Assert.Equal(1000, result.Score);
-    }
+def test_empty_profile_scores_low_with_tips():
+    result = compute_mog_score(EMPTY_PROFILE)
+    assert result["score"] < 50 and result["tier"] == "Hello World"
+    assert len(result["tips"]) == 3
 
-    [Theory]
-    [InlineData(0, "Hello World")]
-    [InlineData(250, "Junior Mogger")]
-    [InlineData(1000, "Gigamogger")]
-    public void Tiers_MatchDoc(int score, string tier) => Assert.Contains(tier, MogTiers.For(score));
-}
+def test_score_never_exceeds_1000():
+    assert compute_mog_score(MAXED_PROFILE, MAXED_STATS)["score"] == 1000
 ```
-Put reusable fake profiles in `tests/MogMatch.Core.Tests/TestProfiles.cs`. Cover every item in the "Testing checklist" of `docs/MOG_SCORE.md`. Run `dotnet test`.
-
-## GitHub stats
-- `GET https://api.github.com/users/{username}` → `public_repos`, `followers`.
-- `GET https://api.github.com/users/{username}/repos?per_page=100` → sum `stargazers_count`, collect `language`.
-- Set a `User-Agent` header (GitHub rejects requests without one) and `Authorization: Bearer {GitHub:Token}` from configuration.
-- Use a typed `HttpClient` (`AddHttpClient<GitHubStatsService>()`), deserialize with `System.Text.Json`.
-- On failure, log and return `null` → GitHub component scores 0 instead of crashing.
+Cover every item in the "Testing checklist" in `docs/MOG_SCORE.md`. Run `pytest`.
 
 ## Debugging "why is my score X?"
-Write a quick xUnit test that builds the user's profile values, calls `Calculate`, and inspects `result.Breakdown` against each component max in `docs/MOG_SCORE.md`.
+Load the profile (`client.get("/api/profiles/me").get_json()` in a test, or the Flask shell), call `compute_mog_score`, and print `breakdown`. Compare each component against its max in `WEIGHTS`.

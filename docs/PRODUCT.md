@@ -1,76 +1,58 @@
 # Product Spec
 
 ## Elevator pitch
-Tinder for devs. Find a hackathon partner, co-founder, or study buddy whose skills *complement* yours — and flex your Mog Score while you're at it.
+A dating app, but for developers. Find a hackathon partner, co-builder or study buddy whose skills *complement* yours — and let the **Intersect Engine** suggest what you should build together.
+
+Hackathon theme: **Connect & Intersect** — connect people, then explore what happens where their skills and interests overlap.
 
 ## Personas
 - **Hackathon Hopper** – needs a teammate with the skills they lack, fast.
 - **Side-Project Builder** – has an idea, wants a co-builder.
 - **Learner** – wants a mentor or study partner on a specific stack.
 
-## Core features
+## Features
 
-### 1. Tech Profile
-Fields:
-- Display name, avatar (from GitHub), headline (≤ 80 chars)
-- Bio / description (free text, ≤ 1000 chars) — feeds the Mog Score
-- Skills: list of `{ name, level: 1–5 }` (e.g. React 4, Python 3)
-- Role tags: frontend · backend · fullstack · mobile · ML/AI · design · devops · data · game dev
-- Experience: years coding, # hackathons
-- Links: GitHub (required via OAuth), LinkedIn, portfolio
-- Looking for: hackathon team · side project · mentor · mentee · just vibes
+### 1. Tech Profile ✅ (milestone 1)
+Large circular avatar · Edit Profile button · full name + username · location · education · external links · About · technical skills · projects · interests. Also: favorite IDE, favorite AI coding agents, experience level, "looking for". Vertically scrollable.
 
-### 2. Mog Score
-- 0–1000, shown as a number + tier badge (see `MOG_SCORE.md`).
-- Recomputed on profile save and nightly (GitHub stats change).
-- Breakdown visible on your own profile ("+120 from skill depth") so users know how to improve.
+### 2. Discover ✅ (milestone 1)
+- Top bar: search, refresh, API ping indicator.
+- Filters dropdown + removable skill chips (e.g. Rust, Frontend).
+- Vertical list of developer cards: avatar, basic info, skill tags, **Pass** (left) / **Like** (right).
+- Bottom nav: Discover · Profile · Settings.
+- Milestone 1: likes/passes live in React state only.
 
-### 3. Discover / Recommendations
-- Card stack of recommended profiles. Each card: avatar, headline, top 5 skills, Mog tier, **predicted Team Mog Score** with you.
-- Actions: ❤️ Like · ✖️ Pass · ⭐ Super-like (1/day).
-- Filters: role, looking-for, skill.
-- Mutual like → **Match** 🎉.
+### 3. Matching (milestone 2)
+- Persistent swipes; mutual like → **Match** 🎉.
+- Matches list.
 
-### 4. Team Mog Score
-- Shown on every match and in chat header.
-- Rewards complementary roles + shared interests (see `MOG_SCORE.md`).
-- Stretch: groups of 3–4 (a "squad") with a squad score.
+### 4. Intersect Engine (milestone 3 — our differentiator)
+For a pair of developers:
+- **Overlap** — shared skills/interests ("you both know Rust and like games").
+- **Complement** — skills only one of you has ("Maya brings Frontend, you bring Backend").
+- **Project ideas** — 2–3 concrete things you could build together, generated from the above.
 
-### 5. Chat
-- 1:1 real-time text chat per match (SignalR `ChatHub`).
-- Typing indicator, read receipts (stretch), code-block formatting with ``` (stretch).
-- Unmatch / block / report.
-
-### 6. Voice chat
-- "Start call" button in chat → peer-to-peer WebRTC audio call, signaled over SignalR.
-- Mute, leave. Stretch: screen share.
-
-## User flow
-```
-Landing → Sign in with GitHub → Build profile → See Mog Score reveal
-   → Discover (swipe) → Match! → Chat → Voice call
-```
+### 5. Stretch
+- **Mog Score** – playful 0–1000 profile score + team score (see `MOG_SCORE.md`).
+- Real-time chat between matches, voice calls.
+- GitHub sign-in.
 
 ## Screens
-1. `/` Landing
-2. `/onboarding` Profile builder (multi-step)
-3. `/profile/[id]` Profile view (own profile shows score breakdown)
-4. `/discover` Swipe stack
-5. `/matches` Match list with team scores
-6. `/chat/[matchId]` Chat + call button
-7. `/leaderboard` (stretch) Top Mog Scores / top teams
+| Route | Screen | Status |
+|---|---|---|
+| `/discover` | Discover list | ✅ |
+| `/profile` | My profile | ✅ |
+| `/profile/edit` | Edit my profile | ✅ |
+| `/profile/:id` | Someone else's profile | ✅ |
+| `/settings` | Settings (placeholder) | ✅ |
+| `/matches` | Matches + Intersect panel | later |
 
-## MVP scope (must ship for demo)
-- [ ] GitHub login
-- [ ] Profile create/edit
-- [ ] Individual Mog Score with breakdown
-- [ ] Discover + like/pass + matching
-- [ ] Team Mog Score on matches
-- [ ] Real-time text chat
-
-**Stretch:** voice chat · leaderboard · squads · LLM-based bio analysis · notifications.
+## Demo flow
+```
+Discover → search/filter → open a profile → Like
+   → (M2) Match! → (M3) Intersect ideas → edit my profile → refresh → still saved
+```
 
 ## Safety
-- Block + report on every profile and chat.
-- No private info beyond what users enter; GitHub email is never displayed.
-- Keep the "dating" framing playful — this is for professional/creative matching.
+- Keep the "dating" framing playful — this is professional/creative matchmaking.
+- Later: block + report on profiles and chats; never display private email.

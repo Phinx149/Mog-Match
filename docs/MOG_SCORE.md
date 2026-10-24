@@ -1,29 +1,31 @@
-# Mog Score
+# Mog Score (stretch milestone — not implemented yet)
 
-The Mog Score is a playful 0–1000 rating of a developer profile. It must be **explainable** (every point comes from a visible component) and **gameable only by doing real things** (filling your profile, shipping code).
+The Mog Score is a playful 0–1000 rating of a developer profile. It must be **explainable** (every point comes from a visible component) and **gameable only by doing real things** (filling in your profile, shipping projects).
 
-Implementation: `src/MogMatch.Core/Scoring/MogScoreCalculator.cs` and `TeamScoreCalculator.cs`. Tests: `tests/MogMatch.Core.Tests/Scoring/`. Keep this doc and the code in sync.
+Planned implementation: `backend/app/services/mog_score.py` (pure functions, no DB or HTTP calls) with tests in `backend/tests/test_mog_score.py`. Keep this doc and the code in sync.
 
 ## Individual score (max 1000)
 
+Based on the fields the `profiles` table already has:
+
 | Component | Max | How it's computed |
 |---|---|---|
-| **Profile completeness** | 100 | +10 per filled field (headline, bio ≥ 100 chars, avatar, ≥ 3 skills, roles, looking for, years, hackathons, ≥ 1 extra link, GitHub) |
-| **Skill depth** | 200 | `sum(level²)` of top 5 skills ÷ 125 × 200 (five level-5 skills = max) |
-| **Skill breadth** | 100 | distinct skill *categories* (language, framework, database, cloud, ML, design, …) × 20, capped |
-| **GitHub activity** | 300 | log-scaled: public repos (80), stars received (80), contributions last year (100), followers (40) |
-| **Experience** | 150 | years coding × 15 (cap 100) + hackathons × 10 (cap 50) |
-| **Bio quality** | 150 | heuristic: length, mentions of concrete projects/tech that match listed skills. If an LLM rating (0–10) is cached on the profile, use `rating × 15` instead |
+| **Profile completeness** | 150 | 15 points each: avatar, location, education, bio ≥ 100 chars, ≥ 3 skills, ≥ 2 interests, favorite IDE, ≥ 1 AI agent, ≥ 1 link, experience level |
+| **Skill breadth** | 200 | 20 per skill, capped at 10 skills |
+| **Projects** | 200 | 60 per project (cap 3) + 20 if ≥ 1 has a URL; technologies that match listed skills add credibility, not points |
+| **GitHub activity** | 250 | log-scaled public repos (80), stars (80), followers (40), recent activity (50). Needs a GitHub link; fetched server-side and cached |
+| **Experience** | 100 | Student 20 · Junior 40 · Mid-level 60 · Senior 80 · Lead 100 |
+| **Bio quality** | 100 | length + mentions of listed skills/projects. Optionally an LLM rating 0–10 × 10, cached on the profile |
 
-Log scaling for GitHub (so 1 → 100 repos matters more than 100 → 1000):
-```csharp
-static int Scaled(int value, int saturateAt, int max) =>
-    (int)Math.Round(Math.Min(1.0, Math.Log10(1 + value) / Math.Log10(1 + saturateAt)) * max);
+Log scaling (so 1 → 100 repos matters more than 100 → 1000):
+```python
+import math
 
-// repos:         Scaled(stats.PublicRepos,   50,   80)
-// stars:         Scaled(stats.StarsReceived, 500,  80)
-// contributions: Scaled(stats.Contributions, 1000, 100)
-// followers:     Scaled(stats.Followers,     200,  40)
+def scaled(value: int, saturate_at: int, max_points: int) -> int:
+    ratio = math.log10(1 + value) / math.log10(1 + saturate_at)
+    return round(min(1.0, ratio) * max_points)
+
+# repos: scaled(repos, 50, 80)   stars: scaled(stars, 500, 80)   followers: scaled(followers, 200, 40)
 ```
 
 ### Tiers
@@ -35,46 +37,40 @@ static int Scaled(int value, int saturateAt, int max) =>
 | 650–849 | 🔥 Senior Mogger |
 | 850–1000 | 👑 Gigamogger |
 
-### Result types (`MogMatch.Core/Scoring`)
-```csharp
-public record MogBreakdown(int Completeness, int Depth, int Breadth, int GitHub, int Experience, int Bio)
+### Result shape (API)
+```json
 {
-    public int Total => Completeness + Depth + Breadth + GitHub + Experience + Bio;
+  "score": 612,
+  "tier": "Mid Mogger",
+  "breakdown": {"completeness": 135, "breadth": 120, "projects": 140, "github": 97, "experience": 60, "bio": 60},
+  "tips": ["Add a project URL for +20", "Add 2 more skills for up to +40"]
 }
-
-public record MogResult(int Score, string Tier, MogBreakdown Breakdown, IReadOnlyList<string> Tips);
 ```
-`Tips` = up to 3 suggestions for the components furthest from their max ("Add 2 more skills to gain up to +40").
+`tips` = up to 3 suggestions for the components furthest from their max.
 
 ## Team Mog Score (max 1000)
 
-A great team isn't two clones. The team score rewards **complementarity** with enough **overlap** to communicate.
+A great team isn't two clones. The team score rewards **complementarity** with enough **overlap** to communicate — the same idea the Intersect Engine uses.
 
 | Component | Max | How |
 |---|---|---|
-| **Combined strength** | 400 | average of members' individual scores × 0.4 |
-| **Role coverage** | 250 | distinct roles across the team; frontend + backend + (design or ML or devops) = full marks |
+| **Combined strength** | 400 | average of members' scores × 0.4 |
+| **Specialty coverage** | 250 | distinct specialty tags across the team (Frontend, Backend, Machine Learning, DevOps, Mobile, …) |
 | **Skill complementarity** | 200 | Jaccard *distance* of skill sets, peaks around 0.65 |
-| **Shared ground** | 100 | ≥ 1 shared language/framework = 60, shared "looking for" = 40 |
-| **Experience balance** | 50 | penalty if one has 0 hackathons and the other 10+ (unless "looking for" includes mentor/mentee) |
+| **Shared ground** | 100 | ≥ 1 shared skill = 60, shared `looking_for` = 40 |
+| **Experience balance** | 50 | penalty for Student + Lead unless one is looking for Mentor and the other for Mentee |
 
-```csharp
-var union        = a.Skills.Select(s => s.Name).Union(b.Skills.Select(s => s.Name)).Count();
-var intersection = a.Skills.Select(s => s.Name).Intersect(b.Skills.Select(s => s.Name)).Count();
-double distance  = union == 0 ? 0 : 1 - (double)intersection / union;           // 0..1
-int complementarity = (int)Math.Round(200 * Math.Max(0, 1 - Math.Abs(distance - 0.65) / 0.65));
+```python
+def complementarity(a_skills: list[str], b_skills: list[str]) -> int:
+    a, b = {s.lower() for s in a_skills}, {s.lower() for s in b_skills}
+    union = a | b
+    distance = 0.0 if not union else 1 - len(a & b) / len(union)   # 0..1
+    return round(200 * max(0.0, 1 - abs(distance - 0.65) / 0.65))
 ```
 
-### Recommendation ranking (`MogMatch.Core/Matching/RecommendationRanker.cs`)
-```
-recommendScore = 0.6 × predictedTeamScore / 1000 + 0.4 × similarity
-similarity     = cosine similarity of skill vectors (skill name → level)
-```
-Exclude: self, already swiped, blocked in either direction (done in the query, before ranking).
-
-## Testing checklist (xUnit)
+## Testing checklist (pytest)
 - Empty profile → score < 50, tier Hello World, 3 tips.
 - Maxed profile → exactly 1000, never above.
-- `githubStats == null` → GitHub component is 0, no exception.
-- Two identical fullstack devs score lower as a team than a frontend + backend pair with the same individual scores.
-- Same input → same output (no `DateTime.Now`, randomness or I/O in the calculators).
+- No GitHub stats → GitHub component is 0, no exception.
+- Two identical full-stack devs score lower as a team than a Frontend + Backend pair with the same individual scores.
+- Same input → same output (no clock, randomness or I/O inside the scorer).
