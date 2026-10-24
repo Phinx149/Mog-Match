@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import Navbar from "../components/layout/Navbar";
+import MogScoreCard from "../components/mog/MogScoreCard";
 import ProfileHeader from "../components/profiles/ProfileHeader";
 import ProjectCard from "../components/profiles/ProjectCard";
 import SkillBadge from "../components/profiles/SkillBadge";
@@ -49,6 +50,8 @@ export default function ProfilePage() {
         ) : (
           <>
             <ProfileHeader profile={profile} editable={isMe} />
+
+            <MogScoreCard mog={profile.mog} showTips={isMe} />
 
             <Section title="About">
               {profile.bio ? (

@@ -24,7 +24,7 @@ Three devs, 24 hours. Split work by **vertical feature** so each person ships en
 - [ ] "Intersect" panel on the match/profile page
 
 ## Milestone 4 — Stretch
-- [ ] Mog Score (see `MOG_SCORE.md`)
+- [x] Mog Score (see `MOG_SCORE.md`)
 - [ ] Real-time chat for matches
 - [ ] GitHub OAuth (replace demo user)
 - [ ] Deploy

@@ -14,6 +14,31 @@ export interface Project {
   technologies: string[];
 }
 
+export type MogComponent =
+  | "esoteric"
+  | "breadth"
+  | "links"
+  | "projects"
+  | "descriptions"
+  | "completeness"
+  | "experience"
+  | "bio";
+
+/** Mirrors backend/app/services/mog_score.py `compute_mog_score`. */
+export interface MogScore {
+  score: number;
+  tier: MogTier;
+  emoji: string;
+  roast: string;
+  breakdown: Record<MogComponent, number>;
+  max_breakdown: Record<MogComponent, number>;
+  tips: string[];
+}
+
+/** Lowest tier first. */
+export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior Mogger", "Gigamogger"] as const;
+export type MogTier = (typeof MOG_TIERS)[number];
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -33,6 +58,7 @@ export interface Profile {
   projects: Project[];
   created_at: string;
   updated_at: string;
+  mog: MogScore;
 }
 
 export interface ProfileListResponse {
@@ -63,6 +89,8 @@ export interface ProfileFilters {
   skills?: string[];
   interests?: string[];
   location?: string;
+  min_tier?: MogTier;
+  sort?: "mog";
 }
 
 export interface HealthResponse {

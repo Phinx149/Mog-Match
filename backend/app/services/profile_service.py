@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models import Profile, ProfileLink, Project, User
+from .mog_score import compute_mog_score, tier_floor
 from .tech_catalog import normalize_technology
 
 EXPERIENCE_LEVELS = ("Student", "Junior", "Mid-level", "Senior", "Lead")
@@ -120,7 +121,7 @@ def _iso(value) -> str | None:
 
 
 def to_dict(profile: Profile) -> dict[str, Any]:
-    return {
+    data = {
         "id": str(profile.id),
         "user_id": str(profile.user_id),
         "full_name": profile.full_name,
@@ -151,6 +152,22 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "created_at": _iso(profile.created_at),
         "updated_at": _iso(profile.updated_at),
     }
+    data["mog"] = compute_mog_score(data)
+    return data
+
+
+def apply_mog_filters(profiles: list[dict], min_tier: str = "", sort: str = "") -> list[dict]:
+    """Keep profiles at or above `min_tier`; `sort="mog"` puts the biggest moggers first."""
+    if min_tier:
+        floor = tier_floor(min_tier)
+        if floor is None:
+            raise ValidationError({"min_tier": "Unknown tier."}, "Unknown Mog tier.")
+        profiles = [p for p in profiles if p["mog"]["score"] >= floor]
+    if sort == "mog":
+        profiles = sorted(profiles, key=lambda p: p["mog"]["score"], reverse=True)
+    elif sort:
+        raise ValidationError({"sort": "Use 'mog' or leave it empty."}, "Unknown sort.")
+    return profiles
 
 
 # ---------- validation helpers ----------

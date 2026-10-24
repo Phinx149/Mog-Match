@@ -1,6 +1,7 @@
 import { Bot, Code2, Heart, MapPin, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Profile, SwipeDecision } from "../../types/profile";
+import MogBadge from "../mog/MogBadge";
 import Avatar from "./Avatar";
 import SkillBadge from "./SkillBadge";
 
@@ -23,7 +24,7 @@ export default function ProfileCard({ profile, activeSkills, onDecide }: Profile
       <div className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-500/40">
         <Link to={`/profile/${profile.id}`} className="group flex items-center gap-4">
           <Avatar name={profile.full_name} url={profile.avatar_url} size="lg" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-semibold group-hover:text-violet-300">{profile.full_name}</h2>
             <p className="truncate font-mono text-xs text-cyan-300">@{profile.username}</p>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
@@ -40,6 +41,7 @@ export default function ProfileCard({ profile, activeSkills, onDecide }: Profile
               )}
             </p>
           </div>
+          <MogBadge mog={profile.mog} />
         </Link>
 
         {profile.bio && <p className="mt-4 line-clamp-2 text-sm text-slate-300">{profile.bio}</p>}

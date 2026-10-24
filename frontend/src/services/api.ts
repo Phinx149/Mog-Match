@@ -50,6 +50,8 @@ export function listProfiles(filters: ProfileFilters = {}, signal?: AbortSignal)
   if (filters.skills?.length) params.set("skills", filters.skills.join(","));
   if (filters.interests?.length) params.set("interests", filters.interests.join(","));
   if (filters.location?.trim()) params.set("location", filters.location.trim());
+  if (filters.min_tier) params.set("min_tier", filters.min_tier);
+  if (filters.sort) params.set("sort", filters.sort);
   const query = params.toString();
   return request<ProfileListResponse>(`/api/profiles${query ? `?${query}` : ""}`, { signal });
 }

@@ -33,9 +33,15 @@ def list_profiles():
         location=request.args.get("location", ""),
         exclude_id=demo.id if demo else None,
     )
-    return jsonify(
-        {"profiles": [profile_service.to_dict(p) for p in profiles], "count": len(profiles)}
-    )
+    try:
+        results = profile_service.apply_mog_filters(
+            [profile_service.to_dict(p) for p in profiles],
+            min_tier=request.args.get("min_tier", "").strip(),
+            sort=request.args.get("sort", "").strip(),
+        )
+    except ValidationError as error:
+        return jsonify({"error": {"message": error.message, "fields": error.fields}}), 400
+    return jsonify({"profiles": results, "count": len(results)})
 
 
 @bp.get("/me")

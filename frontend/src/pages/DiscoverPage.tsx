@@ -3,15 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import FilterBar from "../components/discover/FilterBar";
 import SearchBar from "../components/discover/SearchBar";
+import MogFilter from "../components/mog/MogFilter";
 import Navbar from "../components/layout/Navbar";
 import ProfileCard from "../components/profiles/ProfileCard";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { listProfiles } from "../services/api";
-import type { Profile, SwipeDecision } from "../types/profile";
+import type { MogTier, Profile, SwipeDecision } from "../types/profile";
 
 export default function DiscoverPage() {
   const [search, setSearch] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [minTier, setMinTier] = useState<MogTier | "">("");
+  const [sortByMog, setSortByMog] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [knownSkills, setKnownSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +29,10 @@ export default function DiscoverPage() {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    listProfiles({ q: debouncedSearch, skills: selectedSkills }, controller.signal)
+    listProfiles(
+      { q: debouncedSearch, skills: selectedSkills, min_tier: minTier || undefined, sort: sortByMog ? "mog" : undefined },
+      controller.signal,
+    )
       .then(({ profiles }) => {
         setProfiles(profiles);
         // Remember every skill we've seen so filter options don't vanish as results narrow.
@@ -44,7 +50,7 @@ export default function DiscoverPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [debouncedSearch, selectedSkills, reloadKey]);
+  }, [debouncedSearch, selectedSkills, minTier, sortByMog, reloadKey]);
 
   const remaining = useMemo(() => profiles.filter((p) => !decisions[p.id]), [profiles, decisions]);
   const liked = Object.values(decisions).filter((d) => d.decision === "like");
@@ -75,7 +81,15 @@ export default function DiscoverPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <FilterBar availableSkills={knownSkills} selected={selectedSkills} onChange={setSelectedSkills} />
+          <div className="flex flex-col gap-2">
+            <FilterBar availableSkills={knownSkills} selected={selectedSkills} onChange={setSelectedSkills} />
+            <MogFilter
+              minTier={minTier}
+              sortByMog={sortByMog}
+              onMinTierChange={setMinTier}
+              onSortByMogChange={setSortByMog}
+            />
+          </div>
           <p className="flex shrink-0 items-center gap-3 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <Heart className="size-3.5 text-violet-300" aria-hidden /> {liked.length} liked
