@@ -6,9 +6,9 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 ## Current milestone
 
-✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only)
+✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only) · ✅ Mog Score (on every profile, plus a Discover tier filter and sort)
 
-⏳ Later: persistent swipes & matches, Intersect Engine, Mog Score, chat, voice, GitHub login.
+⏳ Later: persistent swipes & matches, Intersect Engine, Team Mog Score, chat, voice, GitHub login.
 
 ## Tech stack
 
@@ -177,6 +177,10 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | `interests` | `interests=AI` | Profile must have **all** listed interests |
 | `looking_for` | `looking_for=Mentor,Mentee` | Profile must be looking for **any** listed option |
 | `location` | `location=berlin` | Substring match |
+| `min_tier` | `min_tier=Mid Mogger` | Only profiles at or above this Mog tier (`400` if unknown) |
+| `sort` | `sort=mog` | Highest Mog Score first |
+
+Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roast`, `breakdown`, `max_breakdown`, `tips`). See `docs/MOG_SCORE.md`.
 
 **Profile shape**
 ```json

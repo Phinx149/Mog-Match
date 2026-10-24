@@ -33,7 +33,7 @@ Frontend (from `frontend/`):
 - Every backend change keeps `pytest` green; every frontend change keeps `npm run build` green.
 
 ## Out of scope for the current milestone
-Intersect Engine / AI recommendations, Mog Score, persistent swipes/matching, chat, voice, GitHub OAuth, real auth, payments.
+Intersect Engine / AI recommendations, Team Mog Score, persistent swipes/matching, chat, voice, GitHub OAuth, real auth, payments.
 
 ## Team
 Some contributors are beginners. Explain *why*, keep changes small, prefer readable code.

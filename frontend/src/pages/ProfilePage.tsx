@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import Navbar from "../components/layout/Navbar";
+import MogScoreCard from "../components/mog/MogScoreCard";
 import ProfileHeader from "../components/profiles/ProfileHeader";
 import ProjectCard from "../components/profiles/ProjectCard";
 import SkillBadge from "../components/profiles/SkillBadge";
@@ -41,62 +42,70 @@ export default function ProfilePage() {
         )}
       </Navbar>
 
-      <main className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
+      <main className="mx-auto max-w-6xl px-4 py-6">
         {error ? (
           <ErrorState message={error} onRetry={retry} />
         ) : !profile ? (
           <LoadingState label="Loading profile…" />
         ) : (
-          <>
-            <ProfileHeader profile={profile} editable={isMe} />
+          // Profile info is the main column; the Mog Score sits in a sidebar on wide screens
+          // and drops below the profile on phones.
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProfileHeader profile={profile} editable={isMe} />
 
-            <Section title="About">
-              {profile.bio ? (
-                <p className="leading-relaxed whitespace-pre-line text-slate-300">{profile.bio}</p>
-              ) : (
-                <p className="text-muted">No bio yet.</p>
-              )}
-              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                <Fact icon={<Sparkles className="size-4" />} label="Experience" value={profile.experience_level} />
-                <Fact icon={<Code2 className="size-4" />} label="Favorite IDE" value={profile.favorite_ide} />
-                <Fact
-                  icon={<Bot className="size-4" />}
-                  label="AI agents"
-                  value={profile.favorite_ai_agents.join(", ") || null}
-                />
-              </dl>
-              {profile.looking_for.length > 0 && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="inline-flex items-center gap-1.5 text-muted">
-                    <Search className="size-4" aria-hidden /> Looking for
-                  </span>
-                  {profile.looking_for.map((item) => (
-                    <SkillBadge key={item} label={item} variant="neutral" />
-                  ))}
-                </div>
-              )}
-            </Section>
+              <Section title="About">
+                {profile.bio ? (
+                  <p className="leading-relaxed whitespace-pre-line text-slate-300">{profile.bio}</p>
+                ) : (
+                  <p className="text-muted">No bio yet.</p>
+                )}
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                  <Fact icon={<Sparkles className="size-4" />} label="Experience" value={profile.experience_level} />
+                  <Fact icon={<Code2 className="size-4" />} label="Favorite IDE" value={profile.favorite_ide} />
+                  <Fact
+                    icon={<Bot className="size-4" />}
+                    label="AI agents"
+                    value={profile.favorite_ai_agents.join(", ") || null}
+                  />
+                </dl>
+                {profile.looking_for.length > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="inline-flex items-center gap-1.5 text-muted">
+                      <Search className="size-4" aria-hidden /> Looking for
+                    </span>
+                    {profile.looking_for.map((item) => (
+                      <SkillBadge key={item} label={item} variant="neutral" />
+                    ))}
+                  </div>
+                )}
+              </Section>
 
-            <Section title="Technical Skills">
-              <TagList values={profile.skills} variant="skill" empty="No skills listed yet." />
-            </Section>
+              <Section title="Technical Skills">
+                <TagList values={profile.skills} variant="skill" empty="No skills listed yet." />
+              </Section>
 
-            <Section title="Projects">
-              {profile.projects.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {profile.projects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState title="No projects yet">{isMe && "Add one from Edit Profile."}</EmptyState>
-              )}
-            </Section>
+              <Section title="Projects">
+                {profile.projects.length ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {profile.projects.map((project) => (
+                      <ProjectCard key={project.id} project={project} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState title="No projects yet">{isMe && "Add one from Edit Profile."}</EmptyState>
+                )}
+              </Section>
 
-            <Section title="Interests">
-              <TagList values={profile.interests} variant="interest" empty="No interests listed yet." />
-            </Section>
-          </>
+              <Section title="Interests">
+                <TagList values={profile.interests} variant="interest" empty="No interests listed yet." />
+              </Section>
+            </div>
+
+            <aside>
+              <MogScoreCard mog={profile.mog} showTips={isMe} />
+            </aside>
+          </div>
         )}
       </main>
     </>

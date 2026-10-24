@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import FilterBar from "../components/discover/FilterBar";
 import SearchBar from "../components/discover/SearchBar";
+import MogFilter from "../components/mog/MogFilter";
 import Navbar from "../components/layout/Navbar";
 import ProfileCard from "../components/profiles/ProfileCard";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { getFilterOptions, listProfiles } from "../services/api";
-import type { FilterOptions, Profile, SwipeDecision } from "../types/profile";
+import type { FilterOptions, MogTier, Profile, SwipeDecision } from "../types/profile";
 
 const NO_OPTIONS: FilterOptions = { skills: [], looking_for: [] };
 
@@ -15,6 +16,8 @@ export default function DiscoverPage() {
   const [search, setSearch] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedLookingFor, setSelectedLookingFor] = useState<string[]>([]);
+  const [minTier, setMinTier] = useState<MogTier | "">("");
+  const [sortByMog, setSortByMog] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>(NO_OPTIONS);
   const [loading, setLoading] = useState(true);
@@ -39,7 +42,16 @@ export default function DiscoverPage() {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    listProfiles({ q: debouncedSearch, skills: selectedSkills, looking_for: selectedLookingFor }, controller.signal)
+    listProfiles(
+      {
+        q: debouncedSearch,
+        skills: selectedSkills,
+        looking_for: selectedLookingFor,
+        min_tier: minTier || undefined,
+        sort: sortByMog ? "mog" : undefined,
+      },
+      controller.signal,
+    )
       .then(({ profiles }) => setProfiles(profiles))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -49,7 +61,7 @@ export default function DiscoverPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [debouncedSearch, selectedSkills, selectedLookingFor, reloadKey]);
+  }, [debouncedSearch, selectedSkills, selectedLookingFor, minTier, sortByMog, reloadKey]);
 
   const remaining = useMemo(() => profiles.filter((p) => !decisions[p.id]), [profiles, decisions]);
   const liked = Object.values(decisions).filter((d) => d.decision === "like");
@@ -80,13 +92,21 @@ export default function DiscoverPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <FilterBar
-            options={filterOptions}
-            skills={selectedSkills}
-            lookingFor={selectedLookingFor}
-            onSkillsChange={setSelectedSkills}
-            onLookingForChange={setSelectedLookingFor}
-          />
+          <div className="flex flex-col gap-2">
+            <FilterBar
+              options={filterOptions}
+              skills={selectedSkills}
+              lookingFor={selectedLookingFor}
+              onSkillsChange={setSelectedSkills}
+              onLookingForChange={setSelectedLookingFor}
+            />
+            <MogFilter
+              minTier={minTier}
+              sortByMog={sortByMog}
+              onMinTierChange={setMinTier}
+              onSortByMogChange={setSortByMog}
+            />
+          </div>
           <p className="flex shrink-0 items-center gap-3 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <Heart className="size-3.5 text-violet-300" aria-hidden /> {liked.length} liked
