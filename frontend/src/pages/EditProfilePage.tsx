@@ -3,9 +3,8 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ErrorState, LoadingState } from "../components/common/States";
 import TagInput from "../components/forms/TagInput";
-import ToggleChips from "../components/forms/ToggleChips";
 import Navbar from "../components/layout/Navbar";
-import { ApiError, getFilterOptions, getMyProfile, updateMyProfile } from "../services/api";
+import { ApiError, getMyProfile, updateMyProfile } from "../services/api";
 import { EXPERIENCE_LEVELS, type Profile, type ProfileUpdate } from "../types/profile";
 
 type LinkDraft = { label: string; url: string };
@@ -30,7 +29,7 @@ interface FormState {
 
 type SaveStatus = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
-function toForm(p: Profile, lookingForOptions: string[]): FormState {
+function toForm(p: Profile): FormState {
   return {
     full_name: p.full_name,
     username: p.username,
@@ -43,10 +42,7 @@ function toForm(p: Profile, lookingForOptions: string[]): FormState {
     skills: p.skills,
     interests: p.interests,
     favorite_ai_agents: p.favorite_ai_agents,
-    // Keep only values on the allowed list; older free-text entries would be rejected on save.
-    looking_for: lookingForOptions.filter((option) =>
-      p.looking_for.some((value) => value.toLowerCase() === option.toLowerCase()),
-    ),
+    looking_for: p.looking_for,
     links: p.links.map(({ label, url }) => ({ label, url })),
     projects: p.projects.map(({ title, description, project_url, technologies }) => ({
       title,
@@ -80,18 +76,14 @@ function toUpdate(form: FormState): ProfileUpdate {
 
 export default function EditProfilePage() {
   const [form, setForm] = useState<FormState | null>(null);
-  const [lookingForOptions, setLookingForOptions] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([getMyProfile(controller.signal), getFilterOptions(controller.signal)])
-      .then(([profile, options]) => {
-        setLookingForOptions(options.looking_for);
-        setForm(toForm(profile, options.looking_for));
-      })
+    getMyProfile(controller.signal)
+      .then((profile) => setForm(toForm(profile)))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setLoadError(err instanceof Error ? err.message : "Failed to load your profile.");
@@ -118,7 +110,7 @@ export default function EditProfilePage() {
     setFieldErrors({});
     try {
       const saved = await updateMyProfile(toUpdate(form));
-      setForm(toForm(saved, lookingForOptions)); // reflect server-side cleanup (trimmed, de-duplicated tags)
+      setForm(toForm(saved)); // reflect server-side cleanup (trimmed, de-duplicated tags)
       setStatus({ kind: "saved" });
     } catch (err) {
       if (err instanceof ApiError) setFieldErrors(err.fields);
@@ -178,11 +170,8 @@ export default function EditProfilePage() {
           <FieldError message={err("skills")} />
           <TagInput label="Interests" variant="interest" values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
           <FieldError message={err("interests")} />
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-slate-300">Looking for</span>
-            <ToggleChips label="Looking for" options={lookingForOptions} selected={form.looking_for} onChange={(v) => update("looking_for", v)} />
-            <FieldError message={err("looking_for")} />
-          </div>
+          <TagInput label="Looking for" variant="neutral" values={form.looking_for} onChange={(v) => update("looking_for", v)} placeholder="Hackathon team, Mentor…" maxTags={10} />
+          <FieldError message={err("looking_for")} />
         </Card>
 
         <Card title="Setup">

@@ -77,7 +77,7 @@ SEED_PROFILES = [
         "skills": ["Backend", "Rust", "Go", "PostgreSQL", "gRPC", "Kubernetes"],
         "interests": ["Distributed Systems", "Open Source", "Performance"],
         "experience_level": "Senior",
-        "looking_for": ["Side project", "Hackathon team", "Open source"],
+        "looking_for": ["Side project", "Hackathon team"],
         "links": [("GitHub", "https://github.com/diego-rs"), ("Blog", "https://example.com/diego/blog")],
         "projects": [
             {
@@ -123,7 +123,7 @@ SEED_PROFILES = [
         "skills": ["Full-stack", "JavaScript", "Node.js", "React", "MongoDB", "AWS"],
         "interests": ["Startups", "Fintech", "Mentoring"],
         "experience_level": "Mid-level",
-        "looking_for": ["Side project", "Mentor", "Cofounder"],
+        "looking_for": ["Side project", "Mentor"],
         "links": [("GitHub", "https://github.com/samfullstack"), ("Website", "https://example.com/sam")],
         "projects": [
             {
@@ -198,7 +198,7 @@ SEED_PROFILES = [
         "skills": ["Data Engineering", "Python", "SQL", "Apache Spark", "Airflow", "dbt"],
         "interests": ["Climate Tech", "Data Visualization", "Open Data"],
         "experience_level": "Mid-level",
-        "looking_for": ["Side project", "Cofounder"],
+        "looking_for": ["Side project"],
         "links": [("GitHub", "https://github.com/aisha-data"), ("LinkedIn", "https://www.linkedin.com/in/aisha-data")],
         "projects": [
             {
@@ -244,7 +244,7 @@ SEED_PROFILES = [
         "skills": ["DevOps", "Terraform", "Docker", "Go", "AWS", "Backend"],
         "interests": ["Cloud", "Automation", "Board Games"],
         "experience_level": "Lead",
-        "looking_for": ["Mentee", "Hackathon team", "Open source"],
+        "looking_for": ["Mentee", "Hackathon team"],
         "links": [("GitHub", "https://github.com/liv-devops"), ("Website", "https://example.com/olivia")],
         "projects": [
             {

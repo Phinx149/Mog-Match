@@ -30,18 +30,12 @@ def list_profiles():
         query=request.args.get("q", ""),
         skills=_list_arg("skills"),
         interests=_list_arg("interests"),
-        looking_for=_list_arg("looking_for"),
         location=request.args.get("location", ""),
         exclude_id=demo.id if demo else None,
     )
     return jsonify(
         {"profiles": [profile_service.to_dict(p) for p in profiles], "count": len(profiles)}
     )
-
-
-@bp.get("/filter-options")
-def get_filter_options():
-    return jsonify(profile_service.filter_options())
 
 
 @bp.get("/me")

@@ -62,16 +62,7 @@ export interface ProfileFilters {
   q?: string;
   skills?: string[];
   interests?: string[];
-  looking_for?: string[];
   location?: string;
-}
-
-/** Every allowed value for the list fields (GET /api/profiles/filter-options). */
-export interface FilterOptions {
-  /** Every skill a profile is allowed to list. */
-  skills: string[];
-  /** Every "looking for" option a profile can pick. */
-  looking_for: string[];
 }
 
 export interface HealthResponse {

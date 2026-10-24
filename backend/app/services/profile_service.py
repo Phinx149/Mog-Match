@@ -10,12 +10,9 @@ from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models import Profile, ProfileLink, Project, User
-from .tech_catalog import ALL_TECHNOLOGIES, normalize_technology
+from .tech_catalog import normalize_technology
 
 EXPERIENCE_LEVELS = ("Student", "Junior", "Mid-level", "Senior", "Lead")
-# What a profile can say it wants from a match. Fixed (not free text) so filtering and the
-# Mog Score's shared-intent / Mentor-Mentee rules can rely on exact values. Order = display order.
-LOOKING_FOR_OPTIONS = ("Hackathon team", "Side project", "Open source", "Cofounder", "Mentor", "Mentee", "Just vibes")
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,40}$")
 
 # field -> (max length, required)
@@ -72,7 +69,6 @@ def list_profiles(
     query: str = "",
     skills: list[str] | None = None,
     interests: list[str] | None = None,
-    looking_for: list[str] | None = None,
     location: str = "",
     exclude_id: uuid.UUID | None = None,
 ) -> list[Profile]:
@@ -82,7 +78,6 @@ def list_profiles(
     location = location.strip().lower()
     wanted_skills = _lower_set(skills or [])
     wanted_interests = _lower_set(interests or [])
-    wanted_looking_for = _lower_set(looking_for or [])
 
     results = []
     for profile in profiles:
@@ -93,28 +88,12 @@ def list_profiles(
             continue
         if wanted_interests and not wanted_interests <= _lower_set(profile.interests):
             continue
-        # "Looking for" matches ANY selected option: people only list a few, so requiring
-        # all of them (e.g. both Mentor and Hackathon team) would hide almost everyone.
-        if wanted_looking_for and wanted_looking_for.isdisjoint(_lower_set(profile.looking_for)):
-            continue
         if location and location not in (profile.location or "").lower():
             continue
         if query and query not in _search_text(profile):
             continue
         results.append(profile)
     return results
-
-
-def filter_options() -> dict[str, list[str]]:
-    """Every value a profile may use for `skills` and `looking_for` (see `validate_update`).
-
-    The Discover filter menu and the Edit Profile pickers both read this, so they can't drift
-    from what the backend accepts.
-    """
-    return {
-        "skills": sorted(ALL_TECHNOLOGIES, key=str.lower),
-        "looking_for": list(LOOKING_FOR_OPTIONS),
-    }
 
 
 def _search_text(profile: Profile) -> str:
@@ -265,19 +244,6 @@ def _clean_technologies(values: list[str], field: str, errors: dict, noun: str =
     return known
 
 
-def _clean_choices(values: list[str], field: str, allowed: tuple[str, ...], errors: dict) -> list[str]:
-    """Map each value to its spelling in `allowed` (ignoring case); report any that aren't in it."""
-    by_lower = {option.lower(): option for option in allowed}
-    known = [by_lower[value.lower()] for value in values if value.lower() in by_lower]
-    unknown = [value for value in values if value.lower() not in by_lower]
-    if unknown:
-        errors[field] = (
-            f"Unknown option: {', '.join(unknown[:3])}{'…' if len(unknown) > 3 else ''}. "
-            f"Choose from: {', '.join(allowed)}."
-        )
-    return known
-
-
 def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
     if not isinstance(value, list):
         errors["projects"] = "Must be a list."
@@ -330,8 +296,6 @@ def validate_update(data: Any) -> dict[str, Any]:
             cleaned[field] = _clean_tags(data[field], field, max_items, errors)
     if cleaned.get("skills"):
         cleaned["skills"] = _clean_technologies(cleaned["skills"], "skills", errors, noun="skill")
-    if cleaned.get("looking_for"):
-        cleaned["looking_for"] = _clean_choices(cleaned["looking_for"], "looking_for", LOOKING_FOR_OPTIONS, errors)
     if "links" in data:
         cleaned["links"] = _clean_links(data["links"], errors)
     if "projects" in data:
