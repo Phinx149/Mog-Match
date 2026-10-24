@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models import Profile, ProfileLink, Project, User
+from .tech_catalog import normalize_technology
 
 EXPERIENCE_LEVELS = ("Student", "Junior", "Mid-level", "Senior", "Lead")
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,40}$")
@@ -225,6 +226,24 @@ def _clean_links(value: Any, errors: dict) -> list[dict] | None:
     return cleaned
 
 
+def _clean_technologies(values: list[str], field: str, errors: dict, noun: str = "technology") -> list[str]:
+    """Map each value to its tech catalog spelling; report any that aren't recognized."""
+    known: list[str] = []
+    unknown: list[str] = []
+    for value in values:
+        canonical = normalize_technology(value)
+        if canonical is None:
+            unknown.append(value)
+        elif canonical not in known:  # aliases can collapse ("js", "JavaScript") into one entry
+            known.append(canonical)
+    if unknown:
+        errors[field] = (
+            f"Unknown {noun}: {', '.join(unknown[:3])}{'…' if len(unknown) > 3 else ''}. "
+            "Use a known language, framework or dev tool."
+        )
+    return known
+
+
 def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
     if not isinstance(value, list):
         errors["projects"] = "Must be a list."
@@ -244,6 +263,8 @@ def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
         if project_url and not _is_http_url(project_url):
             errors[f"{prefix}.project_url"] = "Must be a valid http(s) URL."
         technologies = _clean_tags(item.get("technologies", []), f"{prefix}.technologies", 20, errors)
+        if technologies:
+            technologies = _clean_technologies(technologies, f"{prefix}.technologies", errors)
         cleaned.append(
             {
                 "title": title,
@@ -273,6 +294,8 @@ def validate_update(data: Any) -> dict[str, Any]:
     for field, max_items in LIST_FIELDS.items():
         if field in data:
             cleaned[field] = _clean_tags(data[field], field, max_items, errors)
+    if cleaned.get("skills"):
+        cleaned["skills"] = _clean_technologies(cleaned["skills"], "skills", errors, noun="skill")
     if "links" in data:
         cleaned["links"] = _clean_links(data["links"], errors)
     if "projects" in data:

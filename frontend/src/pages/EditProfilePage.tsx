@@ -233,6 +233,7 @@ export default function EditProfilePage() {
                 <textarea className="field min-h-20" value={project.description} maxLength={2000} onChange={(e) => updateProject(index, { description: e.target.value })} />
               </Field>
               <TagInput label="Technologies" variant="neutral" values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
+              <FieldError message={err(`projects[${index}].technologies`)} />
             </div>
           ))}
         </Card>
