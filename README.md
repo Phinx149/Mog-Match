@@ -164,6 +164,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
 | GET | `/api/profiles` | Discoverable profiles (excludes the demo user) → `{"profiles": [...], "count": n}` |
+| GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "looking_for": [...]}`. Powers the Discover filter menu and the Edit Profile "Looking for" picker |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | GET | `/api/profiles/me` | The demo user's profile |
 | PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
@@ -174,6 +175,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | `q` | `q=rust` | Text search over name, username, bio, location, education, IDE, skills, interests, AI agents, project titles |
 | `skills` | `skills=Rust,Frontend` or repeated | Profile must have **all** listed skills |
 | `interests` | `interests=AI` | Profile must have **all** listed interests |
+| `looking_for` | `looking_for=Mentor,Mentee` | Profile must be looking for **any** listed option |
 | `location` | `location=berlin` | Substring match |
 
 **Profile shape**
@@ -191,9 +193,10 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 }
 ```
 
-**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for`, `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
+**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
 - `links` and `projects`, when sent, **replace** the existing lists.
 - Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
+- `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
 - `400` on invalid data or unknown fields, `409` if the username is taken.
 
 ## Known limitations (this milestone)

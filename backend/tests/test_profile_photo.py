@@ -16,12 +16,14 @@ def photo_file():
 
 def test_photo_saved_in_user_and_served_after_reload(client, app):
     raw = photo_file()
+    category = client.get("/api/profiles/filter-options").get_json()["looking_for"][0]
     response = client.patch("/api/profiles/me", data={
-        "profile": json.dumps({"full_name": "Photo User"}),
+        "profile": json.dumps({"full_name": "Photo User", "looking_for": [category]}),
         "photo": (BytesIO(raw), "avatar.png"),
     })
     assert response.status_code == 200
     profile = client.get("/api/profiles/me").get_json()
+    assert profile["looking_for"] == [category]
     path = urlsplit(profile["avatar_url"]).path
     image = client.get(path)
     assert image.status_code == 200

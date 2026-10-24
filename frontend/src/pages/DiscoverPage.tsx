@@ -6,14 +6,17 @@ import SearchBar from "../components/discover/SearchBar";
 import Navbar from "../components/layout/Navbar";
 import ProfileCard from "../components/profiles/ProfileCard";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
-import { listProfiles } from "../services/api";
-import type { Profile, SwipeDecision } from "../types/profile";
+import { getFilterOptions, listProfiles } from "../services/api";
+import type { FilterOptions, Profile, SwipeDecision } from "../types/profile";
+
+const NO_OPTIONS: FilterOptions = { skills: [], looking_for: [] };
 
 export default function DiscoverPage() {
   const [search, setSearch] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedLookingFor, setSelectedLookingFor] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [knownSkills, setKnownSkills] = useState<string[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>(NO_OPTIONS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -22,20 +25,22 @@ export default function DiscoverPage() {
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
+  // The filter menu offers every valid skill, so it doesn't depend on which profiles are on screen.
+  // A failure here is non-fatal (the menu just says nothing is available); Refresh retries it.
+  useEffect(() => {
+    const controller = new AbortController();
+    getFilterOptions(controller.signal)
+      .then(setFilterOptions)
+      .catch(() => {});
+    return () => controller.abort();
+  }, [reloadKey]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    listProfiles({ q: debouncedSearch, skills: selectedSkills }, controller.signal)
-      .then(({ profiles }) => {
-        setProfiles(profiles);
-        // Remember every skill we've seen so filter options don't vanish as results narrow.
-        setKnownSkills((previous) => {
-          const merged = new Map(previous.map((s) => [s.toLowerCase(), s]));
-          profiles.flatMap((p) => p.skills).forEach((s) => merged.has(s.toLowerCase()) || merged.set(s.toLowerCase(), s));
-          return [...merged.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-        });
-      })
+    listProfiles({ q: debouncedSearch, skills: selectedSkills, looking_for: selectedLookingFor }, controller.signal)
+      .then(({ profiles }) => setProfiles(profiles))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Failed to load profiles.");
@@ -44,7 +49,7 @@ export default function DiscoverPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [debouncedSearch, selectedSkills, reloadKey]);
+  }, [debouncedSearch, selectedSkills, selectedLookingFor, reloadKey]);
 
   const remaining = useMemo(() => profiles.filter((p) => !decisions[p.id]), [profiles, decisions]);
   const liked = Object.values(decisions).filter((d) => d.decision === "like");
@@ -75,7 +80,13 @@ export default function DiscoverPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <FilterBar availableSkills={knownSkills} selected={selectedSkills} onChange={setSelectedSkills} />
+          <FilterBar
+            options={filterOptions}
+            skills={selectedSkills}
+            lookingFor={selectedLookingFor}
+            onSkillsChange={setSelectedSkills}
+            onLookingForChange={setSelectedLookingFor}
+          />
           <p className="flex shrink-0 items-center gap-3 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <Heart className="size-3.5 text-violet-300" aria-hidden /> {liked.length} liked
@@ -107,7 +118,12 @@ export default function DiscoverPage() {
           <ul className={`flex flex-col gap-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
             {remaining.map((profile) => (
               <li key={profile.id}>
-                <ProfileCard profile={profile} activeSkills={selectedSkills} onDecide={decide} />
+                <ProfileCard
+                  profile={profile}
+                  activeSkills={selectedSkills}
+                  activeLookingFor={selectedLookingFor}
+                  onDecide={decide}
+                />
               </li>
             ))}
           </ul>
