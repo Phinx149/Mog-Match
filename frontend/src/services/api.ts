@@ -1,4 +1,5 @@
 import type {
+  FilterOptions,
   HealthResponse,
   Profile,
   ProfileFilters,
@@ -49,11 +50,16 @@ export function listProfiles(filters: ProfileFilters = {}, signal?: AbortSignal)
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.skills?.length) params.set("skills", filters.skills.join(","));
   if (filters.interests?.length) params.set("interests", filters.interests.join(","));
+  if (filters.looking_for?.length) params.set("looking_for", filters.looking_for.join(","));
   if (filters.location?.trim()) params.set("location", filters.location.trim());
   if (filters.min_tier) params.set("min_tier", filters.min_tier);
   if (filters.sort) params.set("sort", filters.sort);
   const query = params.toString();
   return request<ProfileListResponse>(`/api/profiles${query ? `?${query}` : ""}`, { signal });
+}
+
+export function getFilterOptions(signal?: AbortSignal) {
+  return request<FilterOptions>("/api/profiles/filter-options", { signal });
 }
 
 export function getProfile(id: string, signal?: AbortSignal) {

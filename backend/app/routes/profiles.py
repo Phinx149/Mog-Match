@@ -30,6 +30,7 @@ def list_profiles():
         query=request.args.get("q", ""),
         skills=_list_arg("skills"),
         interests=_list_arg("interests"),
+        looking_for=_list_arg("looking_for"),
         location=request.args.get("location", ""),
         exclude_id=demo.id if demo else None,
     )
@@ -42,6 +43,11 @@ def list_profiles():
     except ValidationError as error:
         return jsonify({"error": {"message": error.message, "fields": error.fields}}), 400
     return jsonify({"profiles": results, "count": len(results)})
+
+
+@bp.get("/filter-options")
+def get_filter_options():
+    return jsonify(profile_service.filter_options())
 
 
 @bp.get("/me")
