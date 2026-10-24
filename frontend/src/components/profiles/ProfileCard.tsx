@@ -9,13 +9,11 @@ const MAX_SKILLS = 6;
 interface ProfileCardProps {
   profile: Profile;
   activeSkills: string[];
-  activeLookingFor: string[];
   onDecide: (profile: Profile, decision: SwipeDecision) => void;
 }
 
-export default function ProfileCard({ profile, activeSkills, activeLookingFor, onDecide }: ProfileCardProps) {
+export default function ProfileCard({ profile, activeSkills, onDecide }: ProfileCardProps) {
   const active = new Set(activeSkills.map((s) => s.toLowerCase()));
-  const activeLooking = new Set(activeLookingFor.map((s) => s.toLowerCase()));
   const extraSkills = profile.skills.length - MAX_SKILLS;
 
   return (
@@ -52,15 +50,6 @@ export default function ProfileCard({ profile, activeSkills, activeLookingFor, o
           ))}
           {extraSkills > 0 && <SkillBadge label={`+${extraSkills}`} variant="neutral" />}
         </div>
-
-        {profile.looking_for.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-            <span>Looking for</span>
-            {profile.looking_for.map((item) => (
-              <SkillBadge key={item} label={item} variant="neutral" highlighted={activeLooking.has(item.toLowerCase())} />
-            ))}
-          </div>
-        )}
 
         {(profile.favorite_ide || profile.favorite_ai_agents.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line pt-3 text-xs text-muted">

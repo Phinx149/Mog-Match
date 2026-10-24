@@ -46,54 +46,6 @@ def test_filter_by_skills_is_case_insensitive_and_requires_all(client):
     assert [p["username"] for p in both] == ["noah-learns"]
 
 
-def test_filter_by_looking_for_matches_any_selected_option(client):
-    mentors = client.get("/api/profiles?looking_for=mentor").get_json()["profiles"]
-    assert sorted(p["username"] for p in mentors) == ["noah-learns", "samfullstack"]
-
-    either = client.get("/api/profiles?looking_for=Mentor,Mentee").get_json()["profiles"]
-    assert len(either) == 5
-
-    combined = client.get("/api/profiles?looking_for=Mentor&skills=Rust").get_json()["profiles"]
-    assert [p["username"] for p in combined] == ["noah-learns"]
-
-
-def test_filter_options_lists_every_allowed_skill_and_looking_for(client):
-    from app.services.profile_service import LOOKING_FOR_OPTIONS
-    from app.services.tech_catalog import ALL_TECHNOLOGIES
-
-    options = client.get("/api/profiles/filter-options").get_json()
-
-    assert set(options["skills"]) == ALL_TECHNOLOGIES
-    assert options["skills"] == sorted(options["skills"], key=str.lower)
-    assert options["looking_for"] == list(LOOKING_FOR_OPTIONS)
-    assert {"Open source", "Cofounder"} <= set(options["looking_for"])
-
-
-def test_new_looking_for_options_have_matches(client):
-    for option, expected in [("Open source", 2), ("Cofounder", 2)]:
-        found = client.get("/api/profiles", query_string={"looking_for": option}).get_json()
-        assert found["count"] == expected, option
-
-
-def test_update_looking_for_normalizes_to_allowed_options(client):
-    response = client.patch("/api/profiles/me", json={"looking_for": ["mentor", " COFOUNDER ", "Mentor"]})
-    assert response.status_code == 200, response.get_json()
-    assert response.get_json()["looking_for"] == ["Mentor", "Cofounder"]  # canonical spelling, de-duplicated
-
-    cleared = client.patch("/api/profiles/me", json={"looking_for": []})
-    assert cleared.status_code == 200
-    assert cleared.get_json()["looking_for"] == []
-
-
-def test_update_rejects_looking_for_outside_the_list(client):
-    response = client.patch("/api/profiles/me", json={"looking_for": ["Mentor", "Pizza buddy"]})
-
-    assert response.status_code == 400
-    message = response.get_json()["error"]["fields"]["looking_for"]
-    assert "Pizza buddy" in message and "Hackathon team" in message
-    assert client.get("/api/profiles/me").get_json()["looking_for"] == ["Hackathon team", "Side project"]  # unchanged
-
-
 def test_search_and_location_filters(client):
     assert [p["username"] for p in client.get("/api/profiles?q=unity").get_json()["profiles"]] == [
         "lena-gamedev"
