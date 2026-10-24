@@ -22,11 +22,11 @@ function initials(name: string): string {
 }
 
 export default function Avatar({ name, url, size = "md" }: AvatarProps) {
-  const [broken, setBroken] = useState(false);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const base = `${SIZES[size]} shrink-0 rounded-full ring-2 ring-violet-500/40`;
 
-  if (url && !broken) {
-    return <img src={url} alt={name} onError={() => setBroken(true)} className={`${base} object-cover`} />;
+  if (url && url !== brokenUrl) {
+    return <img src={url} alt={name} onError={() => setBrokenUrl(url)} className={`${base} object-cover`} />;
   }
   return (
     <div

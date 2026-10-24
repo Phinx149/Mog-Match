@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCircle2, Loader2, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { cloneElement, useEffect, useId, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ErrorState, LoadingState } from "../components/common/States";
 import TagInput from "../components/forms/TagInput";
@@ -79,6 +79,15 @@ export default function EditProfilePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photo) { setPhotoPreview(null); return; }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -109,8 +118,9 @@ export default function EditProfilePage() {
     setStatus({ kind: "saving" });
     setFieldErrors({});
     try {
-      const saved = await updateMyProfile(toUpdate(form));
+      const saved = await updateMyProfile(toUpdate(form), photo);
       setForm(toForm(saved)); // reflect server-side cleanup (trimmed, de-duplicated tags)
+      setPhoto(null);
       setStatus({ kind: "saved" });
     } catch (err) {
       if (err instanceof ApiError) setFieldErrors(err.fields);
@@ -133,6 +143,10 @@ export default function EditProfilePage() {
         <h1 className="text-2xl font-bold">Edit Profile</h1>
 
         <Card title="Basics">
+          <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 5 MB. Saved when you save your profile.">
+            <input className="field cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          </Field>
+          {(photoPreview || form.avatar_url) && <img src={photoPreview || form.avatar_url} alt="Profile photo preview" className="size-24 rounded-full object-cover" />}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Full name" error={err("full_name")}>
               <input className="field" value={form.full_name} maxLength={120} required onChange={(e) => update("full_name", e.target.value)} />
@@ -146,7 +160,7 @@ export default function EditProfilePage() {
             <Field label="Education" error={err("education")}>
               <input className="field" value={form.education} maxLength={200} placeholder="School, degree, year" onChange={(e) => update("education", e.target.value)} />
             </Field>
-            <Field label="Avatar URL" error={err("avatar_url")}>
+            <Field label="Avatar URL" error={err("avatar_url")} hint="Used when no profile photo has been uploaded.">
               <input className="field" type="url" value={form.avatar_url} maxLength={500} placeholder="https://…" onChange={(e) => update("avatar_url", e.target.value)} />
             </Field>
             <Field label="Experience level" error={err("experience_level")}>
@@ -166,20 +180,20 @@ export default function EditProfilePage() {
         </Card>
 
         <Card title="Skills & interests">
-          <TagInput label="Technical skills (languages, frameworks, specialties)" values={form.skills} onChange={(v) => update("skills", v)} placeholder="Rust, React, Frontend…" maxTags={30} />
-          <FieldError message={err("skills")} />
-          <TagInput label="Interests" variant="interest" values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
-          <FieldError message={err("interests")} />
-          <TagInput label="Looking for" variant="neutral" values={form.looking_for} onChange={(v) => update("looking_for", v)} placeholder="Hackathon team, Mentor…" maxTags={10} />
-          <FieldError message={err("looking_for")} />
+          <TagInput label="Technical skills (languages, frameworks, specialties)" error={err("skills")} values={form.skills} onChange={(v) => update("skills", v)} placeholder="Rust, React, Frontend…" maxTags={30} />
+
+          <TagInput label="Interests" variant="interest" error={err("interests")} values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
+
+          <TagInput label="Looking for" variant="neutral" error={err("looking_for")} values={form.looking_for} onChange={(v) => update("looking_for", v)} placeholder="Hackathon team, Mentor…" maxTags={10} />
+
         </Card>
 
         <Card title="Setup">
           <Field label="Favorite IDE" error={err("favorite_ide")}>
             <input className="field" value={form.favorite_ide} maxLength={80} placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
           </Field>
-          <TagInput label="Favorite AI coding agents" variant="neutral" values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
-          <FieldError message={err("favorite_ai_agents")} />
+          <TagInput label="Favorite AI coding agents" variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
+
         </Card>
 
         <Card
@@ -232,13 +246,13 @@ export default function EditProfilePage() {
               <Field label="Description" error={err(`projects[${index}].description`)} compact>
                 <textarea className="field min-h-20" value={project.description} maxLength={2000} onChange={(e) => updateProject(index, { description: e.target.value })} />
               </Field>
-              <TagInput label="Technologies" variant="neutral" values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
-              <FieldError message={err(`projects[${index}].technologies`)} />
+              <TagInput label="Technologies" variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
+
             </div>
           ))}
         </Card>
 
-        <div className="sticky bottom-20 z-10 flex flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm" aria-live="polite">
             {status.kind === "saved" && (
               <span className="inline-flex items-center gap-1.5 text-emerald-300">
@@ -281,14 +295,17 @@ function Card({ title, action, children }: { title: string; action?: ReactNode; 
   );
 }
 
-function Field({ label, error, hint, compact, children }: { label: string; error?: string; hint?: string; compact?: boolean; children: ReactNode }) {
+function Field({ label, error, hint, compact, children }: { label: string; error?: string; hint?: string; compact?: boolean; children: ReactElement<{ id?: string; "aria-invalid"?: boolean; "aria-describedby"?: string }> }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}</span>
-      <div className={error ? "[&_.field]:border-rose-500" : ""}>{children}</div>
+    <div className="min-w-0">
+      <label htmlFor={id} className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}</label>
+      <div className={error ? "[&_.field]:border-rose-500" : ""}>{cloneElement(children, { id, "aria-invalid": !!error, "aria-describedby": error || hint ? `${id}-help` : undefined })}</div>
+      <div id={`${id}-help`}>
       {hint && !error && <span className="mt-1 block text-xs text-muted">{hint}</span>}
       <FieldError message={error} />
-    </label>
+      </div>
+    </div>
   );
 }
 

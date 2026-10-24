@@ -201,4 +201,4 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 - No authentication: `/me` is always the server-configured demo user.
 - Likes/passes reset on page reload (React state only).
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
-- No avatar upload; avatars are URLs with an initials fallback.
+- Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.
