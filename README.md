@@ -1,51 +1,204 @@
-# MogMatch 💘⚙️
+# MogMatch 💜
 
-> A "dating" app for developers. Build your tech profile, get your **Mog Score**, match with devs who complement you, and see how your team stacks up.
+> A developer matchmaking platform. Build a technical profile, discover other developers, filter by skills and interests — and (soon) match with people whose skills *intersect* with yours.
 
-Built for the Social Coding Hackathon.
+Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our headline feature (coming in a later milestone) is the **Intersect Engine**: it looks at two developers' complementary skills and shared interests and recommends projects they could build together.
 
-## The idea
+## Current milestone
 
-1. **Tech Profile** – Users describe themselves: stack, languages, experience, projects, GitHub, what they want to build.
-2. **Mog Score** – Every profile gets a 0–1000 score computed from the description and measurable metrics (repos, contributions, skill breadth/depth, profile completeness).
-3. **Recommendations** – The app suggests developers with related or complementary profiles. Like/pass to match.
-4. **Team Mog Score** – When two (or more) devs match, they get a combined team score that rewards *complementary* skills, not just high individual scores.
-5. **Chat + Voice** – Matched users get a built-in real-time chat and can jump into a voice call.
+✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only)
+
+⏳ Later: persistent swipes & matches, Intersect Engine, Mog Score, chat, voice, GitHub login.
 
 ## Tech stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Language / runtime | **C# on .NET 10 (LTS)** | One language for UI, server and logic |
-| UI | **Blazor Web App** (Interactive Server render mode) | Write UI in C# + Razor, no separate JS frontend |
-| Styling | Bootstrap (ships with template) | Zero setup |
-| Auth | ASP.NET Core Identity + GitHub OAuth | Built in; GitHub login gives us the username for stats |
-| Database | EF Core — SQLite locally, PostgreSQL in prod | No DB install needed to start |
-| Real-time chat | ASP.NET Core **SignalR** | Built into ASP.NET Core |
-| Voice | Browser **WebRTC** via JS interop, signaling over SignalR | Peer-to-peer audio, no paid service |
-| Scoring | Pure C# in `MogMatch.Core` | Fully unit-testable |
-| Tests | xUnit | Default .NET test framework |
-
-## Repo docs
-
-| File | What's in it |
+| Layer | Tech |
 |---|---|
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Setup, git workflow, code style — **start here** |
-| [`CLAUDE.md`](CLAUDE.md) | Context for Claude Code / AI assistants |
-| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Features, user flows, screens, MVP scope |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design, solution structure, data model |
-| [`docs/MOG_SCORE.md`](docs/MOG_SCORE.md) | The individual + team scoring algorithm |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Hackathon task breakdown |
-| [`.claude/skills/`](.claude/skills/) | Claude Code skills for common dev tasks |
+| Frontend | React 19 + Vite + TypeScript, Tailwind CSS v4, React Router, Lucide icons |
+| Backend | Python 3.12+, Flask, Flask-CORS, Flask-SQLAlchemy, Flask-Migrate, python-dotenv |
+| Database | SQLite (dev) via SQLAlchemy ORM — portable UUID/JSON columns, so PostgreSQL is a `DATABASE_URL` change |
+| Tests | pytest (backend), `tsc` type checking (frontend) |
 
-## Quick start
+## Repository structure
 
-```bash
-git clone https://github.com/Phinx149/social-coding-Hackathon.git
-cd social-coding-Hackathon
-dotnet restore
-dotnet ef database update --project src/MogMatch.Web
-dotnet watch --project src/MogMatch.Web     # https://localhost:5001
+```
+.
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py          # Flask application factory + JSON error handlers
+│   │   ├── config.py            # env-driven config (DATABASE_URL, CORS_ORIGINS, DEMO_USER_EMAIL)
+│   │   ├── extensions.py        # db, migrate (+ SQLite foreign keys on)
+│   │   ├── models/              # User, Profile, ProfileLink, Project
+│   │   ├── routes/              # health.py, profiles.py
+│   │   ├── services/            # profile_service.py: filtering, validation, serialization
+│   │   └── seed.py              # `flask seed` command + sample data
+│   ├── migrations/              # Alembic migrations (Flask-Migrate)
+│   ├── tests/                   # pytest
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── run.py
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # layout/, profiles/, discover/, forms/, common/
+│   │   ├── pages/               # Discover, Profile, EditProfile, Settings, NotFound
+│   │   ├── services/api.ts      # typed fetch wrapper for the Flask API
+│   │   ├── types/profile.ts     # TS interfaces matching API responses
+│   │   ├── hooks/
+│   │   ├── App.tsx              # routes
+│   │   └── main.tsx
+│   ├── .env.example
+│   ├── package.json
+│   └── vite.config.ts
+├── docs/                        # product, architecture, roadmap, scoring notes
+├── .claude/skills/              # Claude Code skills for common dev tasks
+├── CLAUDE.md
+└── CONTRIBUTING.md
 ```
 
-> The solution isn't scaffolded yet — see `docs/ROADMAP.md` → Phase 0. In Claude Code, run the `/setup-project` skill to scaffold it.
+## Prerequisites
+
+- **Python 3.12+** — `python --version` (Windows: `py -3.12 --version` or newer)
+- **Node.js 20.19+ or 22+** and npm — `node -v`
+- **Git**
+
+## Backend setup
+
+From the `backend/` folder:
+
+**macOS / Linux / WSL**
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+flask db upgrade        # create tables
+flask seed              # demo user + 10 developers
+python run.py           # http://localhost:5001
+```
+
+**Windows (PowerShell)**
+```powershell
+cd backend
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1      # if blocked: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+pip install -r requirements.txt
+Copy-Item .env.example .env
+flask db upgrade
+flask seed
+python run.py
+```
+
+> `flask` commands find the app through `FLASK_APP=run.py` in `.env`. Run them from `backend/` with the venv active.
+
+## Frontend setup
+
+From the `frontend/` folder (any OS):
+```bash
+cd frontend
+npm install
+cp .env.example .env.local      # Windows PowerShell: Copy-Item .env.example .env.local
+npm run dev                     # http://localhost:5173
+```
+
+## Environment variables
+
+**`backend/.env`**
+| Variable | Default | Purpose |
+|---|---|---|
+| `FLASK_APP` | `run.py` | Lets `flask db` / `flask seed` find the app |
+| `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | SQLAlchemy URL, e.g. `postgresql://user:pass@host/db` |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origins allowed to call `/api/*` |
+| `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded user `/api/profiles/me` acts as |
+| `PORT` | `5001` | Port for `python run.py` (5000 clashes with AirPlay on macOS) |
+
+**`frontend/.env.local`**
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:5001` | Flask API base URL |
+
+Never commit `.env`, `.env.local` or `*.db` files — they're git-ignored.
+
+## Database migrations
+
+Run from `backend/` with the venv active:
+```bash
+flask db upgrade                         # apply all migrations
+flask db migrate -m "add something"      # after changing models: generate a migration
+                                         # → review the file in migrations/versions/ before committing
+flask db downgrade                       # undo the last migration
+```
+
+## Seed data
+
+```bash
+flask seed           # idempotent: creates missing seed profiles, never overwrites edited ones
+flask seed --reset   # restores the demo user and all seeded profiles to their defaults
+```
+Seeds one **demo user** (Jordan Avery, the "you" of the app) plus 10 developers across frontend, backend, full-stack, AI/ML, game dev, cybersecurity, data engineering, mobile and DevOps.
+
+## Running locally
+
+Two terminals:
+1. `backend/` → activate venv → `python run.py`
+2. `frontend/` → `npm run dev`
+
+Open http://localhost:5173. The green **ping** pill in the top bar confirms the frontend can reach the API.
+
+## Tests & checks
+
+```bash
+# backend (from backend/, venv active)
+pytest
+
+# frontend (from frontend/)
+npm run typecheck
+npm run build
+```
+
+## API
+
+All responses are JSON. Errors look like `{"error": {"message": "...", "fields": {"field": "problem"}}}`.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
+| GET | `/api/profiles` | Discoverable profiles (excludes the demo user) → `{"profiles": [...], "count": n}` |
+| GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
+| GET | `/api/profiles/me` | The demo user's profile |
+| PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
+
+**`GET /api/profiles` query params** (all optional, case-insensitive):
+| Param | Example | Behavior |
+|---|---|---|
+| `q` | `q=rust` | Text search over name, username, bio, location, education, IDE, skills, interests, AI agents, project titles |
+| `skills` | `skills=Rust,Frontend` or repeated | Profile must have **all** listed skills |
+| `interests` | `interests=AI` | Profile must have **all** listed interests |
+| `location` | `location=berlin` | Substring match |
+
+**Profile shape**
+```json
+{
+  "id": "uuid", "user_id": "uuid",
+  "full_name": "Maya Chen", "username": "mayacodes", "avatar_url": null,
+  "location": "San Francisco, CA", "education": "B.A. Cognitive Science, UC Berkeley",
+  "bio": "...", "favorite_ide": "VS Code", "favorite_ai_agents": ["Cursor", "Claude Code"],
+  "skills": ["Frontend", "TypeScript", "React"], "interests": ["Design Systems"],
+  "experience_level": "Senior", "looking_for": ["Side project"],
+  "links": [{"id": "uuid", "label": "GitHub", "url": "https://..."}],
+  "projects": [{"id": "uuid", "title": "Prism UI", "description": "...", "project_url": "https://...", "technologies": ["React"]}],
+  "created_at": "ISO-8601", "updated_at": "ISO-8601"
+}
+```
+
+**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for`, `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
+- `links` and `projects`, when sent, **replace** the existing lists.
+- Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
+- `400` on invalid data or unknown fields, `409` if the username is taken.
+
+## Known limitations (this milestone)
+
+- No authentication: `/me` is always the server-configured demo user.
+- Likes/passes reset on page reload (React state only).
+- Filtering runs in Python after loading all profiles — fine for hackathon scale.
+- No avatar upload; avatars are URLs with an initials fallback.

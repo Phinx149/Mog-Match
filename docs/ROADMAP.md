@@ -1,34 +1,41 @@
 # Hackathon Roadmap
 
-Split work by **vertical feature**, not by layer, so each person can ship something end-to-end. Tick boxes in PRs.
+Three devs, 24 hours. Split work by **vertical feature** so each person ships end-to-end. Branch off `dev`, PR into `dev`, merge `dev` → `main` when demo-ready.
 
-## Phase 0 — Setup (everyone, first hour)
-- [ ] Scaffold the solution (`/setup-project` skill) and push to `main`
-- [ ] Create a GitHub OAuth app (callback `https://localhost:5001/signin-github`), share ID/secret privately
-- [ ] Everyone installs the .NET 10 SDK, clones, runs `dotnet watch`, and makes a test PR (add your name to the Team table below)
+## Milestone 1 — Boilerplate ✅
+- [x] Flask app factory, models, migrations, seed command
+- [x] Profile API (list/filter, get, get/patch `me`) + pytest suite
+- [x] React app: Discover (search, filters, like/pass), Profile, Edit Profile, Settings placeholder
+- [x] README with setup + API docs
 
-## Phase 1 — MVP
-| Track | Tasks | Skill to use |
-|---|---|---|
-| **Auth + Profile** | GitHub login, onboarding form (`EditForm`), profile page, skills editor | `/new-feature`, `/db-migration` |
-| **Mog Score** | `MogScoreCalculator` + xUnit tests, `GitHubStatsService`, breakdown UI + `MogBadge` | `/mog-score` |
-| **Discover + Match** | Swipe/Match entities, `MatchService`, `RecommendationRanker`, discover card UI | `/db-migration`, `/mog-score` |
-| **Chat** | Message entity, `ChatHub`, `ChatWindow`, matches list page | `/realtime-chat` |
+## Milestone 2 — Swipes & matches (next)
+| Task | Notes |
+|---|---|
+| `swipes` + `matches` models & migration | see planned tables in `ARCHITECTURE.md` |
+| `POST /api/swipes` | record like/pass for the demo user; create match on mutual like |
+| `GET /api/matches` | list my matches |
+| Discover excludes already-swiped profiles | server-side |
+| Matches page + nav item | |
+| Seed: a few seed profiles that already "liked" the demo user | so the demo produces a match instantly |
 
-## Phase 2 — Polish & stretch
-- [ ] Team Mog Score on matches + chat header
-- [ ] Voice chat (`/voice-chat`)
-- [ ] Mog Score reveal animation 🎉
-- [ ] Leaderboard
-- [ ] Deploy (Azure App Service free tier, or a container on Railway/Fly.io)
+## Milestone 3 — Intersect Engine (the differentiator)
+- [ ] Compute overlap (shared skills/interests) and complement (skills only one has) for a pair
+- [ ] Generate 2–3 project ideas for a match (LLM call, cached per match)
+- [ ] "Intersect" panel on the match/profile page
 
-## Phase 3 — Demo (last 2 hours)
-- [ ] Seed 15–20 fake profiles (`DbSeeder` on startup in Development)
-- [ ] Freeze features — bug fixes only
-- [ ] Rehearse demo: sign up → score reveal → swipe → match → chat → call
-- [ ] Slides / README screenshots
+## Milestone 4 — Stretch
+- [ ] Mog Score (see `MOG_SCORE.md`)
+- [ ] Real-time chat for matches
+- [ ] GitHub OAuth (replace demo user)
+- [ ] Deploy
+
+## Demo prep (last 2 hours)
+- [ ] Feature freeze — bug fixes only
+- [ ] `flask seed --reset` before demo
+- [ ] Rehearse: Discover → filter → like → match → Intersect ideas → profile edit
+- [ ] README screenshots
 
 ## Team
-| Name | GitHub | Track |
+| Name | GitHub | Focus |
 |---|---|---|
 | | | |

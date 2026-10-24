@@ -1,88 +1,54 @@
 ---
 name: db-migration
-description: Add or change EF Core entities, DbContext configuration, migrations, or seed data for MogMatch. Use when someone says "add a column", "new table", "migration", "no such table", "pending model changes", "seed fake profiles", or edits src/MogMatch.Web/Data/.
+description: Add or change SQLAlchemy models, Flask-Migrate/Alembic migrations, or seed data in MogMatch's Flask backend. Use when someone says "add a column", "new table", "migration", "no such table", "flask db", "seed", "reset the database", or edits backend/app/models/ or backend/app/seed.py.
 ---
 
-# Database Migration (EF Core)
+# Database Migration (Flask-SQLAlchemy + Flask-Migrate)
 
-Schema reference: `docs/ARCHITECTURE.md#data-model-ef-core-entities`. Files: `src/MogMatch.Web/Data/AppDbContext.cs`, `Data/Entities/`, `Data/Migrations/`.
+Run everything from `backend/` with the venv active. Schema overview: `docs/ARCHITECTURE.md#data-model`.
 
 ## Workflow
-1. Add/change the entity class in `Data/Entities/` (and a `DbSet<T>` in `AppDbContext` if it's new).
-2. Configure keys/constraints in `OnModelCreating` (see below).
-3. Create the migration:
-   ```bash
-   dotnet ef migrations add AddBioToProfile --project src/MogMatch.Web
-   ```
-   Name it in PascalCase describing the change.
-4. **Open the generated file and read it** — make sure it does what you expect (no surprise `DropTable`).
-5. Apply: `dotnet ef database update --project src/MogMatch.Web`
-6. Commit the entity change **and** the migration files (including `AppDbContextModelSnapshot.cs`) together.
+1. Edit/add the model in `app/models/` and export it from `app/models/__init__.py`.
+2. Generate: `flask db migrate -m "add swipes table"`
+3. **Open the new file in `migrations/versions/` and read it.** Autogenerate misses some things (renames look like drop+add; data changes aren't generated). Fix it by hand if needed.
+4. Apply: `flask db upgrade`
+5. Update `seed.py` if the feature needs demo data, `profile_service.to_dict` / `frontend/src/types/` if the API shape changes.
+6. Run `pytest` (tests build the schema with `db.create_all()` from the models).
+7. Commit the model change **and** the migration file together.
 
-**Never edit or delete a migration that's already on `main`** — add a new one.
+Never edit a migration that's already merged into `dev` — add a new one.
 
-## OnModelCreating patterns for this app
-```csharp
-protected override void OnModelCreating(ModelBuilder b)
-{
-    base.OnModelCreating(b);   // required for Identity tables
+## Model conventions
+```python
+import uuid
+from ..extensions import db
+from .base import TimestampMixin
 
-    b.Entity<Profile>(e =>
-    {
-        e.HasIndex(p => p.UserId).IsUnique();
-        e.Property(p => p.Headline).HasMaxLength(80);
-        e.Property(p => p.Bio).HasMaxLength(1000);
-        e.HasOne<AppUser>().WithOne(u => u.Profile).HasForeignKey<Profile>(p => p.UserId);
-    });
+class Swipe(TimestampMixin, db.Model):
+    __tablename__ = "swipes"
 
-    b.Entity<ProfileSkill>().HasKey(s => new { s.ProfileId, s.Name });           // composite key
-    b.Entity<Swipe>().HasKey(s => new { s.SwiperId, s.TargetId });
-    b.Entity<Swipe>().Property(s => s.Action).HasConversion<string>();           // store enum as text
-    b.Entity<Match>().HasIndex(m => new { m.UserAId, m.UserBId }).IsUnique();
-    b.Entity<Message>().Property(m => m.Body).HasMaxLength(4000);
-    b.Entity<Message>().HasIndex(m => new { m.MatchId, m.CreatedAt });
-    b.Entity<Block>().HasKey(x => new { x.BlockerId, x.BlockedId });
-}
+    id = db.Column(db.Uuid, primary_key=True, default=uuid.uuid4)          # UUID PKs everywhere
+    swiper_id = db.Column(db.Uuid, db.ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_id = db.Column(db.Uuid, db.ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    action = db.Column(db.String(10), nullable=False)                      # validate values in the service
+
+    __table_args__ = (db.UniqueConstraint("swiper_id", "target_id"),)
 ```
+- List data → `db.Column(db.JSON, nullable=False, default=list)`. When updating, **assign a new list** (`profile.skills = [...]`); in-place `.append()` isn't detected.
+- Owned children → `relationship(..., cascade="all, delete-orphan")` + `ondelete="CASCADE"` on the FK.
+- Avoid SQLite-only SQL so `DATABASE_URL=postgresql://...` keeps working.
+- Migrations run in batch mode (`render_as_batch=True`) so SQLite can alter tables.
 
-## Mutual-like → Match (in `MatchService`, not a DB trigger)
-```csharp
-public async Task<Match?> SwipeAsync(Guid me, Guid target, SwipeAction action)
-{
-    await using var db = await dbFactory.CreateDbContextAsync();
-    await using var tx = await db.Database.BeginTransactionAsync();
-
-    db.Swipes.Add(new Swipe { SwiperId = me, TargetId = target, Action = action, CreatedAt = DateTime.UtcNow });
-
-    Match? match = null;
-    var theyLikedMe = action != SwipeAction.Pass && await db.Swipes.AnyAsync(s =>
-        s.SwiperId == target && s.TargetId == me && s.Action != SwipeAction.Pass);
-
-    if (theyLikedMe)
-    {
-        var (a, b) = me.CompareTo(target) < 0 ? (me, target) : (target, me);   // ordered pair
-        match = new Match { UserAId = a, UserBId = b, CreatedAt = DateTime.UtcNow /* + TeamScore */ };
-        db.Matches.Add(match);
-    }
-
-    await db.SaveChangesAsync();
-    await tx.CommitAsync();
-    return match;
-}
-```
-
-## Seed data
-Create `Data/DbSeeder.cs` with 15–20 varied profiles (different roles/skills so team scores look interesting). Call it from `Program.cs` only when `app.Environment.IsDevelopment()` and the Profiles table is empty.
-
-## SQLite vs PostgreSQL
-- Dev uses SQLite (`Data Source=mogmatch.db`, file is git-ignored). Prod uses PostgreSQL via `UseNpgsql` when the connection string isn't SQLite.
-- Avoid provider-specific SQL in migrations. Stick to EF APIs.
+## Seed data (`app/seed.py`)
+- `flask seed` must stay **idempotent**: create what's missing, skip what exists, never overwrite edits.
+- Destructive refresh only behind `flask seed --reset`.
+- Look up seeded rows by stable keys (email / username), not by generated UUIDs.
 
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
-| `SQLite Error 1: no such table` | `dotnet ef database update --project src/MogMatch.Web` |
-| `The model for context has pending changes` | you changed an entity without adding a migration |
-| Migration conflict after pulling `main` | remove *your unmerged* migration (`dotnet ef migrations remove`), pull, re-add it |
-| Local DB in a weird state (dev only) | delete `mogmatch.db`, run `database update` again |
-| `A second operation was started on this context` | you're sharing a context across concurrent calls — use `IDbContextFactory` and `await using` per operation |
+| `no such table` | `flask db upgrade` |
+| `Target database is not up to date` | `flask db upgrade`, then migrate again |
+| `Can't locate revision` / two heads after merging `dev` | `flask db heads`; if two, `flask db merge heads -m "merge"` then `flask db upgrade` |
+| Autogenerate produced an empty migration | model not imported in `app/models/__init__.py` |
+| Dev DB hopelessly out of sync (dev only!) | stop Flask, delete `instance/mogmatch.db`, `flask db upgrade && flask seed` |
