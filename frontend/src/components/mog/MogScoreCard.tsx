@@ -37,7 +37,7 @@ export default function MogScoreCard({ mog, showTips }: MogScoreCardProps) {
         </p>
       </div>
 
-      <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+      <dl className="mt-5 grid gap-3">
         {components.map((key) => {
           const value = mog.breakdown[key];
           const max = mog.max_breakdown[key];
