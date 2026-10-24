@@ -26,7 +26,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init.headers },
+      headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...init.headers },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
@@ -70,9 +70,12 @@ export function getMyProfile(signal?: AbortSignal) {
   return request<Profile>("/api/profiles/me", { signal });
 }
 
-export function updateMyProfile(update: ProfileUpdate) {
+export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
+  const body = new FormData();
+  body.append("profile", JSON.stringify(update));
+  if (photo) body.append("photo", photo);
   return request<Profile>("/api/profiles/me", {
     method: "PATCH",
-    body: JSON.stringify(update),
+    body: photo ? body : JSON.stringify(update),
   });
 }

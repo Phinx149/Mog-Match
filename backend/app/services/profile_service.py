@@ -1,11 +1,12 @@
 """Profile reads, filtering, serialization and validated updates."""
 
 import re
+import hashlib
 import uuid
 from typing import Any
 from urllib.parse import urlparse
 
-from flask import current_app
+from flask import current_app, url_for
 from sqlalchemy.orm import selectinload
 
 from ..extensions import db
@@ -147,7 +148,8 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "user_id": str(profile.user_id),
         "full_name": profile.full_name,
         "username": profile.username,
-        "avatar_url": profile.avatar_url,
+        "avatar_url": (url_for("profiles.get_photo", profile_id=profile.id, v=hashlib.sha256(profile.user.photo_data).hexdigest()[:16], _external=True)
+                       if profile.user.photo_data else profile.avatar_url),
         "location": profile.location,
         "education": profile.education,
         "bio": profile.bio,
@@ -371,16 +373,29 @@ def validate_update(data: Any) -> dict[str, Any]:
 
 # ---------- writes ----------
 
-def update_profile(profile: Profile, data: Any) -> Profile:
-    cleaned = validate_update(data)
+def update_profile(profile: Profile, data: Any, photo=None, extra_errors=None) -> Profile:
+    errors = dict(extra_errors or {})
+    try:
+        cleaned = validate_update(data)
+    except ValidationError as error:
+        errors.update(error.fields)
+        cleaned = {}
+        if not error.fields:
+            raise
 
-    new_username = cleaned.get("username")
+    new_username = data.get("username") if isinstance(data, dict) else None
+    new_username = new_username.strip() if isinstance(new_username, str) else None
     if new_username and new_username.lower() != profile.username.lower():
         taken = Profile.query.filter(
             db.func.lower(Profile.username) == new_username.lower(), Profile.id != profile.id
         ).first()
         if taken:
-            raise ValidationError({"username": "That username is already taken."}, "Username taken.", conflict=True)
+            errors["username"] = "That username is already taken."
+
+    if errors:
+        raise ValidationError(errors, conflict=bool(new_username and errors.get("username") == "That username is already taken."))
+    if photo:
+        profile.user.photo_data, profile.user.photo_mimetype = photo
 
     for field in STRING_FIELDS:
         if field in cleaned:

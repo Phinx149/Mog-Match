@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { useId } from "react";
 
 interface ToggleChipsProps {
   /** Accessible name for the group, e.g. "Looking for". */
@@ -6,15 +7,18 @@ interface ToggleChipsProps {
   options: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  error?: string;
 }
 
 /** A row of pills where each one switches on/off. Use it when the allowed values are a fixed list. */
-export default function ToggleChips({ label, options, selected, onChange }: ToggleChipsProps) {
+export default function ToggleChips({ label, options, selected, onChange, error }: ToggleChipsProps) {
+  const errorId = useId();
   const toggle = (option: string) =>
     onChange(selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]);
 
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
+    <div>
+    <div role="group" aria-label={label} aria-invalid={!!error} aria-describedby={error ? errorId : undefined} className={`flex flex-wrap gap-1.5 ${error ? "rounded-lg border border-rose-500 p-2" : ""}`}>
       {options.map((option) => {
         const on = selected.includes(option);
         return (
@@ -34,6 +38,8 @@ export default function ToggleChips({ label, options, selected, onChange }: Togg
           </button>
         );
       })}
+    </div>
+    {error && <p id={errorId} className="mt-1 text-xs text-rose-300">{error}</p>}
     </div>
   );
 }
