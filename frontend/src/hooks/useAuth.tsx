@@ -24,10 +24,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => setUser(null)) // API offline: the login page shows the real error when you try
       .finally(() => setChecking(false));
 
+    // All normal tabs share one login cookie. If another tab logged in as someone else, this tab
+    // must notice, or it would show one name while the API answers as another. Re-check on focus.
+    const recheck = () => {
+      getSession()
+        .then((session) => setUser((current) => (current?.id === session.user?.id ? current : session.user)))
+        .catch(() => {});
+    };
     // Any API call that comes back 401 means the session ended (e.g. after `flask seed --reset`).
     const onLoggedOut = () => setUser(null);
+    window.addEventListener("focus", recheck);
     window.addEventListener(LOGGED_OUT_EVENT, onLoggedOut);
-    return () => window.removeEventListener(LOGGED_OUT_EVENT, onLoggedOut);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener(LOGGED_OUT_EVENT, onLoggedOut);
+    };
   }, []);
 
   const logIn = useCallback(async (username: string, password: string) => {

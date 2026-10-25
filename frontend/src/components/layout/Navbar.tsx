@@ -33,7 +33,7 @@ export default function Navbar({ children }: NavbarProps) {
             <Link
               to="/profile"
               title="Logged in as"
-              className="hidden font-mono text-xs text-cyan-300 hover:underline sm:inline"
+              className="max-w-24 truncate font-mono text-xs text-cyan-300 hover:underline sm:max-w-none"
             >
               @{user.username}
             </Link>

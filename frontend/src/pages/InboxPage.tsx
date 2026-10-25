@@ -9,6 +9,8 @@ import type { InboxResponse, Invite, InviteStatus } from "../types/invite";
 
 type Tab = "received" | "sent";
 
+const POLL_MS = 5000;
+
 const STATUS_STYLES: Record<InviteStatus, string> = {
   pending: "border-amber-400/40 bg-amber-400/10 text-amber-200",
   accepted: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
@@ -42,6 +44,20 @@ export default function InboxPage() {
   }, [reloadKey]);
 
   const refresh = () => setReloadKey((key) => key + 1);
+
+  // New invites can arrive while this page is open: re-check quietly every few seconds and when
+  // you come back to the tab. (No spinner, so the list doesn't flicker.)
+  useEffect(() => {
+    const quietReload = () => {
+      if (document.visibilityState === "visible") getInbox().then(setInbox).catch(() => {});
+    };
+    const timer = window.setInterval(quietReload, POLL_MS);
+    window.addEventListener("focus", quietReload);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", quietReload);
+    };
+  }, []);
 
   const respond = (invite: Invite, status: "accepted" | "declined") => {
     setBusyId(invite.id);

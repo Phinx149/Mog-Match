@@ -11,7 +11,7 @@ const ITEMS = [
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
-/** Invites waiting for my answer. Re-checked on every page change and after I answer one. */
+/** Invites waiting for my answer. Re-checked on page change, tab focus, every 15s, and after I answer one. */
 function usePendingInvites(): number {
   const { pathname } = useLocation();
   const [count, setCount] = useState(0);
@@ -24,9 +24,13 @@ function usePendingInvites(): number {
         .catch(() => {}); // the badge is a nice-to-have; pages show their own errors
     recount();
     window.addEventListener(INVITES_CHANGED_EVENT, recount);
+    window.addEventListener("focus", recount);
+    const timer = window.setInterval(recount, 15000); // so new invites light up the badge
     return () => {
       controller.abort();
+      window.clearInterval(timer);
       window.removeEventListener(INVITES_CHANGED_EVENT, recount);
+      window.removeEventListener("focus", recount);
     };
   }, [pathname]);
 

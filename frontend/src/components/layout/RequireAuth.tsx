@@ -9,5 +9,6 @@ export default function RequireAuth() {
 
   if (checking) return <LoadingState label="Checking who you are…" />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <Outlet />;
+  // Keyed by user: if the logged-in user changes, every page reloads its data for the new user.
+  return <Outlet key={user.id} />;
 }
