@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from ..services.auth_service import current_profile_or_401
-from ..services import chat_service, idea_service, studio_service
+from ..services import chat_service, connection_service, idea_service, studio_service
 from ..services.profile_service import ValidationError
 
 bp = Blueprint("chat", __name__, url_prefix="/api/conversations")
@@ -10,6 +10,18 @@ bp = Blueprint("chat", __name__, url_prefix="/api/conversations")
 @bp.get("")
 def conversations():
     return jsonify({"conversations": chat_service.list_conversations(current_profile_or_401())})
+
+
+@bp.post("/<uuid:invite_id>/unmatch")
+def unmatch(invite_id):
+    connection_service.end_connection(current_profile_or_401(), invite_id)
+    return jsonify({"ok": True})
+
+
+@bp.post("/<uuid:invite_id>/block")
+def block(invite_id):
+    connection_service.end_connection(current_profile_or_401(), invite_id, block=True)
+    return jsonify({"ok": True})
 
 
 @bp.get("/<uuid:invite_id>/messages")

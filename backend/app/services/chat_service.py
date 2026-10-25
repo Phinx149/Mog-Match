@@ -11,6 +11,7 @@ from ..extensions import db, socketio
 from ..models import ChatMessage, Invite, ProjectIdea
 from .invite_service import _person
 from .profile_service import ValidationError
+from .connection_service import blocked_ids, is_blocked
 
 MAX_MESSAGE_LENGTH = 2000
 PAGE_SIZE = 50
@@ -36,14 +37,21 @@ def notify(invite, event="inbox:updated", payload=None):
         socketio.emit(event, payload or {"conversation_id": str(invite.id)}, to=user_room(profile_id))
 
 
-def conversation(me, invite_id):
+def conversation(me, invite_id, *, writable=False):
     try:
         invite_id = uuid.UUID(str(invite_id))
     except (ValueError, TypeError):
         abort(404, description="Conversation not found.")
-    invite = db.session.get(Invite, invite_id)
-    if invite is None or me.id not in (invite.sender_id, invite.recipient_id) or invite.status != "accepted":
+    query = Invite.query.filter_by(id=invite_id).populate_existing()
+    invite = (query.with_for_update() if writable else query).first()
+    if invite is None or me.id not in (invite.sender_id, invite.recipient_id):
         abort(404, description="Conversation not found.")
+    if is_blocked(invite.sender_id, invite.recipient_id):
+        abort(404, description="Conversation not found.")
+    if invite.status != "accepted" and invite.unmatched_at is None:
+        abort(404, description="Conversation not found.")
+    if writable and invite.status != "accepted":
+        abort(409, description="You are unmatched. Both people must accept a rematch before sending new messages.")
     return invite
 
 
@@ -67,14 +75,18 @@ def conversation_dict(invite, me):
     unread = ChatMessage.query.filter(ChatMessage.invite_id == invite.id,
                                      ChatMessage.sender_id != me.id, ChatMessage.id > read_id).count()
     return {"id": str(invite.id), "person": _person(other), "opening_message": invite.message,
+            "status": invite.status, "can_message": invite.status == "accepted",
+            "rematch_requested_by": str(invite.sender_id) if invite.status == "pending" else None,
             "last_message": message_dict(latest) if latest else None, "unread_count": unread,
             "updated_at": timestamp(latest.created_at if latest else invite.updated_at)}
 
 
 def list_conversations(me):
-    invites = Invite.query.filter(Invite.status == "accepted", or_(Invite.sender_id == me.id,
+    hidden = blocked_ids(me.id)
+    invites = Invite.query.filter(or_(Invite.status == "accepted", Invite.unmatched_at.isnot(None)), or_(Invite.sender_id == me.id,
                                                                    Invite.recipient_id == me.id)).all()
-    return sorted([conversation_dict(invite, me) for invite in invites],
+    return sorted([conversation_dict(invite, me) for invite in invites
+                   if invite.sender_id not in hidden and invite.recipient_id not in hidden],
                   key=lambda row: row["updated_at"], reverse=True)
 
 
@@ -106,7 +118,7 @@ def send_message(me, data):
         errors["client_token"] = "A unique message token is required."
     if errors:
         raise ValidationError(errors, "Couldn't send message.")
-    invite = conversation(me, data.get("conversation_id"))
+    invite = conversation(me, data.get("conversation_id"), writable=True)
     existing = ChatMessage.query.filter_by(invite_id=invite.id, sender_id=me.id, client_token=token).first()
     if existing:
         return message_dict(existing)

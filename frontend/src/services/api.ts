@@ -169,6 +169,10 @@ export function getConversations(signal?: AbortSignal) {
   return request<{ conversations: Conversation[] }>("/api/conversations", { signal });
 }
 
+export function endConnection(id: string, action: "unmatch" | "block") {
+  return request<{ ok: boolean }>(`/api/conversations/${encodeURIComponent(id)}/${action}`, { method: "POST" });
+}
+
 export function getMessages(id: string, signal?: AbortSignal, before?: number) {
   return request<{ messages: ChatMessage[]; has_more: boolean }>(
     `/api/conversations/${encodeURIComponent(id)}/messages${before ? `?before=${before}` : ""}`, { signal });

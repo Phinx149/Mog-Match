@@ -9,6 +9,7 @@ from PIL import Image, UnidentifiedImageError
 from ..services import auth_service, profile_service, swipe_service
 from ..services.auth_service import current_profile_or_401
 from ..services.profile_service import ValidationError
+from ..services.connection_service import is_blocked
 
 bp = Blueprint("profiles", __name__, url_prefix="/api/profiles")
 
@@ -99,6 +100,9 @@ def update_my_profile():
 
 @bp.get("/<uuid:profile_id>/photo")
 def get_photo(profile_id):
+    me = auth_service.current_profile()
+    if me and is_blocked(me.id, profile_id):
+        abort(404)
     profile = profile_service.get_profile(profile_id)
     if profile is None or not profile.user.photo_data:
         abort(404)
@@ -108,6 +112,9 @@ def get_photo(profile_id):
 
 @bp.get("/<uuid:profile_id>")
 def get_profile(profile_id: uuid.UUID):
+    me = auth_service.current_profile()
+    if me and is_blocked(me.id, profile_id):
+        abort(404, description="Profile not found.")
     profile = profile_service.get_profile(profile_id)
     if profile is None:
         abort(404, description="Profile not found.")

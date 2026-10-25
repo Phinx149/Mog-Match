@@ -9,6 +9,7 @@ from ..models import Profile, Swipe
 from . import profile_service
 from .mog_match import compute_match, rank_matches
 from .profile_service import ValidationError
+from .connection_service import blocked_ids, is_blocked
 
 ACTIONS = ("like", "pass")
 
@@ -42,7 +43,7 @@ def record_swipe(me: Profile, data: Any) -> dict[str, Any]:
     if target_id == me.id:
         raise ValidationError({"target_id": "You can't swipe on yourself."}, "Invalid swipe.")
     target = profile_service.get_profile(target_id)
-    if target is None:
+    if target is None or is_blocked(me.id, target_id):
         raise NotFoundError("Profile not found.")
 
     swipe = Swipe.query.filter_by(swiper_id=me.id, target_id=target.id).one_or_none()
@@ -60,13 +61,14 @@ def record_swipe(me: Profile, data: Any) -> dict[str, Any]:
 
 def swiped_ids(me: Profile) -> set[uuid.UUID]:
     """Everyone I've already liked or passed, so Discover can hide them."""
-    return {row.target_id for row in Swipe.query.filter_by(swiper_id=me.id)}
+    return {row.target_id for row in Swipe.query.filter_by(swiper_id=me.id)} | blocked_ids(me.id)
 
 
 def list_matches(me: Profile) -> list[dict]:
     """Everyone I liked, most similar to me first."""
     liked = Swipe.query.filter_by(swiper_id=me.id, action="like").all()
-    others = [profile_service.to_dict(swipe.target) for swipe in liked]
+    hidden = blocked_ids(me.id)
+    others = [profile_service.to_dict(swipe.target) for swipe in liked if swipe.target_id not in hidden]
     # Sort by name first so ties in the match score come out in a stable order.
     others.sort(key=lambda p: p["full_name"].lower())
     return rank_matches(profile_service.to_dict(me), others)
