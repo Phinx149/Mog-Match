@@ -43,6 +43,7 @@ git push -u origin feat/discover-filters
 Rules:
 - Don't push directly to `main`.
 - Keep PRs small (one feature/fix).
+- CI (`.github/workflows/ci.yml`) runs `pytest`, the TypeScript check and the frontend build on every PR. Get it green before asking for review; to reproduce a failure locally, run `python -m pytest` in `backend/` and `npm run typecheck && npm run build` in `frontend/`.
 - Pull `dev` into your branch often: `git pull origin dev`.
 - Two people generated migrations at the same time? See the `db-migration` skill.
 - Merge conflict? Keep the right code, delete the `<<<<<<<`/`=======`/`>>>>>>>` markers, re-run tests, commit.
