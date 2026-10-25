@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from ..extensions import db
 from ..models import Profile, ProfileLink, Project
 from .mog_score import compute_mog_score, tier_floor
-from .tech_catalog import ALL_TECHNOLOGIES, normalize_technology
+from .tech_catalog import ALIASES, ALL_TECHNOLOGIES, normalize_technology
 
 EXPERIENCE_LEVELS = ("Student", "Junior", "Mid-level", "Senior", "Lead")
 # What a profile can say it wants from a match. Fixed (not free text) so filtering and the
@@ -184,14 +184,17 @@ def list_profiles(
     return results
 
 
-def filter_options() -> dict[str, list[str]]:
+def filter_options() -> dict[str, Any]:
     """Every value a profile may use for `skills` and `looking_for` (see `validate_update`).
 
-    The Discover filter menu and the Edit Profile pickers both read this, so they can't drift
-    from what the backend accepts.
+    The Discover filter menu and the Edit Profile form both read this, so they can't drift
+    from what the backend accepts. `skill_aliases` (nickname -> canonical skill, e.g. "js" ->
+    "JavaScript") lets the form flag an unknown skill as soon as it is added, because the
+    backend also accepts these spellings.
     """
     return {
         "skills": sorted(ALL_TECHNOLOGIES, key=str.lower),
+        "skill_aliases": dict(ALIASES),
         "looking_for": list(LOOKING_FOR_OPTIONS),
     }
 

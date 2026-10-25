@@ -8,6 +8,7 @@ import Navbar from "../components/layout/Navbar";
 import ThemePicker from "../components/profiles/ThemePicker";
 import { ApiError, getFilterOptions, getMyProfile, updateMyProfile } from "../services/api";
 import { EXPERIENCE_LEVELS, type Profile, type ProfileTheme, type ProfileUpdate } from "../types/profile";
+import { knownTechnologyKeys, unknownTechnologyError } from "../utils/techCatalog";
 import { DEFAULT_THEME, sameTheme } from "../utils/theme";
 
 type LinkDraft = { label: string; url: string };
@@ -63,6 +64,50 @@ function toForm(p: Profile, lookingForOptions: string[]): FormState {
 
 const orNull = (value: string) => (value.trim() ? value.trim() : null);
 
+// Same rules as the backend (profile_service.py). Each check returns an error message, or undefined when the
+// value is fine. They run when a field loses focus (or, for skills and technologies, whenever a tag is added or
+// removed) and again on save, so the two can't disagree.
+const USERNAME_PATTERN = /^[A-Za-z0-9_-]{3,40}$/;
+const HTTP_URL = /^https?:\/\/[^\s/?#]+/i;
+const AGENT_REQUIRED = "Add at least one coding agent.";
+const TECHNOLOGY_REQUIRED = "Add at least one technology.";
+
+const required = (value: string) => (value.trim() ? undefined : "This field is required.");
+const usernameError = (value: string) =>
+  required(value) ?? (USERNAME_PATTERN.test(value.trim()) ? undefined : "Use 3-40 letters, numbers, underscores or hyphens.");
+const optionalUrl = (value: string) =>
+  !value.trim() || HTTP_URL.test(value.trim()) ? undefined : "Must be a valid http(s) URL.";
+const requiredUrl = (value: string) => required(value) ?? optionalUrl(value);
+const requiredTag = (values: string[], message: string) => (values.some((value) => value.trim()) ? undefined : message);
+
+/** Every client-side error in the form, keyed the same way as the server's `fields`. */
+function validateForm(form: FormState, knownTechnologies: Set<string>): Record<string, string> {
+  const checks: [string, string | undefined][] = [
+    ["full_name", required(form.full_name)],
+    ["username", usernameError(form.username)],
+    ["avatar_url", optionalUrl(form.avatar_url)],
+    ["bio", required(form.bio)],
+    ["favorite_ide", required(form.favorite_ide)],
+    ["skills", unknownTechnologyError(form.skills, knownTechnologies, "skill")],
+    ["favorite_ai_agents", requiredTag(form.favorite_ai_agents, AGENT_REQUIRED)],
+  ];
+  form.links.forEach((link, index) => {
+    checks.push([`links[${index}].label`, required(link.label)], [`links[${index}].url`, requiredUrl(link.url)]);
+  });
+  form.projects.forEach((project, index) => {
+    checks.push(
+      [`projects[${index}].title`, required(project.title)],
+      [`projects[${index}].description`, required(project.description)],
+      [`projects[${index}].project_url`, optionalUrl(project.project_url)],
+      [
+        `projects[${index}].technologies`,
+        requiredTag(project.technologies, TECHNOLOGY_REQUIRED) ?? unknownTechnologyError(project.technologies, knownTechnologies, "technology"),
+      ],
+    );
+  });
+  return Object.fromEntries(checks.filter((check): check is [string, string] => check[1] !== undefined));
+}
+
 function toUpdate(form: FormState): ProfileUpdate {
   return {
     full_name: form.full_name,
@@ -86,6 +131,7 @@ function toUpdate(form: FormState): ProfileUpdate {
 export default function EditProfilePage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [lookingForOptions, setLookingForOptions] = useState<string[]>([]);
+  const [knownTechnologies, setKnownTechnologies] = useState<Set<string>>(new Set());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -104,6 +150,7 @@ export default function EditProfilePage() {
     Promise.all([getMyProfile(controller.signal), getFilterOptions(controller.signal)])
       .then(([profile, options]) => {
         setLookingForOptions(options.looking_for);
+        setKnownTechnologies(knownTechnologyKeys(options));
         setForm(toForm(profile, options.looking_for));
       })
       .catch((err: unknown) => {
@@ -116,15 +163,57 @@ export default function EditProfilePage() {
   if (loadError) return <ErrorState message={loadError} onRetry={() => window.location.reload()} />;
   if (!form) return <LoadingState label="Loading your profile…" />;
 
+  const clearErrors = (...keys: string[]) =>
+    setFieldErrors((current) => {
+      if (!keys.some((key) => key in current)) return current;
+      const next = { ...current };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+
+  // Shows an error on a field right now (on blur, or when a tag is added). It only ever adds one: editing a
+  // field clears its error (see `update`), so a server complaint such as "username taken" stays until the
+  // value actually changes.
+  const flagError = (key: string, message: string | undefined) => {
+    if (message) setFieldErrors((current) => ({ ...current, [key]: message }));
+  };
+
+  // Link and project errors are keyed by row position, so removing a row drops its errors and
+  // shifts the later rows' errors up; otherwise they would land on the wrong row.
+  const removeRowErrors = (prefix: "links" | "projects", removed: number) =>
+    setFieldErrors((current) => {
+      const next: Record<string, string> = {};
+      for (const [key, message] of Object.entries(current)) {
+        const match = /^(\w+)\[(\d+)\](.*)$/.exec(key);
+        if (!match || match[1] !== prefix) next[key] = message;
+        else if (Number(match[2]) < removed) next[key] = message;
+        else if (Number(match[2]) > removed) next[`${prefix}[${Number(match[2]) - 1}]${match[3]}`] = message;
+      }
+      return next;
+    });
+
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => (current ? { ...current, [key]: value } : current));
+    clearErrors(key);
     if (status.kind === "saved") setStatus({ kind: "idle" });
   };
 
-  const updateLink = (index: number, patch: Partial<LinkDraft>) =>
+  const updateLink = (index: number, patch: Partial<LinkDraft>) => {
     update("links", form.links.map((link, i) => (i === index ? { ...link, ...patch } : link)));
-  const updateProject = (index: number, patch: Partial<ProjectDraft>) =>
+    clearErrors(...Object.keys(patch).map((field) => `links[${index}].${field}`));
+  };
+  const updateProject = (index: number, patch: Partial<ProjectDraft>) => {
     update("projects", form.projects.map((project, i) => (i === index ? { ...project, ...patch } : project)));
+    clearErrors(...Object.keys(patch).map((field) => `projects[${index}].${field}`));
+  };
+  const removeLink = (index: number) => {
+    update("links", form.links.filter((_, i) => i !== index));
+    removeRowErrors("links", index);
+  };
+  const removeProject = (index: number) => {
+    update("projects", form.projects.filter((_, i) => i !== index));
+    removeRowErrors("projects", index);
+  };
   // The picker previews instantly, so drop the server's old complaints about the theme as soon as it changes.
   const updateTheme = (theme: ProfileTheme) => {
     update("theme", theme);
@@ -137,24 +226,10 @@ export default function EditProfilePage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const errors: Record<string, string> = {};
-    for (const key of ["full_name", "username", "bio", "favorite_ide"] as const) {
-      if (!form[key].trim()) errors[key] = "This field is required.";
-    }
-    if (!form.favorite_ai_agents.some((agent) => agent.trim())) {
-      errors.favorite_ai_agents = "Add at least one coding agent.";
-    }
-    form.projects.forEach((project, index) => {
-      for (const key of ["title", "description"] as const) {
-        if (!project[key].trim()) errors[`projects[${index}].${key}`] = "This field is required.";
-      }
-      if (!project.technologies.some((technology) => technology.trim())) {
-        errors[`projects[${index}].technologies`] = "Add at least one technology.";
-      }
-    });
+    const errors = validateForm(form, knownTechnologies);
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
-      setStatus({ kind: "error", message: "Please complete the required fields." });
+      setStatus({ kind: "error", message: "Some fields are missing or invalid." });
       return;
     }
     setStatus({ kind: "saving" });
@@ -189,15 +264,15 @@ export default function EditProfilePage() {
 
         <Card title="Basics">
           <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 4 MB. Saved when you save your profile.">
-            <input className="field cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+            <input className="field cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(e) => { setPhoto(e.target.files?.[0] ?? null); clearErrors("photo"); }} />
           </Field>
           {(photoPreview || form.avatar_url) && <img src={photoPreview || form.avatar_url} alt="Profile photo preview" className="size-24 rounded-full object-cover" />}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Full name" error={err("full_name")}>
-              <input className="field" value={form.full_name} maxLength={120} required onChange={(e) => update("full_name", e.target.value)} />
+              <input className="field" value={form.full_name} maxLength={120} required onChange={(e) => update("full_name", e.target.value)} onBlur={() => flagError("full_name", required(form.full_name))} />
             </Field>
             <Field label="Username" error={err("username")} hint="3–40 letters, numbers, _ or -">
-              <input className="field font-mono" value={form.username} maxLength={40} required onChange={(e) => update("username", e.target.value)} />
+              <input className="field font-mono" value={form.username} maxLength={40} required onChange={(e) => update("username", e.target.value)} onBlur={() => flagError("username", usernameError(form.username))} />
             </Field>
             <Field label="Location" error={err("location")}>
               <input className="field" value={form.location} maxLength={120} placeholder="City, Country" onChange={(e) => update("location", e.target.value)} />
@@ -206,7 +281,7 @@ export default function EditProfilePage() {
               <input className="field" value={form.education} maxLength={200} placeholder="School, degree, year" onChange={(e) => update("education", e.target.value)} />
             </Field>
             <Field label="Avatar URL" error={err("avatar_url")} hint="Used when no profile photo has been uploaded.">
-              <input className="field" type="url" value={form.avatar_url} maxLength={500} placeholder="https://…" onChange={(e) => update("avatar_url", e.target.value)} />
+              <input className="field" type="url" value={form.avatar_url} maxLength={500} placeholder="https://…" onChange={(e) => update("avatar_url", e.target.value)} onBlur={() => flagError("avatar_url", optionalUrl(form.avatar_url))} />
             </Field>
             <Field label="Experience level" error={err("experience_level")}>
               <select className="field" value={form.experience_level} onChange={(e) => update("experience_level", e.target.value)}>
@@ -220,12 +295,12 @@ export default function EditProfilePage() {
             </Field>
           </div>
           <Field label="About me" required error={err("bio")}>
-            <textarea className="field min-h-28" value={form.bio} maxLength={2000} required placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} />
+            <textarea className="field min-h-28" value={form.bio} maxLength={2000} required placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} onBlur={() => flagError("bio", required(form.bio))} />
           </Field>
         </Card>
 
         <Card title="Skills & interests">
-          <TagInput label="Technical skills (languages, frameworks, specialties)" error={err("skills")} values={form.skills} onChange={(v) => update("skills", v)} placeholder="Rust, React, Frontend…" maxTags={30} />
+          <TagInput label="Technical skills (languages, frameworks, specialties)" error={err("skills")} values={form.skills} onChange={(v) => { update("skills", v); flagError("skills", unknownTechnologyError(v, knownTechnologies, "skill")); }} placeholder="Rust, React, Frontend…" maxTags={30} />
 
           <TagInput label="Interests" variant="interest" error={err("interests")} values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
 
@@ -237,9 +312,9 @@ export default function EditProfilePage() {
 
         <Card title="Setup">
           <Field label="Favorite IDE" required error={err("favorite_ide")}>
-            <input className="field" value={form.favorite_ide} maxLength={80} required placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
+            <input className="field" value={form.favorite_ide} maxLength={80} required placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} onBlur={() => flagError("favorite_ide", required(form.favorite_ide))} />
           </Field>
-          <TagInput label="Favorite AI coding agents" required variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
+          <TagInput label="Favorite AI coding agents" required variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} onBlur={(v) => flagError("favorite_ai_agents", requiredTag(v, AGENT_REQUIRED))} placeholder="Claude Code, Codex…" maxTags={10} />
 
         </Card>
 
@@ -255,12 +330,12 @@ export default function EditProfilePage() {
           {form.links.map((link, index) => (
             <div key={index} className="grid gap-2 sm:grid-cols-[10rem_1fr_auto] sm:items-start">
               <Field label="Label" error={err(`links[${index}].label`)} compact>
-                <input className="field" value={link.label} maxLength={40} placeholder="GitHub" onChange={(e) => updateLink(index, { label: e.target.value })} />
+                <input className="field" value={link.label} maxLength={40} placeholder="GitHub" onChange={(e) => updateLink(index, { label: e.target.value })} onBlur={() => flagError(`links[${index}].label`, required(link.label))} />
               </Field>
               <Field label="URL" error={err(`links[${index}].url`)} compact>
-                <input className="field" type="url" value={link.url} maxLength={500} placeholder="https://github.com/you" onChange={(e) => updateLink(index, { url: e.target.value })} />
+                <input className="field" type="url" value={link.url} maxLength={500} placeholder="https://github.com/you" onChange={(e) => updateLink(index, { url: e.target.value })} onBlur={() => flagError(`links[${index}].url`, requiredUrl(link.url))} />
               </Field>
-              <RemoveButton label="Remove link" onClick={() => update("links", form.links.filter((_, i) => i !== index))} />
+              <RemoveButton label="Remove link" onClick={() => removeLink(index)} />
             </div>
           ))}
         </Card>
@@ -282,18 +357,18 @@ export default function EditProfilePage() {
               <div className="flex items-start gap-2">
                 <div className="grid flex-1 gap-3 sm:grid-cols-2">
                   <Field label="Title" required error={err(`projects[${index}].title`)} compact>
-                    <input className="field" value={project.title} maxLength={120} required onChange={(e) => updateProject(index, { title: e.target.value })} />
+                    <input className="field" value={project.title} maxLength={120} required onChange={(e) => updateProject(index, { title: e.target.value })} onBlur={() => flagError(`projects[${index}].title`, required(project.title))} />
                   </Field>
                   <Field label="Project URL" error={err(`projects[${index}].project_url`)} compact>
-                    <input className="field" type="url" value={project.project_url} maxLength={500} placeholder="https://…" onChange={(e) => updateProject(index, { project_url: e.target.value })} />
+                    <input className="field" type="url" value={project.project_url} maxLength={500} placeholder="https://…" onChange={(e) => updateProject(index, { project_url: e.target.value })} onBlur={() => flagError(`projects[${index}].project_url`, optionalUrl(project.project_url))} />
                   </Field>
                 </div>
-                <RemoveButton label="Remove project" onClick={() => update("projects", form.projects.filter((_, i) => i !== index))} />
+                <RemoveButton label="Remove project" onClick={() => removeProject(index)} />
               </div>
               <Field label="Description" required error={err(`projects[${index}].description`)} compact>
-                <textarea className="field min-h-20" value={project.description} maxLength={2000} required onChange={(e) => updateProject(index, { description: e.target.value })} />
+                <textarea className="field min-h-20" value={project.description} maxLength={2000} required onChange={(e) => updateProject(index, { description: e.target.value })} onBlur={() => flagError(`projects[${index}].description`, required(project.description))} />
               </Field>
-              <TagInput label="Technologies" required variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
+              <TagInput label="Technologies" required variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => { updateProject(index, { technologies: v }); flagError(`projects[${index}].technologies`, unknownTechnologyError(v, knownTechnologies, "technology")); }} onBlur={(v) => flagError(`projects[${index}].technologies`, requiredTag(v, TECHNOLOGY_REQUIRED))} placeholder="React, Flask…" maxTags={20} />
 
             </div>
           ))}

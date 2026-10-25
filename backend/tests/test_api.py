@@ -72,6 +72,18 @@ def test_filter_options_lists_every_allowed_skill_and_looking_for(client):
     assert {"Open source", "Cofounder"} <= set(options["looking_for"])
 
 
+def test_filter_options_has_enough_for_the_form_to_spot_unknown_skills(client):
+    """The Edit Profile form checks a skill in the browser with the same lookup the backend uses:
+    skills + aliases, compared by `_key`. This fails if the two ever stop agreeing."""
+    from app.services.tech_catalog import _key, normalize_technology
+
+    options = client.get("/api/profiles/filter-options").get_json()
+    known = {_key(name) for name in [*options["skills"], *options["skill_aliases"]]}
+
+    for name in ["react", "NODEJS", "node js", "k8s", "js", "c++", "Machine Learning", "NotARealFramework", "", "x y z"]:
+        assert (_key(name) in known) == (normalize_technology(name) is not None), name
+
+
 def test_new_looking_for_options_have_matches(client):
     for option, expected in [("Open source", 2), ("Cofounder", 2)]:
         found = client.get("/api/profiles", query_string={"looking_for": option}).get_json()
