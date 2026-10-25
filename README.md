@@ -136,6 +136,7 @@ flask db downgrade                       # undo the last migration
 ```bash
 flask seed           # idempotent: creates missing seed profiles, never overwrites edited ones
 flask seed --reset   # restores the demo user and all seeded profiles to their defaults
+flask seed-test-users # quick-login accounts user1 / user2 that already like each other (passwords in TEST_USERS, app/seed.py)
 ```
 Seeds one **demo user** (Jordan Avery, the "you" of the app) plus 10 developers across frontend, backend, full-stack, AI/ML, game dev, cybersecurity, data engineering, mobile and DevOps.
 

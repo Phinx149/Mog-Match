@@ -4,7 +4,7 @@ import click
 from flask import Flask, current_app
 
 from .extensions import db
-from .models import Invite, Profile, ProfileLink, Project, User
+from .models import Invite, Profile, ProfileLink, Project, Swipe, User
 from .services.auth_service import hash_password
 
 SEED_EMAIL_DOMAIN = "seed.mogmatch.dev"
@@ -291,6 +291,44 @@ SEED_INVITES = [
 ]
 
 
+# Throwaway accounts for quick two-person testing on your own laptop: `flask seed-test-users`.
+# Not part of `flask seed`, so they stay out of tests and other people's databases.
+# They already like each other, so each shows up on the other's Match page, ready to invite.
+TEST_USER_EMAIL_DOMAIN = "test.mogmatch.dev"
+TEST_USERS = [
+    {
+        "password": "123",
+        "full_name": "Test User One",
+        "username": "user1",
+        "location": "Testville",
+        "bio": "Quick-login account for testing.",
+        "favorite_ide": "VS Code",
+        "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Python", "React", "TypeScript"],
+        "interests": ["Startups", "AI"],
+        "experience_level": "Mid-level",
+        "looking_for": ["Side project"],
+        "links": [],
+        "projects": [],
+    },
+    {
+        "password": "234",
+        "full_name": "Test User Two",
+        "username": "user2",
+        "location": "Testville",
+        "bio": "Quick-login account for testing.",
+        "favorite_ide": "VS Code",
+        "favorite_ai_agents": ["Cursor"],
+        "skills": ["Python", "Flask", "React"],
+        "interests": ["AI", "Open Source"],
+        "experience_level": "Junior",
+        "looking_for": ["Side project", "Mentor"],
+        "links": [],
+        "projects": [],
+    },
+]
+
+
 def _build_profile(user: User, data: dict) -> Profile:
     fields = {k: v for k, v in data.items() if k not in ("links", "projects")}
     profile = Profile(user=user, **fields)
@@ -360,6 +398,31 @@ def seed_database(reset: bool = False) -> dict[str, int]:
     return counts
 
 
+def seed_test_users() -> int:
+    """Create user1/user2 if missing and make them like each other. Returns how many were created."""
+    created = 0
+    for data in TEST_USERS:
+        if Profile.query.filter_by(username=data["username"]).one_or_none() is not None:
+            continue  # already there (and maybe edited): leave it alone
+        fields = {key: value for key, value in data.items() if key != "password"}
+        user = User(
+            email=f"{data['username']}@{TEST_USER_EMAIL_DOMAIN}",
+            password_hash=hash_password(data["password"]),
+        )
+        db.session.add(user)
+        db.session.add(_build_profile(user, fields))
+        created += 1
+    db.session.flush()
+
+    profiles = [Profile.query.filter_by(username=d["username"]).one() for d in TEST_USERS]
+    for me in profiles:
+        for other in profiles:
+            if me is not other and not Swipe.query.filter_by(swiper_id=me.id, target_id=other.id).first():
+                db.session.add(Swipe(swiper_id=me.id, target_id=other.id, action="like"))
+    db.session.commit()
+    return created
+
+
 def register_commands(app: Flask) -> None:
     @app.cli.command("seed")
     @click.option("--reset", is_flag=True, help="Restore seeded profiles to their defaults.")
@@ -370,3 +433,10 @@ def register_commands(app: Flask) -> None:
             f"Seed complete: {counts['created']} created, {counts['reset']} reset, "
             f"{counts['skipped']} skipped (already present)."
         )
+
+    @app.cli.command("seed-test-users")
+    def seed_test_users_command() -> None:
+        """Add quick-login test accounts user1 and user2 (local testing only)."""
+        created = seed_test_users()
+        names = ", ".join(d["username"] for d in TEST_USERS)
+        click.echo(f"Test users ready ({created} created): {names}. Passwords are in TEST_USERS in app/seed.py.")

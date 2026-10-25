@@ -95,3 +95,17 @@ def test_each_user_has_their_own_profile_and_matches(app, log_in):
     # Discover hides the logged-in user, so Sam sees Jordan and Jordan sees Sam.
     sam_sees = {p["username"] for p in sam.get("/api/profiles").get_json()["profiles"]}
     assert "jordan-dev" in sam_sees and "samfullstack" not in sam_sees
+
+
+# ---------- quick-login test users ----------
+
+def test_seed_test_users_can_log_in_and_already_like_each_other(app, anon_client):
+    from app.seed import TEST_USERS, seed_test_users
+
+    assert seed_test_users() == 2
+    assert seed_test_users() == 0  # idempotent
+    first, second = TEST_USERS
+    login = {"username": first["username"], "password": first["password"]}
+    assert anon_client.post("/api/auth/login", json=login).status_code == 200
+    matches = anon_client.get("/api/profiles/me/matches").get_json()["matches"]
+    assert [m["username"] for m in matches] == [second["username"]]
