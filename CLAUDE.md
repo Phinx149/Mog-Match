@@ -40,7 +40,7 @@ Frontend (from `frontend/`):
 ## Database portability (SQLite locally, Postgres in production)
 - Code must work on both. Use the ORM only (no raw SQL, no SQLite-only functions), `db.Uuid` / `db.JSON` columns, `TimestampMixin` datetimes.
 - Postgres errors on strings longer than `String(n)`; SQLite doesn't. Every validation limit must be ≤ its column size (`test_every_field_at_its_max_length_saves` checks).
-- New migration → also try it on Postgres before merging if you can: `DATABASE_URL=postgresql://... flask db upgrade` on an empty DB, or run the tests with `TEST_DATABASE_URL`. After merge, someone runs `flask db upgrade` against production (see `docs/DEPLOY.md`).
+- New migration → also try it on Postgres before merging if you can: `DATABASE_URL=postgresql://... flask db upgrade` on an empty DB, or run the tests with `TEST_DATABASE_URL`. Production applies it automatically on the next deploy (`backend/vercel_build.py`, the api service's `buildCommand`), so keep migrations additive.
 - Vercel limits: read-only disk (never write files at runtime), 4.5 MB request bodies (photos capped by `MAX_PHOTO_BYTES`), cold starts. `create_app` refuses to start on Vercel (`VERCEL=1`) without `DATABASE_URL` or with the default `SECRET_KEY`.
 
 ## Auth (how "me" works)
