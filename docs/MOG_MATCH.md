@@ -36,6 +36,7 @@ If both lists are shorter than `FULL_AT`, sharing the whole longer list is enoug
 
 ## API
 - `POST /api/swipes` `{"target_id": "<uuid>", "action": "like" | "pass"}` → `201 {"target_id", "action", "match"}` (`match` is the score below for a like, `null` for a pass). Swiping on the same person again overwrites. `400` for bad input or swiping on yourself, `404` for an unknown profile.
+- `DELETE /api/swipes/<target_id>` → `{"removed": true}`: unlike (or un-pass) one person; they leave my matches and come back to Discover. `404` if I never swiped on them. The **Unlike** button on each match card calls this.
 - `DELETE /api/swipes` → `{"removed": n}`: forget all my likes/passes (Discover's "Start over").
 - `GET /api/profiles/me/matches` → `{"matches": [...], "count": n}`: everyone I liked, most similar first. Each entry is a full profile plus:
 

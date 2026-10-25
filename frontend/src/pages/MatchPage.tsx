@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import Navbar from "../components/layout/Navbar";
 import MatchCard from "../components/match/MatchCard";
-import { getMyMatches } from "../services/api";
+import { getMyMatches, removeSwipe } from "../services/api";
 import type { MatchedProfile } from "../types/profile";
 
 /** Mog Match: everyone I liked, ranked by how similar their profile is to mine. */
@@ -30,7 +30,21 @@ export default function MatchPage() {
     return () => controller.abort();
   }, [reloadKey]);
 
+  const [notice, setNotice] = useState<string | null>(null);
+
   const refresh = () => setReloadKey((key) => key + 1);
+
+  const unlike = (profile: MatchedProfile) => {
+    const before = matches;
+    setMatches((current) => current.filter((m) => m.id !== profile.id)); // feels instant
+    setNotice(null);
+    removeSwipe(profile.id)
+      .then(() => setNotice(`Unliked ${profile.full_name}. They're back on Discover.`))
+      .catch((err: unknown) => {
+        setMatches(before); // not saved, so put the card back
+        setNotice(err instanceof Error ? err.message : "Couldn't unlike, try again.");
+      });
+  };
 
   return (
     <>
@@ -52,6 +66,7 @@ export default function MatchPage() {
           Everyone you liked, ranked by how much their profile overlaps with yours: tech stack, interests, goals and
           more.
         </p>
+        {notice && <p className="mb-4 text-sm text-violet-200">{notice}</p>}
 
         {error ? (
           <ErrorState message={error} onRetry={refresh} />
@@ -68,7 +83,7 @@ export default function MatchPage() {
           <ol className={`flex flex-col gap-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
             {matches.map((profile, index) => (
               <li key={profile.id}>
-                <MatchCard profile={profile} rank={index + 1} />
+                <MatchCard profile={profile} rank={index + 1} onUnlike={unlike} />
               </li>
             ))}
           </ol>

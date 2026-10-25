@@ -72,6 +72,15 @@ def list_matches(me: Profile) -> list[dict]:
     return rank_matches(profile_service.to_dict(me), others)
 
 
+def remove_swipe(me: Profile, target_id: uuid.UUID) -> None:
+    """Undo my like/pass on one person: they leave my matches and come back to Discover."""
+    swipe = Swipe.query.filter_by(swiper_id=me.id, target_id=target_id).one_or_none()
+    if swipe is None:
+        raise NotFoundError("You haven't liked or passed on this profile.")
+    db.session.delete(swipe)
+    db.session.commit()
+
+
 def clear_swipes(me: Profile) -> int:
     """Forget all my likes/passes (Discover's "start over"). Returns how many were removed."""
     removed = Swipe.query.filter_by(swiper_id=me.id).delete()

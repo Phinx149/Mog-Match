@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { HeartOff, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { MatchComponent, MatchedProfile } from "../../types/profile";
 import MogBadge from "../mog/MogBadge";
@@ -45,9 +45,10 @@ function explain(key: MatchComponent, profile: MatchedProfile): string | null {
 interface MatchCardProps {
   profile: MatchedProfile;
   rank: number;
+  onUnlike: (profile: MatchedProfile) => void;
 }
 
-export default function MatchCard({ profile, rank }: MatchCardProps) {
+export default function MatchCard({ profile, rank, onUnlike }: MatchCardProps) {
   const { match } = profile;
   const components = Object.keys(LABELS) as MatchComponent[];
   const reasons = components
@@ -121,6 +122,19 @@ export default function MatchCard({ profile, rank }: MatchCardProps) {
           <p className="mt-3 text-xs text-muted">Nothing in common yet: {missing.join(", ")}.</p>
         )}
       </details>
+
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => onUnlike(profile)}
+          aria-label={`Unlike ${profile.full_name}`}
+          title="Remove from your matches and show them on Discover again"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+        >
+          <HeartOff className="size-3.5" aria-hidden />
+          Unlike
+        </button>
+      </div>
     </article>
   );
 }

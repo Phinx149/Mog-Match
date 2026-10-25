@@ -84,6 +84,11 @@ export function createSwipe(targetId: string, action: SwipeDecision) {
   });
 }
 
+/** Unlike one person: they leave my matches and come back to Discover. */
+export function removeSwipe(targetId: string) {
+  return request<{ removed: boolean }>(`/api/swipes/${encodeURIComponent(targetId)}`, { method: "DELETE" });
+}
+
 /** Forget all my likes/passes (and so all my matches). */
 export function clearSwipes() {
   return request<{ removed: number }>("/api/swipes", { method: "DELETE" });

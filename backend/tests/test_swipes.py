@@ -91,3 +91,24 @@ def test_seed_reset_clears_swipes(app, client):
     swipe(client, "mayacodes")
     seed_database(reset=True)
     assert client.get("/api/profiles/me/matches").get_json()["count"] == 0
+
+
+def test_unlike_removes_the_match_and_brings_them_back_to_discover(client):
+    maya = profile_id(client, "mayacodes")
+    swipe(client, "mayacodes")
+    swipe(client, "samfullstack")
+
+    response = client.delete(f"/api/swipes/{maya}")
+    assert response.status_code == 200
+    assert response.get_json() == {"removed": True}
+
+    matches = client.get("/api/profiles/me/matches").get_json()["matches"]
+    assert [m["username"] for m in matches] == ["samfullstack"]  # the other like is untouched
+    discover = {p["username"] for p in client.get("/api/profiles").get_json()["profiles"]}
+    assert "mayacodes" in discover and "samfullstack" not in discover
+
+
+def test_unlike_someone_never_liked_is_404(client):
+    assert client.delete(f"/api/swipes/{profile_id(client, 'mayacodes')}").status_code == 404
+    assert client.delete(f"/api/swipes/{uuid.uuid4()}").status_code == 404
+    assert client.delete("/api/swipes/not-a-uuid").status_code == 404
