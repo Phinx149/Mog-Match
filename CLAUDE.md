@@ -19,7 +19,7 @@ Backend (from `backend/`, venv active — Windows: `.venv\Scripts\...`):
 - `pytest`
 - `flask db migrate -m "msg"` / `flask db upgrade`
 - `flask seed` / `flask seed --reset`
-- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other
+- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other, plus 25 demo users (password `123`, `app/demo_users.py`), 5 per Mog tier. `tests/test_demo_users.py` checks each lands in its tier: rescore them if you change Mog Score weights
 - `flask db check` — fails if models and migrations disagree
 - `TEST_DATABASE_URL=postgresql://... pytest` — same suite on Postgres (drops all tables in that DB; throwaway DBs only)
 - After pulling: `pip install -r requirements.txt`, `flask db upgrade`, `flask seed`
