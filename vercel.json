@@ -13,7 +13,8 @@
     },
     "api": {
       "root": "backend/",
-      "entrypoint": "run:app"
+      "entrypoint": "run:app",
+      "buildCommand": "python vercel_build.py"
     }
   },
   "rewrites": [

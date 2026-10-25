@@ -223,7 +223,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
 | GET | `/api/profiles` | Discoverable profiles (excludes me and people I swiped on) → `{"profiles": [...], "count": n}` |
-| GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "looking_for": [...]}`. Powers the Discover filter menu and the Edit Profile "Looking for" picker |
+| GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "skill_aliases": {"js": "JavaScript", ...}, "looking_for": [...]}`. Powers the Discover filter menu, the Edit Profile "Looking for" picker, and the Edit Profile check that flags an unknown skill as soon as it is added (`skill_aliases` are the nicknames the backend also accepts) |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | POST | `/api/auth/login` | `{"username", "password"}` → `{"user": {...}}` and a session cookie. `401` for a wrong username or password |
 | POST | `/api/auth/logout` | Ends the session → `{"user": null}` |
@@ -271,7 +271,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 **`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`), `theme` (`{background, effect, effect_options}`).
 - `links`, `projects` and `theme`, when sent, **replace** the existing value.
 - Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
-- `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
+- `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists (plus the accepted skill nicknames).
 - `theme` is cosmetic only; nothing else (search, filters, Mog Score) reads it. Each option is `null` for the default look.
   - `theme.background`: `#rrggbb`. It must be dark enough for the light text to stay readable, otherwise `400` with a `theme.background` field error.
   - `theme.effect`: an animation drawn behind the card: `matrix` (falling green code), `dvd` (a bouncing DVD logo that changes color on every wall hit) `emoji` (emoji floating around, each one spinning) `slogans` (gym-bro slogans scrolling past in rows like a marquee) `market` (a made-up candlestick chart with pumps and crashes; it is not real data) `money` (green bills, or coins, fluttering down while gusts of wind blow them around) or `snow` (soft flakes and crystals drifting down on a wind that surges and eases off). All are generated in the browser on a canvas, not images. Any other name is a `400` with a `theme.effect` field error.
@@ -294,7 +294,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 Production is Vercel + Postgres; the full step-by-step guide, including how to run migrations against production, is in [`docs/DEPLOY.md`](docs/DEPLOY.md). In short:
 1. Import the repo into Vercel with the repo root as the root directory (`vercel.json` defines both services).
 2. Connect a Neon Postgres database (sets `DATABASE_URL`) and set `SECRET_KEY` and `SEED_PASSWORD`.
-3. From your laptop: `DATABASE_URL="<production url>" flask db upgrade`, then the same with `flask seed`.
+3. Nothing to run by hand: every deploy runs `backend/vercel_build.py` (migrations + `flask seed`, plus the demo users if `SEED_DEMO_USERS=1`).
 4. Deploy, then open `/api/health`.
 
 Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL` in `backend/.env`.

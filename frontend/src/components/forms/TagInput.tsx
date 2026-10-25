@@ -5,6 +5,8 @@ interface TagInputProps {
   label: string;
   values: string[];
   onChange: (values: string[]) => void;
+  /** Called when the box loses focus, with the tags as they stand after any half-typed one is added. */
+  onBlur?: (values: string[]) => void;
   placeholder?: string;
   variant?: "skill" | "interest" | "neutral";
   maxTags?: number;
@@ -13,16 +15,19 @@ interface TagInputProps {
 }
 
 /** Chips plus a text box: Enter or comma adds a tag, Backspace on an empty box removes the last one. */
-export default function TagInput({ label, values, onChange, placeholder, variant = "skill", maxTags, error, required }: TagInputProps) {
+export default function TagInput({ label, values, onChange, onBlur, placeholder, variant = "skill", maxTags, error, required }: TagInputProps) {
   const [draft, setDraft] = useState("");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /** Adds the tag (if it is new and there is room) and returns the resulting list. */
   const add = (raw: string) => {
     const tag = raw.trim().slice(0, 40);
-    if (!tag || values.some((v) => v.toLowerCase() === tag.toLowerCase())) return;
-    if (maxTags && values.length >= maxTags) return;
-    onChange([...values, tag]);
+    if (!tag || values.some((v) => v.toLowerCase() === tag.toLowerCase())) return values;
+    if (maxTags && values.length >= maxTags) return values;
+    const next = [...values, tag];
+    onChange(next);
+    return next;
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -55,8 +60,9 @@ export default function TagInput({ label, values, onChange, placeholder, variant
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           onBlur={() => {
-            add(draft);
+            const next = add(draft);
             setDraft("");
+            onBlur?.(next);
           }}
           placeholder={values.length ? "" : placeholder}
           className="min-w-24 flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-muted"

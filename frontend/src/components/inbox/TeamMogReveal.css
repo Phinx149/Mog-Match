@@ -1,0 +1,27 @@
+.team-mog-dialog::backdrop { background: #34383ef5; }
+.team-mog-backdrop { background: radial-gradient(ellipse at 50% 45%, #34d39918, #454a51 70%); }
+.team-mog-stage { position: relative; width: min(320px, 85vw); aspect-ratio: 1; margin: 16px auto; isolation: isolate; }
+.team-mog-vortex { position: absolute; inset: 0; animation: team-mog-vortex 2.2s cubic-bezier(.55, .1, .8, .9) forwards; }
+.team-mog-orbiter { position: absolute; left: 50%; top: 50%; width: 80px; height: 80px; margin: -40px; }
+.team-mog-orbiter-0 { transform: translateX(-110px); }
+.team-mog-orbiter-1 { transform: translateX(110px); }
+.team-mog-face { border-radius: 50%; box-shadow: 0 0 20px #34d39990, 0 0 45px #67e8f950; animation: team-mog-counter-spin 2.2s cubic-bezier(.55, .1, .8, .9) forwards; }
+.team-mog-trail { position: absolute; inset: 17px; border-radius: 50%; background: conic-gradient(transparent 0deg 60deg, #34d399 110deg, transparent 180deg 240deg, #67e8f9 290deg, transparent 360deg); mask: radial-gradient(transparent 59%, black 61% 65%, transparent 67%); filter: drop-shadow(0 0 12px #2dd4bf); animation: team-mog-trail 2.2s ease-in forwards; }
+.team-mog-trail-inner { inset: 40px; opacity: .55; animation-direction: reverse; }
+.team-mog-explosion { position: absolute; inset: 0; }
+.team-mog-fireball { position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(circle, #ecfdf5, #67e8f9 25%, #2dd4bf 50%, #06b6d480 68%, transparent 72%); box-shadow: 0 0 70px #2dd4bf80; animation: team-mog-fireball .65s ease-out forwards; }
+.team-mog-shockwave { position: absolute; inset: 33%; border: 3px solid #99f6e4; border-radius: 50%; box-shadow: 0 0 18px #2dd4bf, inset 0 0 18px #2dd4bf; animation: team-mog-shockwave .65s ease-out forwards; }
+.team-mog-spark { position: absolute; top: 50%; left: 50%; width: 28px; height: 4px; border-radius: 50%; background: linear-gradient(90deg, transparent, #34d399, #67e8f9); box-shadow: 0 0 10px #34d399; transform-origin: left center; animation: team-mog-spark .65s ease-out forwards; }
+.team-mog-card { animation: team-mog-card .4s ease-out both; }
+.team-mog-score-fire { transform-origin: center bottom; filter: drop-shadow(0 0 10px #2dd4bf40); animation: team-mog-score-fire 1.5s ease-in-out infinite alternate; }
+@keyframes team-mog-vortex { 0% { transform: rotate(0deg) scale(1); } 65% { transform: rotate(720deg) scale(.7); } 100% { transform: rotate(1800deg) scale(.02); opacity: .4; } }
+@keyframes team-mog-counter-spin { 0% { transform: rotate(0deg); } 65% { transform: rotate(-720deg); } 100% { transform: rotate(-1800deg); } }
+@keyframes team-mog-trail { 0% { transform: rotate(0deg) scale(1); opacity: .5; } 70% { opacity: 1; } 100% { transform: rotate(1500deg) scale(.08); opacity: 0; } }
+@keyframes team-mog-fireball { 0% { transform: scale(.05); opacity: 1; } 45% { transform: scale(1.7); opacity: .95; } 100% { transform: scale(2.1); opacity: 0; } }
+@keyframes team-mog-shockwave { from { transform: scale(.1); opacity: 1; } to { transform: scale(4); opacity: 0; } }
+@keyframes team-mog-spark { from { transform: rotate(var(--spark-angle)) translateX(0) scaleX(.3); opacity: 1; } to { transform: rotate(var(--spark-angle)) translateX(145px) scaleX(.7); opacity: 0; } }
+@keyframes team-mog-card { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes team-mog-score-fire { from { transform: scale(1); } to { transform: scale(var(--team-fire-peak)); } }
+@media (prefers-reduced-motion: reduce) {
+  .team-mog-dialog *, .team-mog-dialog *::before, .team-mog-dialog *::after { animation: none !important; transition: none !important; }
+}

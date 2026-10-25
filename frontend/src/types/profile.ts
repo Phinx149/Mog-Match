@@ -247,6 +247,8 @@ export interface ProfileFilters {
 export interface FilterOptions {
   /** Every skill a profile is allowed to list. */
   skills: string[];
+  /** Other spellings the backend accepts for a skill, nickname -> canonical name (e.g. "js" -> "JavaScript"). */
+  skill_aliases: Record<string, string>;
   /** Every "looking for" option a profile can pick. */
   looking_for: string[];
 }

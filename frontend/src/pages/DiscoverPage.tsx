@@ -11,7 +11,7 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { clearSwipes, createSwipe, getFilterOptions, listProfiles } from "../services/api";
 import type { FilterOptions, MogMatch, MogTier, Profile, SwipeDecision } from "../types/profile";
 
-const NO_OPTIONS: FilterOptions = { skills: [], looking_for: [] };
+const NO_OPTIONS: FilterOptions = { skills: [], skill_aliases: {}, looking_for: [] };
 
 export default function DiscoverPage() {
   const [search, setSearch] = useState("");
