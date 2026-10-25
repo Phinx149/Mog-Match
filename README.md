@@ -88,7 +88,7 @@ Sign up in seconds with a username and password, then build out your profile. Ch
 
 **Live:** **[mog-match.vercel.app](https://mog-match.vercel.app)**. Create an account and start swiping.
 
-**On your machine:** the app comes with **60+ demo developers** across every Mog tier, each with a backstory, projects, a profile picture and their own theme. Log in as `gigachad` / `123` to see a 👑 Gigamogger, or `newbie` / `123` for the other end of the scale. Setup takes a few commands: see the [developer guide](docs/ARCHITECTURE.md#prerequisites).
+**On your machine:** the app comes with **60+ demo developers** across every Mog tier, each with a backstory, projects, a profile picture and their own theme. Log in as `gigachad` / `123` to see a 👑 Gigamogger, or `newbie` / `123` for the other end of the scale. Setup takes a few commands: see the [developer guide](docs/DEVELOPMENT.md#prerequisites).
 
 ---
 
@@ -96,11 +96,11 @@ Sign up in seconds with a username and password, then build out your profile. Ch
 
 <div align="center">
 
-| 📘 [Architecture & developer guide](docs/ARCHITECTURE.md) | 🚢 [Deploying to Vercel](docs/DEPLOY.md) | 💬 [Chat & studio](docs/CHAT.md) |
+| 📘 [Developer guide](docs/DEVELOPMENT.md) | 🏗️ [Architecture](docs/ARCHITECTURE.md) | 🚢 [Deploying to Vercel](docs/DEPLOY.md) |
 |:---:|:---:|:---:|
-| Setup, environment variables, seed data, API reference, data model | Postgres, environment variables, automatic database setup | Real-time events, AI studio setup |
-| 🔥 [Mog Score](docs/MOG_SCORE.md) | 💞 [Mog Match](docs/MOG_MATCH.md) | 🗺️ [Roadmap](docs/ROADMAP.md) · 🤝 [Contributing](CONTRIBUTING.md) |
-| Every scoring rule and tier | How similarity is computed | What's next, and how to send a PR |
+| Setup, environment variables, seed data, API reference | The key design decisions, and why | Postgres, environment variables, automatic database setup |
+| 🔥 [Mog Score](docs/MOG_SCORE.md) · 💞 [Mog Match](docs/MOG_MATCH.md) | 💬 [Chat & studio](docs/CHAT.md) | 🗺️ [Roadmap](docs/ROADMAP.md) · 🤝 [Contributing](CONTRIBUTING.md) |
+| Every scoring and similarity rule | Real-time events, AI studio setup | What's next, and how to send a PR |
 
 </div>
 

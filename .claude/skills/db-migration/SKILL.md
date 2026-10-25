@@ -5,7 +5,7 @@ description: Add or change SQLAlchemy models, Flask-Migrate/Alembic migrations, 
 
 # Database Migration (Flask-SQLAlchemy + Flask-Migrate)
 
-Run everything from `backend/` with the venv active. Schema overview: `docs/ARCHITECTURE.md#data-model`.
+Run everything from `backend/` with the venv active. Schema overview: `docs/ARCHITECTURE.md` (diagram + why) and `docs/DEVELOPMENT.md#data-model` (every column).
 
 ## Workflow
 1. Edit/add the model in `app/models/` and export it from `app/models/__init__.py`.
