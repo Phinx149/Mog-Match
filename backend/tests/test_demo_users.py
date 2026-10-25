@@ -69,6 +69,15 @@ def test_every_test_account_has_its_own_valid_theme(seeded):
         assert errors == {}, (name, errors)
 
 
+def test_the_demo_accounts_show_off_every_effect():
+    from app.demo_users import DEMO_THEMES
+    from app.services.profile_service import THEME_EFFECTS
+
+    used = {theme.get("effect") for theme in DEMO_THEMES.values()}
+    # So the Discover page has something to look at for each effect. A new effect fails this until a demo user gets it.
+    assert set(THEME_EFFECTS) - used == set()
+
+
 def test_themes_come_back_from_the_api(seeded):
     from app.demo_users import DEMO_THEMES
 
