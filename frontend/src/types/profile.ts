@@ -39,6 +39,18 @@ export interface MogScore {
 export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior Mogger", "Gigamogger"] as const;
 export type MogTier = (typeof MOG_TIERS)[number];
 
+/** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
+export const THEME_EFFECTS = ["matrix"] as const;
+export type ThemeEffect = (typeof THEME_EFFECTS)[number];
+
+/** Cosmetic look of a profile's card and page. A `null` option means the default look. */
+export interface ProfileTheme {
+  /** Card background as `#rrggbb`. */
+  background: string | null;
+  /** Animation drawn behind the card's content. */
+  effect: ThemeEffect | null;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -54,6 +66,7 @@ export interface Profile {
   interests: string[];
   experience_level: string | null;
   looking_for: string[];
+  theme: ProfileTheme;
   links: ProfileLink[];
   projects: Project[];
   created_at: string;
@@ -80,6 +93,8 @@ export interface ProfileUpdate {
   interests?: string[];
   experience_level?: string | null;
   looking_for?: string[];
+  /** Replaces the whole theme; send `{ background: null, effect: null }` to go back to the default. */
+  theme?: ProfileTheme;
   links?: Omit<ProfileLink, "id">[];
   projects?: Omit<Project, "id">[];
 }

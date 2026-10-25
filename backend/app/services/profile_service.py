@@ -42,6 +42,16 @@ MAX_TAG_LENGTH = 40
 MAX_LINKS = 10
 MAX_PROJECTS = 20
 
+# Theme options a profile may set (purely cosmetic; never used for search, filtering or scoring).
+THEME_FIELDS = ("background", "effect")
+# Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
+# THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
+THEME_EFFECTS = ("matrix",)
+HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
+# The UI's text is light, so the card background has to be dark enough to keep it readable.
+# 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
+MAX_BACKGROUND_LUMINANCE = 0.05
+
 
 class ValidationError(Exception):
     def __init__(self, fields: dict[str, str], message: str = "Invalid profile data.", conflict: bool = False):
@@ -159,6 +169,11 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "interests": list(profile.interests),
         "experience_level": profile.experience_level,
         "looking_for": list(profile.looking_for),
+        # Always an object so the frontend never has to null-check it; null = default look.
+        "theme": {
+            "background": (profile.theme or {}).get("background"),
+            "effect": (profile.theme or {}).get("effect"),
+        },
         "links": [
             {"id": str(link.id), "label": link.label, "url": link.url} for link in profile.links
         ],
@@ -297,6 +312,48 @@ def _clean_choices(values: list[str], field: str, allowed: tuple[str, ...], erro
     return known
 
 
+def _relative_luminance(hex_color: str) -> float:
+    """WCAG relative luminance of '#rrggbb': 0 is black, 1 is white."""
+    r, g, b = (int(hex_color[i : i + 2], 16) / 255 for i in (1, 3, 5))
+
+    def linear(channel: float) -> float:
+        return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+
+
+def _clean_theme(value: Any, errors: dict) -> dict[str, str]:
+    """Return the theme to store: only options that are set, so `{}` (or null) means default."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        errors["theme"] = "Must be an object."
+        return {}
+    for key in value:
+        if key not in THEME_FIELDS:
+            errors[f"theme.{key}"] = "Unknown theme option."
+
+    cleaned: dict[str, str] = {}
+    background = value.get("background")
+    if background is not None:
+        # Only a strict #rrggbb ever reaches the database, because the frontend puts this
+        # value straight into a style attribute.
+        if not isinstance(background, str) or not HEX_COLOR.fullmatch(background.strip()):
+            errors["theme.background"] = "Must be a hex color like #172554."
+        elif _relative_luminance(background.strip()) > MAX_BACKGROUND_LUMINANCE:
+            errors["theme.background"] = "That color is too light for the text. Pick a darker one."
+        else:
+            cleaned["background"] = background.strip().lower()
+
+    effect = value.get("effect")
+    if effect is not None:
+        if effect not in THEME_EFFECTS:  # also catches non-strings, which can't equal a name
+            errors["theme.effect"] = f"Must be one of: {', '.join(THEME_EFFECTS)}."
+        else:
+            cleaned["effect"] = effect
+    return cleaned
+
+
 def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
     if not isinstance(value, list):
         errors["projects"] = "Must be a list."
@@ -334,7 +391,7 @@ def validate_update(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValidationError({}, "Request body must be a JSON object.")
 
-    allowed = set(STRING_FIELDS) | set(LIST_FIELDS) | {"links", "projects"}
+    allowed = set(STRING_FIELDS) | set(LIST_FIELDS) | {"links", "projects", "theme"}
     errors: dict[str, str] = {}
     for key in data:
         if key not in allowed:
@@ -355,6 +412,8 @@ def validate_update(data: Any) -> dict[str, Any]:
         cleaned["links"] = _clean_links(data["links"], errors)
     if "projects" in data:
         cleaned["projects"] = _clean_projects(data["projects"], errors)
+    if "theme" in data:
+        cleaned["theme"] = _clean_theme(data["theme"], errors)
 
     username = cleaned.get("username")
     if username and not USERNAME_PATTERN.match(username):
@@ -406,6 +465,10 @@ def update_profile(profile: Profile, data: Any, photo=None, extra_errors=None) -
     for field in LIST_FIELDS:
         if field in cleaned:
             setattr(profile, field, cleaned[field])  # assign a new list so SQLAlchemy sees the change
+
+    # The theme is replaced as a whole too; an empty one is stored as NULL (default look).
+    if "theme" in cleaned:
+        profile.theme = cleaned["theme"] or None
 
     # Links and projects are replaced as a whole: the edit form always sends the full list.
     if "links" in cleaned:

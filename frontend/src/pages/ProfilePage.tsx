@@ -7,6 +7,7 @@ import MogScoreCard from "../components/mog/MogScoreCard";
 import ProfileHeader from "../components/profiles/ProfileHeader";
 import ProjectCard from "../components/profiles/ProjectCard";
 import SkillBadge from "../components/profiles/SkillBadge";
+import ThemeScope from "../components/profiles/ThemeScope";
 import { ApiError, getMyProfile, getProfile } from "../services/api";
 import type { Profile } from "../types/profile";
 
@@ -49,8 +50,9 @@ export default function ProfilePage() {
           <LoadingState label="Loading profile…" />
         ) : (
           // Profile info is the main column; the Mog Score sits in a sidebar on wide screens
-          // and drops below the profile on phones.
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          // and drops below the profile on phones. The profile's theme covers this whole area but
+          // not the navbar above it.
+          <ThemeScope theme={profile.theme} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div className="flex min-w-0 flex-col gap-5">
               <ProfileHeader profile={profile} editable={isMe} />
 
@@ -105,7 +107,7 @@ export default function ProfilePage() {
             <aside>
               <MogScoreCard mog={profile.mog} showTips={isMe} />
             </aside>
-          </div>
+          </ThemeScope>
         )}
       </main>
     </>

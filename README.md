@@ -191,16 +191,20 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
   "bio": "...", "favorite_ide": "VS Code", "favorite_ai_agents": ["Cursor", "Claude Code"],
   "skills": ["Frontend", "TypeScript", "React"], "interests": ["Design Systems"],
   "experience_level": "Senior", "looking_for": ["Side project"],
+  "theme": {"background": "#172554", "effect": null},
   "links": [{"id": "uuid", "label": "GitHub", "url": "https://..."}],
   "projects": [{"id": "uuid", "title": "Prism UI", "description": "...", "project_url": "https://...", "technologies": ["React"]}],
   "created_at": "ISO-8601", "updated_at": "ISO-8601"
 }
 ```
 
-**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
-- `links` and `projects`, when sent, **replace** the existing lists.
+**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`), `theme` (`{background, effect}`).
+- `links`, `projects` and `theme`, when sent, **replace** the existing value.
 - Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
 - `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
+- `theme` is cosmetic only; nothing else (search, filters, Mog Score) reads it. Each option is `null` for the default look.
+  - `theme.background`: `#rrggbb`. It must be dark enough for the light text to stay readable, otherwise `400` with a `theme.background` field error.
+  - `theme.effect`: an animation drawn behind the card, currently only `matrix` (falling green code, generated in the browser on a canvas, not an image). Any other name is a `400` with a `theme.effect` field error.
 - `400` on invalid data or unknown fields, `409` if the username is taken.
 
 ## Known limitations (this milestone)

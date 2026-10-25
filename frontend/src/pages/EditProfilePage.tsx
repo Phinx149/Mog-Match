@@ -1,12 +1,13 @@
-import { ArrowLeft, CheckCircle2, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { cloneElement, useEffect, useId, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ErrorState, LoadingState } from "../components/common/States";
 import TagInput from "../components/forms/TagInput";
 import ToggleChips from "../components/forms/ToggleChips";
 import Navbar from "../components/layout/Navbar";
+import ThemePicker from "../components/profiles/ThemePicker";
 import { ApiError, getFilterOptions, getMyProfile, updateMyProfile } from "../services/api";
-import { EXPERIENCE_LEVELS, type Profile, type ProfileUpdate } from "../types/profile";
+import { EXPERIENCE_LEVELS, type Profile, type ProfileTheme, type ProfileUpdate } from "../types/profile";
 
 type LinkDraft = { label: string; url: string };
 type ProjectDraft = { title: string; description: string; project_url: string; technologies: string[] };
@@ -24,6 +25,7 @@ interface FormState {
   interests: string[];
   favorite_ai_agents: string[];
   looking_for: string[];
+  theme: ProfileTheme;
   links: LinkDraft[];
   projects: ProjectDraft[];
 }
@@ -47,6 +49,7 @@ function toForm(p: Profile, lookingForOptions: string[]): FormState {
     looking_for: lookingForOptions.filter((option) =>
       p.looking_for.some((value) => value.toLowerCase() === option.toLowerCase()),
     ),
+    theme: p.theme,
     links: p.links.map(({ label, url }) => ({ label, url })),
     projects: p.projects.map(({ title, description, project_url, technologies }) => ({
       title,
@@ -73,6 +76,7 @@ function toUpdate(form: FormState): ProfileUpdate {
     interests: form.interests,
     favorite_ai_agents: form.favorite_ai_agents,
     looking_for: form.looking_for,
+    theme: form.theme,
     links: form.links,
     projects: form.projects.map((project) => ({ ...project, project_url: orNull(project.project_url) })),
   };
@@ -120,6 +124,16 @@ export default function EditProfilePage() {
     update("links", form.links.map((link, i) => (i === index ? { ...link, ...patch } : link)));
   const updateProject = (index: number, patch: Partial<ProjectDraft>) =>
     update("projects", form.projects.map((project, i) => (i === index ? { ...project, ...patch } : project)));
+  // The picker previews instantly, so drop the server's old complaints about the theme as soon as it changes.
+  const updateTheme = (theme: ProfileTheme) => {
+    update("theme", theme);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next["theme.background"];
+      delete next["theme.effect"];
+      return next;
+    });
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -260,6 +274,36 @@ export default function EditProfilePage() {
 
             </div>
           ))}
+        </Card>
+
+        <Card
+          title="Appearance"
+          // Always rendered (disabled at the default) so the header keeps the same height; a button
+          // that only appears with a custom theme would make this card jump taller.
+          action={
+            <button
+              type="button"
+              onClick={() => updateTheme({ background: null, effect: null })}
+              disabled={!form.theme.background && !form.theme.effect}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-slate-200 transition-colors enabled:hover:border-cyan-500/50 enabled:hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RotateCcw className="size-3.5" aria-hidden />
+              Reset to default
+            </button>
+          }
+        >
+          <ThemePicker
+            theme={form.theme}
+            onChange={updateTheme}
+            error={err("theme.background")}
+            effectError={err("theme.effect")}
+            preview={{
+              name: form.full_name,
+              username: form.username,
+              avatarUrl: photoPreview || form.avatar_url || null,
+              skills: form.skills,
+            }}
+          />
         </Card>
 
         <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 sm:flex-row sm:items-center sm:justify-between">
