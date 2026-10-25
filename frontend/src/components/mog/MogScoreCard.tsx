@@ -47,13 +47,14 @@ export default function MogScoreCard({ mog, showTips }: MogScoreCardProps) {
           <svg viewBox="0 0 64 80" className="mog-score-flame" style={flameStyle}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="1" x2="0.7" y2="0">
-                <stop stopColor="#22d3ee" />
-                <stop offset="0.5" stopColor="#8b5cf6" />
-                <stop offset="1" stopColor="#e879f9" />
+                {/* The same colors as the Tailwind palette (cyan-400, violet-500, fuchsia-400, cyan-200), as variables so the Hacker appearance can re-color the flame. */}
+                <stop style={{ stopColor: "var(--color-cyan-400)" }} />
+                <stop offset="0.5" style={{ stopColor: "var(--color-violet-500)" }} />
+                <stop offset="1" style={{ stopColor: "var(--color-fuchsia-400)" }} />
               </linearGradient>
             </defs>
             <path fill={`url(#${gradientId})`} d="M34 2C40 23 56 26 53 44C59 41 60 35 59 31C72 59 57 78 32 78C7 78-4 58 6 39C8 50 13 51 15 48C9 29 30 24 34 2Z" />
-            <path fill="#a5f3fc" d="M32 39C34 51 44 53 44 63C44 71 39 76 32 76C21 76 17 66 22 59C23 63 25 64 27 63C24 53 32 50 32 39Z" />
+            <path style={{ fill: "var(--color-cyan-200)" }} d="M32 39C34 51 44 53 44 63C44 71 39 76 32 76C21 76 17 66 22 59C23 63 25 64 27 63C24 53 32 50 32 39Z" />
           </svg>
         </div>
       </div>
