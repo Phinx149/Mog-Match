@@ -27,7 +27,7 @@ users ──1:1── profiles ──1:N── profile_links
 | Table | Columns |
 |---|---|
 | `users` | `id` UUID PK, `email` unique nullable, `created_at`, `updated_at` |
-| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix"}`), timestamps |
+| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix", "effect_options": {"brightness", "size", "speed", "glow"}}`), timestamps |
 | `profile_links` | `id` UUID PK, `profile_id` FK (cascade), `label`, `url`, `position` |
 | `projects` | `id` UUID PK, `profile_id` FK (cascade), `title`, `description`, `project_url`, JSON `technologies`, `position`, timestamps |
 

@@ -1,4 +1,4 @@
-import type { ProfileTheme } from "../types/profile";
+import type { EffectOptions, ProfileTheme } from "../types/profile";
 
 // Helpers for profile themes. The backend is the authority on what's allowed
 // (backend/app/services/profile_service.py `_clean_theme`); these let the edit form warn
@@ -26,13 +26,47 @@ export const BACKGROUND_SWATCHES = [
   { name: "Ocean", hex: "#083344" },
 ] as const;
 
+/** What the server uses for options a profile hasn't set. Keep in sync with DEFAULT_EFFECT_OPTIONS in the backend. */
+export const DEFAULT_EFFECT_OPTIONS: EffectOptions = { brightness: 40, size: 14, speed: 4, glow: false };
+
+/** The theme of a profile that hasn't customized anything. */
+export const DEFAULT_THEME: ProfileTheme = { background: null, effect: null, effect_options: DEFAULT_EFFECT_OPTIONS };
+
+/** The sliders' limits; the backend enforces the same ones (EFFECT_OPTION_RANGES). */
+export const EFFECT_OPTION_RANGES = {
+  brightness: { label: "Brightness", min: 10, max: 100, step: 5, unit: "%" },
+  size: { label: "Text size", min: 10, max: 48, step: 2, unit: "px" },
+  speed: { label: "Speed", min: 1, max: 10, step: 1, unit: "" },
+} as const;
+
 /** One-click looks for the edit form: each sets the whole theme at once. */
 export const THEME_PRESETS: readonly { name: string; description: string; theme: ProfileTheme }[] = [
-  { name: "Hacker", description: "Dark green with falling code", theme: { background: "#03110a", effect: "matrix" } },
+  {
+    name: "Hacker",
+    description: "Dark green with subtle falling code",
+    theme: { background: "#03110a", effect: "matrix", effect_options: DEFAULT_EFFECT_OPTIONS },
+  },
+  {
+    name: "Neon Hacker",
+    description: "Big, bright, glowing code",
+    theme: {
+      background: "#010a03",
+      effect: "matrix",
+      effect_options: { brightness: 90, size: 28, speed: 7, glow: true },
+    },
+  },
 ];
 
 export function sameTheme(a: ProfileTheme, b: ProfileTheme): boolean {
-  return a.background?.toLowerCase() === b.background?.toLowerCase() && a.effect === b.effect;
+  const [x, y] = [a.effect_options, b.effect_options];
+  return (
+    a.background?.toLowerCase() === b.background?.toLowerCase() &&
+    a.effect === b.effect &&
+    x.brightness === y.brightness &&
+    x.size === y.size &&
+    x.speed === y.speed &&
+    x.glow === y.glow
+  );
 }
 
 function relativeLuminance(hex: string): number {

@@ -1,10 +1,10 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
-import type { ProfileTheme, ThemeEffect } from "../../types/profile";
+import type { EffectOptions, ProfileTheme, ThemeEffect } from "../../types/profile";
 import { DEFAULT_BACKGROUND, HEX_COLOR } from "../../utils/theme";
 import MatrixRain from "./MatrixRain";
 
 /** What to draw for each effect name. Adding an effect = a component here + its name in THEME_EFFECTS. */
-const EFFECTS: Record<ThemeEffect, ComponentType> = {
+const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = {
   matrix: MatrixRain,
 };
 
@@ -35,7 +35,7 @@ export default function ThemeScope({ theme, className = "", children }: ThemeSco
       data-effect={theme.effect ?? undefined}
       style={{ "--profile-bg": background ?? DEFAULT_BACKGROUND } as CSSProperties}
     >
-      {Effect && <Effect />}
+      {Effect && <Effect options={theme.effect_options} />}
       {children}
     </div>
   );

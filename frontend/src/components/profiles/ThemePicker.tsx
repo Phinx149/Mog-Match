@@ -1,6 +1,13 @@
 import { useId } from "react";
-import type { ProfileTheme, ThemeEffect } from "../../types/profile";
-import { BACKGROUND_SWATCHES, DEFAULT_BACKGROUND, isDarkEnough, sameTheme, THEME_PRESETS } from "../../utils/theme";
+import type { EffectOptions, ProfileTheme, ThemeEffect } from "../../types/profile";
+import {
+  BACKGROUND_SWATCHES,
+  DEFAULT_BACKGROUND,
+  EFFECT_OPTION_RANGES,
+  isDarkEnough,
+  sameTheme,
+  THEME_PRESETS,
+} from "../../utils/theme";
 import Avatar from "./Avatar";
 import SkillBadge from "./SkillBadge";
 import ThemeScope from "./ThemeScope";
@@ -24,7 +31,8 @@ interface ThemePickerProps {
 /** Controlled picker for a profile's look: presets, a background color, an animated effect, and a live preview. */
 export default function ThemePicker({ theme, onChange, error, effectError, preview }: ThemePickerProps) {
   const inputId = useId();
-  const { background, effect } = theme;
+  const { background, effect, effect_options: options } = theme;
+  const setOption = (patch: Partial<EffectOptions>) => onChange({ ...theme, effect_options: { ...options, ...patch } });
   // Warn right away; the server re-checks on save and is the one that actually enforces it.
   const message =
     background !== null && !isDarkEnough(background)
@@ -124,6 +132,39 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
         ) : (
           <span className="mt-1 block text-xs text-muted">Plays behind your card. Viewers who prefer reduced motion see a still frame instead.</span>
         )}
+
+        {effect && (
+          <fieldset className="mt-3 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
+            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">Tune the rain</legend>
+            {(Object.keys(EFFECT_OPTION_RANGES) as (keyof typeof EFFECT_OPTION_RANGES)[]).map((key) => {
+              const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
+              return (
+                <RangeField
+                  key={key}
+                  label={label}
+                  value={options[key]}
+                  display={`${options[key]}${unit}`}
+                  {...{ min, max, step }}
+                  onChange={(value) => setOption({ [key]: value })}
+                />
+              );
+            })}
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-cyan-400"
+                checked={options.glow}
+                onChange={(e) => setOption({ glow: e.target.checked })}
+              />
+              Neon glow <span className="text-xs text-muted">(bold letters with a halo)</span>
+            </label>
+            {options.brightness > 60 && (
+              <p className="text-xs text-amber-300/90 sm:col-span-2">
+                Bright rain behind text can make a card harder to read. Check the preview.
+              </p>
+            )}
+          </fieldset>
+        )}
       </div>
 
       <div>
@@ -158,4 +199,37 @@ function chipClass(selected: boolean): string {
       ? "border-cyan-400 bg-cyan-400/10 text-cyan-200"
       : "border-line text-slate-200 hover:border-cyan-500/50 hover:text-cyan-200"
   }`;
+}
+
+interface RangeFieldProps {
+  label: string;
+  value: number;
+  /** The value as shown to people, e.g. "40%". */
+  display: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}
+
+/** A labelled slider with its current value next to the label. */
+function RangeField({ label, value, display, min, max, step, onChange }: RangeFieldProps) {
+  const id = useId();
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 flex items-baseline justify-between text-sm text-slate-300">
+        {label}
+        <output htmlFor={id} className="font-mono text-xs text-cyan-300">
+          {display}
+        </output>
+      </label>
+      <input
+        id={id}
+        type="range"
+        className="block w-full cursor-pointer accent-cyan-400"
+        {...{ min, max, step, value }}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </div>
+  );
 }

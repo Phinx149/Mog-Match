@@ -8,6 +8,7 @@ import Navbar from "../components/layout/Navbar";
 import ThemePicker from "../components/profiles/ThemePicker";
 import { ApiError, getFilterOptions, getMyProfile, updateMyProfile } from "../services/api";
 import { EXPERIENCE_LEVELS, type Profile, type ProfileTheme, type ProfileUpdate } from "../types/profile";
+import { DEFAULT_THEME, sameTheme } from "../utils/theme";
 
 type LinkDraft = { label: string; url: string };
 type ProjectDraft = { title: string; description: string; project_url: string; technologies: string[] };
@@ -129,8 +130,7 @@ export default function EditProfilePage() {
     update("theme", theme);
     setFieldErrors((current) => {
       const next = { ...current };
-      delete next["theme.background"];
-      delete next["theme.effect"];
+      for (const key of Object.keys(next)) if (key.startsWith("theme.")) delete next[key];
       return next;
     });
   };
@@ -151,6 +151,8 @@ export default function EditProfilePage() {
   };
 
   const err = (key: string) => fieldErrors[key];
+  // The sliders can't send a bad value, so a server complaint about one option is shown as a single line.
+  const firstEffectOptionError = Object.entries(fieldErrors).find(([key]) => key.startsWith("theme.effect_options."))?.[1];
   const saving = status.kind === "saving";
 
   return (
@@ -283,8 +285,8 @@ export default function EditProfilePage() {
           action={
             <button
               type="button"
-              onClick={() => updateTheme({ background: null, effect: null })}
-              disabled={!form.theme.background && !form.theme.effect}
+              onClick={() => updateTheme(DEFAULT_THEME)}
+              disabled={sameTheme(form.theme, DEFAULT_THEME)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-slate-200 transition-colors enabled:hover:border-cyan-500/50 enabled:hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCcw className="size-3.5" aria-hidden />
@@ -296,7 +298,7 @@ export default function EditProfilePage() {
             theme={form.theme}
             onChange={updateTheme}
             error={err("theme.background")}
-            effectError={err("theme.effect")}
+            effectError={err("theme.effect") ?? err("theme.effect_options") ?? firstEffectOptionError}
             preview={{
               name: form.full_name,
               username: form.username,

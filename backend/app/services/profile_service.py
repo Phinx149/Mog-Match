@@ -43,10 +43,15 @@ MAX_LINKS = 10
 MAX_PROJECTS = 20
 
 # Theme options a profile may set (purely cosmetic; never used for search, filtering or scoring).
-THEME_FIELDS = ("background", "effect")
+THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
 THEME_EFFECTS = ("matrix",)
+# Tuning for the effect (currently the matrix rain's). Integers must be within these inclusive
+# ranges; the frontend sliders use the same ones (EFFECT_OPTION_RANGES in frontend/src/utils/theme.ts).
+EFFECT_OPTION_RANGES = {"brightness": (10, 100), "size": (10, 48), "speed": (1, 10)}  # percent, px, steps
+# Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
+DEFAULT_EFFECT_OPTIONS = {"brightness": 40, "size": 14, "speed": 4, "glow": False}
 HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 # The UI's text is light, so the card background has to be dark enough to keep it readable.
 # 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
@@ -173,6 +178,7 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "theme": {
             "background": (profile.theme or {}).get("background"),
             "effect": (profile.theme or {}).get("effect"),
+            "effect_options": {**DEFAULT_EFFECT_OPTIONS, **(profile.theme or {}).get("effect_options", {})},
         },
         "links": [
             {"id": str(link.id), "label": link.label, "url": link.url} for link in profile.links
@@ -322,7 +328,33 @@ def _relative_luminance(hex_color: str) -> float:
     return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
 
 
-def _clean_theme(value: Any, errors: dict) -> dict[str, str]:
+def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
+    """Validate the effect's tuning knobs; returns only the ones that were sent."""
+    if not isinstance(value, dict):
+        errors["theme.effect_options"] = "Must be an object."
+        return {}
+
+    cleaned: dict[str, Any] = {}
+    for key, option in value.items():
+        field = f"theme.effect_options.{key}"
+        if key in EFFECT_OPTION_RANGES:
+            low, high = EFFECT_OPTION_RANGES[key]
+            # bool is a subclass of int in Python, so exclude it explicitly (True would pass as 1).
+            if not isinstance(option, int) or isinstance(option, bool) or not low <= option <= high:
+                errors[field] = f"Must be a whole number from {low} to {high}."
+            else:
+                cleaned[key] = option
+        elif key == "glow":
+            if not isinstance(option, bool):
+                errors[field] = "Must be true or false."
+            else:
+                cleaned[key] = option
+        else:
+            errors[field] = "Unknown effect option."
+    return cleaned
+
+
+def _clean_theme(value: Any, errors: dict) -> dict[str, Any]:
     """Return the theme to store: only options that are set, so `{}` (or null) means default."""
     if value is None:
         return {}
@@ -333,7 +365,7 @@ def _clean_theme(value: Any, errors: dict) -> dict[str, str]:
         if key not in THEME_FIELDS:
             errors[f"theme.{key}"] = "Unknown theme option."
 
-    cleaned: dict[str, str] = {}
+    cleaned: dict[str, Any] = {}
     background = value.get("background")
     if background is not None:
         # Only a strict #rrggbb ever reaches the database, because the frontend puts this
@@ -351,6 +383,12 @@ def _clean_theme(value: Any, errors: dict) -> dict[str, str]:
             errors["theme.effect"] = f"Must be one of: {', '.join(THEME_EFFECTS)}."
         else:
             cleaned["effect"] = effect
+
+    # Kept even while the effect is off, so someone can switch it off and on without retuning.
+    if value.get("effect_options") is not None:
+        options = _clean_effect_options(value["effect_options"], errors)
+        if options:
+            cleaned["effect_options"] = options
     return cleaned
 
 

@@ -1,47 +1,57 @@
 import { useEffect, useRef } from "react";
+import type { EffectOptions } from "../../types/profile";
 
 // Half-width katakana and digits, like the film.
 const GLYPHS = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789";
-const FONT_SIZE = 14; // px; also the column width and row height
-const FRAME_MS = 60; // ~16 fps: a slow, steady fall, and cheap when Discover shows many cards
-const FADE = 0.12; // how much of the older letters is erased each frame; lower = longer trails
-const STATIC_STEPS = 40; // frames pre-drawn for people who prefer reduced motion
+const GREEN = "#22ff66";
+const STEPS_PER_SPEED = 4; // speed 1-10 -> 4-40 rows fallen per second (the default, 4, is the original slow fall)
+const MAX_STEPS_PER_FRAME = 3; // catch-up limit, e.g. right after the tab was in the background
+const FADE = 0.12; // how much of the older letters is erased each step; lower = longer trails
+const STATIC_STEPS = 40; // steps pre-drawn for people who prefer reduced motion
 
 /**
  * Falling green code, drawn on a canvas that fills its parent. It is generated, not an image:
  * it fits any card size, never repeats or shows a seam, and costs no download.
  * The parent must be `relative`; ThemeScope takes care of that.
  */
-export default function MatrixRain() {
+export default function MatrixRain({ options }: { options: EffectOptions }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { size, speed, glow } = options;
 
+  // Brightness is just the canvas opacity (below), so changing it never restarts the animation.
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const stepMs = 1000 / (speed * STEPS_PER_SPEED);
     let width = 0;
     let height = 0;
     let drops: number[] = []; // the row each column's falling letter is on
     let frame = 0; // requestAnimationFrame id; 0 = not running
-    let lastDraw = 0;
+    let lastStep = 0;
 
     const step = () => {
       // Erase part of what is already there instead of repainting a background, so the canvas
       // stays transparent and the trails fade out over whatever color sits behind it.
+      ctx.shadowBlur = 0; // a leftover glow would be "erased" as well, smearing the fade
       ctx.globalCompositeOperation = "destination-out";
       ctx.fillStyle = `rgba(0, 0, 0, ${FADE})`;
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "source-over";
 
-      ctx.fillStyle = "#22ff66";
-      ctx.font = `${FONT_SIZE}px monospace`;
+      ctx.fillStyle = GREEN;
+      ctx.font = `${glow ? "bold " : ""}${size}px monospace`;
+      if (glow) {
+        ctx.shadowColor = GREEN;
+        ctx.shadowBlur = size * 0.7;
+      }
       drops.forEach((row, column) => {
         const letter = GLYPHS.charAt(Math.floor(Math.random() * GLYPHS.length));
-        ctx.fillText(letter, column * FONT_SIZE, row * FONT_SIZE);
+        ctx.fillText(letter, column * size, row * size);
         // Once past the bottom, restart from the top at random so the columns drift out of sync.
-        drops[column] = row * FONT_SIZE > height && Math.random() > 0.96 ? 0 : row + 1;
+        drops[column] = row * size > height && Math.random() > 0.96 ? 0 : row + 1;
       });
     };
 
@@ -53,16 +63,19 @@ export default function MatrixRain() {
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // Start each column somewhere random so the rain is already falling on first paint.
-      const rows = height / FONT_SIZE;
-      drops = Array.from({ length: Math.ceil(width / FONT_SIZE) }, () => Math.floor(Math.random() * rows));
+      const rows = height / size;
+      drops = Array.from({ length: Math.ceil(width / size) }, () => Math.floor(Math.random() * rows));
       if (reduceMotion) for (let i = 0; i < STATIC_STEPS; i++) step(); // one still picture, no animation
     };
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
-      if (now - lastDraw < FRAME_MS) return;
-      lastDraw = now;
-      step();
+      if (!lastStep) lastStep = now;
+      // Screens refresh every ~16 ms, so at high speeds more than one step can be due per frame.
+      const due = Math.floor((now - lastStep) / stepMs);
+      if (due < 1) return;
+      lastStep += due * stepMs;
+      for (let i = 0; i < Math.min(due, MAX_STEPS_PER_FRAME); i++) step();
     };
     const start = () => {
       if (!frame && !reduceMotion) frame = requestAnimationFrame(tick);
@@ -70,6 +83,7 @@ export default function MatrixRain() {
     const stop = () => {
       cancelAnimationFrame(frame);
       frame = 0;
+      lastStep = 0;
     };
 
     // Only animate while on screen: Discover can list many themed cards, most scrolled out of view.
@@ -82,14 +96,15 @@ export default function MatrixRain() {
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
     };
-  }, []);
+  }, [size, speed, glow]);
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden
-      // -z-10 puts it behind the content (ThemeScope isolates the stacking); dim enough that text stays readable.
-      className="pointer-events-none absolute inset-0 -z-10 size-full rounded-[inherit] opacity-40"
+      style={{ opacity: options.brightness / 100 }}
+      // -z-10 puts it behind the content (ThemeScope isolates the stacking).
+      className="pointer-events-none absolute inset-0 -z-10 size-full rounded-[inherit]"
     />
   );
 }

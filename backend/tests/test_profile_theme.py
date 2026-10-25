@@ -1,7 +1,8 @@
 import pytest
 
 
-DEFAULT_THEME = {"background": None, "effect": None}
+DEFAULT_OPTIONS = {"brightness": 40, "size": 14, "speed": 4, "glow": False}
+DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
 
 def _theme(client):
@@ -90,10 +91,10 @@ def test_theme_does_not_change_the_mog_score(client):
 def test_effect_persists_alongside_the_background(client):
     response = client.patch("/api/profiles/me", json={"theme": {"background": "#04130a", "effect": "matrix"}})
     assert response.status_code == 200, response.get_json()
-    assert response.get_json()["theme"] == {"background": "#04130a", "effect": "matrix"}
+    assert response.get_json()["theme"] == {**DEFAULT_THEME, "background": "#04130a", "effect": "matrix"}
 
     me = client.get("/api/profiles/me").get_json()
-    assert me["theme"] == {"background": "#04130a", "effect": "matrix"}
+    assert me["theme"] == {**DEFAULT_THEME, "background": "#04130a", "effect": "matrix"}
     assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
 
 
@@ -101,7 +102,7 @@ def test_effect_works_without_a_custom_background(client):
     response = client.patch("/api/profiles/me", json={"theme": {"effect": "matrix"}})
 
     assert response.status_code == 200, response.get_json()
-    assert response.get_json()["theme"] == {"background": None, "effect": "matrix"}
+    assert response.get_json()["theme"] == {**DEFAULT_THEME, "effect": "matrix"}
 
 
 def test_effect_can_be_reset(client):
@@ -120,3 +121,88 @@ def test_effect_must_be_a_known_name(client, value):
     assert response.status_code == 400
     assert "theme.effect" in response.get_json()["error"]["fields"]
     assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+CRANKED = {"brightness": 100, "size": 48, "speed": 10, "glow": True}
+
+
+def test_effect_options_persist_and_show_up_for_other_viewers(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"] == CRANKED
+
+    me = client.get("/api/profiles/me").get_json()
+    assert me["theme"]["effect_options"] == CRANKED
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"]["effect_options"] == CRANKED
+
+
+def test_partial_effect_options_fall_back_to_defaults(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": {"size": 30}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"] == {**DEFAULT_OPTIONS, "size": 30}
+
+
+def test_effect_options_survive_turning_the_effect_off(client):
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": None, "effect_options": CRANKED}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {**DEFAULT_THEME, "effect_options": CRANKED}
+
+
+def test_resetting_the_theme_clears_effect_options(client):
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+
+    response = client.patch("/api/profiles/me", json={"theme": {}})
+
+    assert response.get_json()["theme"] == DEFAULT_THEME
+
+
+def test_updating_other_fields_keeps_effect_options(client):
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+    client.patch("/api/profiles/me", json={"full_name": "Jordan A."})
+
+    assert _theme(client)["effect_options"] == CRANKED
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("size", 9), ("size", 49), ("size", 14.5), ("size", "14"), ("size", True), ("size", None),
+        ("brightness", 0), ("brightness", 101), ("brightness", -5),
+        ("speed", 0), ("speed", 11), ("speed", [4]),
+        ("glow", 1), ("glow", "yes"), ("glow", None),
+    ],
+)
+def test_effect_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+@pytest.mark.parametrize("value", [10, 48, 14])
+def test_effect_option_range_edges_are_accepted(client, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"size": value}}})
+
+    assert response.status_code == 200, response.get_json()
+
+
+def test_effect_options_reject_unknown_keys_and_wrong_shape(client):
+    unknown = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"color": "red"}}})
+    assert unknown.status_code == 400
+    assert "theme.effect_options.color" in unknown.get_json()["error"]["fields"]
+
+    wrong_shape = client.patch("/api/profiles/me", json={"theme": {"effect_options": [1, 2]}})
+    assert wrong_shape.status_code == 400
+    assert "theme.effect_options" in wrong_shape.get_json()["error"]["fields"]
+
+
+def test_effect_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before

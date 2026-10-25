@@ -43,12 +43,26 @@ export type MogTier = (typeof MOG_TIERS)[number];
 export const THEME_EFFECTS = ["matrix"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
-/** Cosmetic look of a profile's card and page. A `null` option means the default look. */
+/** How the animated effect looks. The server fills in defaults, so every field is always present. */
+export interface EffectOptions {
+  /** How opaque the effect is, 10-100 (%). */
+  brightness: number;
+  /** Letter size, 10-48 (px). */
+  size: number;
+  /** How fast it moves, 1-10. */
+  speed: number;
+  /** Bold letters with a neon halo. */
+  glow: boolean;
+}
+
+/** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */
 export interface ProfileTheme {
   /** Card background as `#rrggbb`. */
   background: string | null;
   /** Animation drawn behind the card's content. */
   effect: ThemeEffect | null;
+  /** Tuning for `effect`; kept even while the effect is off. */
+  effect_options: EffectOptions;
 }
 
 export interface Profile {
@@ -93,7 +107,7 @@ export interface ProfileUpdate {
   interests?: string[];
   experience_level?: string | null;
   looking_for?: string[];
-  /** Replaces the whole theme; send `{ background: null, effect: null }` to go back to the default. */
+  /** Replaces the whole theme; send `DEFAULT_THEME` (utils/theme.ts) to go back to the default. */
   theme?: ProfileTheme;
   links?: Omit<ProfileLink, "id">[];
   projects?: Omit<Project, "id">[];
