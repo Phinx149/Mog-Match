@@ -89,4 +89,4 @@ git push -u origin feat/<short-name>
 gh pr create --base dev --fill
 ```
 PR description: what changed, screenshot for UI, how to test, and anything teammates must run after pulling (`flask db upgrade`, `flask seed`, new env vars).
-`gh` may not be installed: if `gh pr create` fails, push the branch and share `https://github.com/Phinx149/social-coding-Hackathon/compare/dev...<branch>?expand=1`.
+`gh` may not be installed: if `gh pr create` fails, push the branch and share `https://github.com/Phinx149/Mog-Match/compare/dev...<branch>?expand=1`.
