@@ -1,4 +1,5 @@
 import { Bot, Code2, Heart, MapPin, X } from "lucide-react";
+import { useState, type AnimationEvent } from "react";
 import { Link } from "react-router-dom";
 import type { Profile, SwipeDecision } from "../../types/profile";
 import MogBadge from "../mog/MogBadge";
@@ -19,15 +20,34 @@ export default function ProfileCard({ profile, activeSkills, activeLookingFor, o
   const active = new Set(activeSkills.map((s) => s.toLowerCase()));
   const activeLooking = new Set(activeLookingFor.map((s) => s.toLowerCase()));
   const extraSkills = profile.skills.length - MAX_SKILLS;
+  // Set while the card is squeezing into the button; the swipe is only reported once that finishes.
+  const [leaving, setLeaving] = useState<SwipeDecision | null>(null);
+
+  const swipe = (decision: SwipeDecision) => {
+    if (leaving) return; // ignore a second click mid-animation
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onDecide(profile, decision);
+      return;
+    }
+    setLeaving(decision);
+  };
+
+  // Theme effects (rain, snow...) animate inside the card and their events bubble up here too,
+  // so only react to our own animation.
+  const onAnimationEnd = (event: AnimationEvent) => {
+    if (leaving && event.animationName === "swipe-away") onDecide(profile, leaving);
+  };
 
   return (
-    <article className="flex items-stretch gap-3 sm:gap-4">
-      <DecisionButton kind="pass" onClick={() => onDecide(profile, "pass")} name={profile.full_name} />
+    <article className="flex items-stretch gap-3 sm:gap-4" onAnimationEnd={onAnimationEnd}>
+      <DecisionButton kind="pass" onClick={() => swipe("pass")} name={profile.full_name} pressed={leaving === "pass"} />
 
       {/* Only the card body is themed; the Like/Pass buttons on either side keep the app's look. */}
       <ThemeScope
         theme={profile.theme}
-        className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-500/40"
+        className={`min-w-0 flex-1 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-500/40 ${
+          leaving ? `pointer-events-none swipe-to-${leaving}` : ""
+        }`}
       >
         <Link to={`/profile/${profile.id}`} className="group flex items-center gap-4">
           <Avatar name={profile.full_name} url={profile.avatar_url} size="lg" />
@@ -87,12 +107,20 @@ export default function ProfileCard({ profile, activeSkills, activeLookingFor, o
         )}
       </ThemeScope>
 
-      <DecisionButton kind="like" onClick={() => onDecide(profile, "like")} name={profile.full_name} />
+      <DecisionButton kind="like" onClick={() => swipe("like")} name={profile.full_name} pressed={leaving === "like"} />
     </article>
   );
 }
 
-function DecisionButton({ kind, onClick, name }: { kind: SwipeDecision; onClick: () => void; name: string }) {
+interface DecisionButtonProps {
+  kind: SwipeDecision;
+  onClick: () => void;
+  name: string;
+  /** This is the button that was just clicked, so it pops while the card squeezes into it. */
+  pressed: boolean;
+}
+
+function DecisionButton({ kind, onClick, name, pressed }: DecisionButtonProps) {
   const isLike = kind === "like";
   const Icon = isLike ? Heart : X;
   return (
@@ -102,6 +130,8 @@ function DecisionButton({ kind, onClick, name }: { kind: SwipeDecision; onClick:
       aria-label={`${isLike ? "Like" : "Pass on"} ${name}`}
       title={isLike ? "Like" : "Pass"}
       className={`flex w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors sm:w-16 ${
+        pressed ? "swipe-pop" : ""
+      } ${
         isLike
           ? "border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25"
           : "border-line bg-surface text-muted hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"

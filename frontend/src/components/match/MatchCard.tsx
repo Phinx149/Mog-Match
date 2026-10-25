@@ -17,6 +17,19 @@ const LABELS: Record<MatchComponent, string> = {
   location: "Location",
 };
 
+// The score warms up from cool grey to gold, stepping at the same points as the labels in
+// backend/app/services/mog_match.py (0, 20, 40, 60, 80). Class names are spelled out in full so Tailwind finds them.
+const SCORE_STYLES = [
+  { min: 80, className: "text-amber-300 drop-shadow-[0_0_14px_rgb(252_211_77/0.5)]" },
+  { min: 60, className: "text-fuchsia-300 drop-shadow-[0_0_12px_rgb(240_171_252/0.4)]" },
+  { min: 40, className: "text-violet-300 drop-shadow-[0_0_10px_rgb(196_181_253/0.3)]" },
+  { min: 20, className: "text-sky-300" },
+  { min: 0, className: "text-slate-400" },
+];
+
+const scoreClass = (score: number) =>
+  (SCORE_STYLES.find(({ min }) => score >= min) ?? SCORE_STYLES[SCORE_STYLES.length - 1]).className;
+
 const plural = (count: number, word: string) => `${count} shared ${word}${count === 1 ? "" : "s"}`;
 
 /** A plain-English sentence for what a component found, or null when it found nothing. */
@@ -80,13 +93,18 @@ export default function MatchCard({ profile, rank, onUnlike, invite, onInvite }:
             <MogBadge mog={profile.mog} />
           </p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="font-mono text-3xl font-bold text-violet-200">
+        <div className="group/score relative shrink-0 text-right">
+          <p
+            className={`origin-right font-mono text-4xl font-extrabold tabular-nums transition-transform group-hover/score:scale-105 sm:text-5xl ${scoreClass(match.score)}`}
+          >
             {match.score}
-            <span className="text-sm text-muted">%</span>
+            <span className="text-xl font-bold opacity-70 sm:text-2xl">%</span>
           </p>
-          <p className="text-xs font-medium text-violet-300">similar to you</p>
-          <p className="text-xs text-muted italic">{match.label}</p>
+          {/* Always in the page (so screen readers read it), but only shown on hover or keyboard focus. */}
+          <span className="pointer-events-none absolute top-full right-0 z-20 mt-1 w-max max-w-56 rounded-lg border border-line bg-surface-raised px-3 py-2 text-left opacity-0 shadow-xl shadow-black/40 transition-opacity group-hover/score:opacity-100 group-focus-visible:opacity-100">
+            <span className="block text-xs font-medium text-violet-300">similar to you</span>
+            <span className="block text-xs text-muted italic">{match.label}</span>
+          </span>
         </div>
       </Link>
 
@@ -128,15 +146,7 @@ export default function MatchCard({ profile, rank, onUnlike, invite, onInvite }:
         )}
       </details>
 
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-        <div className="mr-auto flex min-w-0 flex-1">
-          <InviteControl
-            name={profile.full_name}
-            invite={invite}
-            fromThem={invite?.sender.id === profile.id}
-            onSend={(message) => onInvite(profile, message)}
-          />
-        </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => onUnlike(profile)}
@@ -147,6 +157,15 @@ export default function MatchCard({ profile, rank, onUnlike, invite, onInvite }:
           <HeartOff className="size-4" aria-hidden />
           Unlike
         </button>
+        {/* Takes the leftover width and right-aligns the request button (or its status / open form). */}
+        <div className="flex min-w-0 flex-1 justify-end">
+          <InviteControl
+            name={profile.full_name}
+            invite={invite}
+            fromThem={invite?.sender.id === profile.id}
+            onSend={(message) => onInvite(profile, message)}
+          />
+        </div>
       </div>
     </article>
   );
