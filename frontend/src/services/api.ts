@@ -13,7 +13,12 @@ import type { SessionResponse } from "../types/auth";
 import type { InboxResponse, Invite } from "../types/invite";
 import type { Conversation, ChatMessage, ProjectIdea, StudioTurn } from "../types/chat";
 
-export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
+// Dev: the Flask server on its own port. Production (Vercel): the API is on the same domain
+// under /api, so an empty base URL makes every request relative ("/api/...").
+export const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:5001" : "")).replace(
+  /\/$/,
+  "",
+);
 
 export class ApiError extends Error {
   status: number;
@@ -40,7 +45,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new ApiError(`Can't reach the API at ${API_URL}. Is the Flask server running?`, 0);
+    throw new ApiError(`Can't reach the API at ${API_URL || window.location.origin}. Is the Flask server running?`, 0);
   }
 
   const body = await response.json().catch(() => null);

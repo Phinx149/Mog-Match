@@ -3,7 +3,7 @@ import json
 from io import BytesIO
 import warnings
 
-from flask import Blueprint, abort, jsonify, request, send_file
+from flask import Blueprint, abort, current_app, jsonify, request, send_file
 from PIL import Image, UnidentifiedImageError
 
 from ..services import auth_service, profile_service, swipe_service
@@ -74,9 +74,10 @@ def update_my_profile():
             data = None
         upload = request.files.get("photo")
         if upload:
-            raw = upload.read(5 * 1024 * 1024 + 1)
-            if len(raw) > 5 * 1024 * 1024:
-                errors["photo"] = "Choose a photo smaller than 5 MB."
+            max_bytes = current_app.config["MAX_PHOTO_BYTES"]
+            raw = upload.read(max_bytes + 1)
+            if len(raw) > max_bytes:
+                errors["photo"] = f"Choose a photo smaller than {max_bytes // (1024 * 1024)} MB."
             else:
                 try:
                     with warnings.catch_warnings():

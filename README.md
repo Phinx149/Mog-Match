@@ -18,7 +18,8 @@ Chat and Project studio setup, API/events, and browser-test instructions: [docs/
 |---|---|
 | Frontend | React 19 + Vite + TypeScript, Tailwind CSS v4, React Router, Lucide icons |
 | Backend | Python 3.12+, Flask, Flask-CORS, Flask-SQLAlchemy, Flask-Migrate, python-dotenv |
-| Database | SQLite (dev) via SQLAlchemy ORM — portable UUID/JSON columns, so PostgreSQL is a `DATABASE_URL` change |
+| Database | SQLite in local dev, **PostgreSQL in production** (Neon on Vercel, `psycopg` driver). Same SQLAlchemy models and migrations for both |
+| Hosting | Vercel: one project, `vercel.json` Services (`/api/*` → Flask, everything else → the Vite build). See [`docs/DEPLOY.md`](docs/DEPLOY.md) |
 | Tests | pytest (backend), `tsc` type checking (frontend) |
 
 ## Repository structure
@@ -121,17 +122,18 @@ npm run dev                     # http://localhost:5173
 | Variable | Default | Purpose |
 |---|---|---|
 | `FLASK_APP` | `run.py` | Lets `flask db` / `flask seed` find the app |
-| `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | SQLAlchemy URL, e.g. `postgresql://user:pass@host/db` |
+| `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | Database to use. Empty = local SQLite file. A Postgres URL (`postgresql://user:pass@host/db`, or `postgres://...`) is used with the psycopg driver automatically. `POSTGRES_URL` also works (Vercel/Neon sets both) |
+| `TEST_DATABASE_URL` | *(empty → temporary SQLite)* | Run `pytest` against this Postgres database instead. **It drops every table first**, so only use a throwaway DB |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origins allowed to call `/api/*` |
 | `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded demo user (username `jordan-dev`) |
-| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. Set a long random value anywhere but your laptop |
+| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. **Required on Vercel**: the app refuses to start there with the default |
 | `SEED_PASSWORD` | see `.env.example` | Password `flask seed` gives every seeded user |
 | `PORT` | `5001` | Port for `python run.py` (5000 clashes with AirPlay on macOS) |
 
 **`frontend/.env.local`**
 | Variable | Default | Purpose |
 |---|---|---|
-| `VITE_API_URL` | `http://localhost:5001` | Flask API base URL |
+| `VITE_API_URL` | `http://localhost:5001` in dev, empty in production builds | Flask API base URL. Leave unset on Vercel: production calls `/api` on the same domain |
 
 Never commit `.env`, `.env.local` or `*.db` files — they're git-ignored.
 
@@ -258,21 +260,47 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
   "bio": "...", "favorite_ide": "VS Code", "favorite_ai_agents": ["Cursor", "Claude Code"],
   "skills": ["Frontend", "TypeScript", "React"], "interests": ["Design Systems"],
   "experience_level": "Senior", "looking_for": ["Side project"],
+  "theme": {"background": "#172554", "effect": null, "effect_options": {"brightness": 40, "size": 14, "speed": 4, "glow": false, "count": 1, "color_change": true, "color": "#ffffff", "rain_color": "#22ff66", "rain_rainbow": false, "rain_symbols": "katakana", "emojis": ["🚀", "✨", "🔥", "💻", "🦄", "🍕"], "emoji_count": 14, "emoji_angle": 45, "emoji_path": "straight", "emoji_spin": 2, "slogans": ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"], "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": true, "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": true, "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5, "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2}},
   "links": [{"id": "uuid", "label": "GitHub", "url": "https://..."}],
   "projects": [{"id": "uuid", "title": "Prism UI", "description": "...", "project_url": "https://...", "technologies": ["React"]}],
   "created_at": "ISO-8601", "updated_at": "ISO-8601"
 }
 ```
 
-**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
-- `links` and `projects`, when sent, **replace** the existing lists.
+**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`), `theme` (`{background, effect, effect_options}`).
+- `links`, `projects` and `theme`, when sent, **replace** the existing value.
 - Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
 - `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
+- `theme` is cosmetic only; nothing else (search, filters, Mog Score) reads it. Each option is `null` for the default look.
+  - `theme.background`: `#rrggbb`. It must be dark enough for the light text to stay readable, otherwise `400` with a `theme.background` field error.
+  - `theme.effect`: an animation drawn behind the card: `matrix` (falling green code), `dvd` (a bouncing DVD logo that changes color on every wall hit) `emoji` (emoji floating around, each one spinning) `slogans` (gym-bro slogans scrolling past in rows like a marquee) `market` (a made-up candlestick chart with pumps and crashes; it is not real data) `money` (green bills, or coins, fluttering down while gusts of wind blow them around) or `snow` (soft flakes and crystals drifting down on a wind that surges and eases off). All are generated in the browser on a canvas, not images. Any other name is a `400` with a `theme.effect` field error.
+  - `theme.effect_options` tunes whichever effect is on; send any subset and the rest use the defaults shown above (responses always include every option). An effect ignores options that don't apply to it. They are kept while `effect` is `null`. Anything invalid is a `400` with a `theme.effect_options.<name>` field error.
+    - Whole numbers: `brightness` 10-100 (%), `size` 10-48 (letter size for `matrix`, logo size for `dvd`), `speed` 1-10, `count` 1-10 (how many `dvd` logos).
+    - `glow` true/false (neon halo). `color_change` true/false (`dvd`: a logo takes a new color on every bounce). `color` `#rrggbb` (`dvd`: the logo color while `color_change` is false).
+    - `matrix` only: `rain_color` `#rrggbb` (default classic green); `rain_rainbow` true/false (every column gets its own drifting hue instead of `rain_color`); `rain_symbols` one of `katakana` (default), `binary`, `code`, `chaos`. The characters themselves live in the frontend (`RAIN_SYMBOLS` in `utils/theme.ts`).
+    - `emoji` only: `emojis` a list of 1-12 emoji (default 🚀 ✨ 🔥 💻 🦄 🍕; duplicates are dropped, and only a rough check is made: short, no letters, digits, spaces or ASCII); `emoji_count` 3-60 (how many float at once); `emoji_angle` 0-359 (direction of travel in degrees: 0 is right, 90 is down); `emoji_path` one of `straight` (default; leaves one side, comes back in the other), `wave` (the same, wobbling side to side) or `bounce` (ricochets off the edges, starting along `emoji_angle`); `emoji_spin` -10 to 10 (tenths of a turn per second, negative is counter-clockwise, 0 is no spin). `size`, `speed`, `brightness` and `glow` apply too.
+    - `slogans` only: `slogans` a list of 1-8 slogans of 1-40 characters each (default "NEVER SKIP LEG DAY", "ONE MORE REP", ...; whitespace is tidied, repeats ignoring case are dropped, and control or text-direction characters are rejected); `slogan_color` `#rrggbb`; `slogan_style` one of `solid`, `outline`, `mixed` (default; filled and outlined rows take turns); `slogan_tilt` -45 to 45 (degrees the rows lean; negative leans up to the right); `slogan_alternate` true/false (every other row scrolls the opposite way). `size` is the text size, and `speed`, `brightness` and `glow` apply too.
+    - `market` only: `chart_volatility` 1-10 (how wildly the price swings); `chart_mood` one of `bull`, `bear`, `choppy` (default; which way it tends to go); `chart_palette` one of `classic` (default, green up and red down), `swapped`, `neon`, `mono`; `chart_ticker` 1-8 letters or numbers (trimmed, stored uppercase, default `MOG`); `chart_label` true/false (show the ticker, price and price tag). `size` is the candle width, and `speed`, `brightness` and `glow` apply too.
+    - `money` only: `money_kind` one of `bills` (default; green bills that flip over as they fall), `coins` (gold and silver coins that spin) or `mixed` (both); `money_count` 5-80 (how many are in the air at once, default 30); `money_wind` 0-10 (how hard the gusts blow them sideways, and sometimes up; 0 is still air so they just fall, default 5); `money_weight` 1-10 (how heavy the coins are, default 5: heavier coins fall faster, turn over slower and are blown about less; bills ignore it). `size` is the bill length (a coin is about half that wide), `speed` is how fast they fall, and `brightness` and `glow` apply too.
+    - `snow` only: `snow_kind` one of `dots` (soft round flakes), `crystals` (six-armed snowflakes that slowly turn) or `mixed` (default; both); `snow_count` 20-200 (how many are in the air at once, default 80); `snow_wind` -10 to 10 (which way the wind blows them: negative is left, positive is right, 0 is calm, default 2; the wind surges and eases off, so it is never perfectly steady). `size` is the flake size (a crystal is bigger than a soft flake of the same size), `speed` is how fast they fall, and `brightness` and `glow` apply too.
+    - Colors are strict `#rrggbb` and, unlike `theme.background`, have no darkness rule: they are drawn on a canvas, never used as a fill behind text.
+  - A `dvd` logo that lands in a corner (or bounces close enough to one, heading into it) sets off a sparkle burst; that part is not configurable.
+- A theme saved by an older version whose effect or options no longer exist is read back as the default look (the stale values are ignored, not an error).
 - `400` on invalid data or unknown fields, `409` if the username is taken.
+
+## Deploying
+
+Production is Vercel + Postgres; the full step-by-step guide, including how to run migrations against production, is in [`docs/DEPLOY.md`](docs/DEPLOY.md). In short:
+1. Import the repo into Vercel with the repo root as the root directory (`vercel.json` defines both services).
+2. Connect a Neon Postgres database (sets `DATABASE_URL`) and set `SECRET_KEY` and `SEED_PASSWORD`.
+3. From your laptop: `DATABASE_URL="<production url>" flask db upgrade`, then the same with `flask seed`.
+4. Deploy, then open `/api/health`.
+
+Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL` in `backend/.env`.
 
 ## Known limitations (this milestone)
 
 - Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
 - The inbox updates by polling (every 5 s), not push.
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
-- Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.
+- Edit Profile accepts JPEG, PNG and WebP photos up to 4 MB (Vercel rejects request bodies over 4.5 MB). Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

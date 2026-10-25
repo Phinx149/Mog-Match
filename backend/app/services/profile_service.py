@@ -2,6 +2,7 @@
 
 import re
 import hashlib
+import unicodedata
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -41,6 +42,84 @@ LIST_FIELDS: dict[str, int] = {
 MAX_TAG_LENGTH = 40
 MAX_LINKS = 10
 MAX_PROJECTS = 20
+
+# Theme options a profile may set (purely cosmetic; never used for search, filtering or scoring).
+THEME_FIELDS = ("background", "effect", "effect_options")
+# Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
+# THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow")
+# Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
+# and an effect ignores options that don't apply to it, like the rain and `count`).
+# Integers must be within these inclusive ranges; the frontend sliders use the same ones
+# (EFFECT_OPTION_RANGES in frontend/src/utils/theme.ts).
+EFFECT_OPTION_RANGES = {
+    "brightness": (10, 100), "size": (10, 48), "speed": (1, 10), "count": (1, 10),
+    # Floating emoji only. The angle is the direction of travel in degrees (0 = right, 90 = down);
+    # the spin is in tenths of a turn per second, negative = counter-clockwise, 0 = none.
+    "emoji_count": (3, 60), "emoji_angle": (0, 359), "emoji_spin": (-10, 10),
+    # Scrolling slogans only: the tilt of the rows in degrees (negative leans up to the right).
+    "slogan_tilt": (-45, 45),
+    # Volatile market only: how wildly the price swings, from sleepy (1) to unhinged (10).
+    "chart_volatility": (1, 10),
+    # Money rain only: how many bills or coins are in the air, how hard the wind blows them around (0 = still air),
+    # and how heavy the coins are (heavier = falls faster, turns over slower, blown about less).
+    "money_count": (5, 80), "money_wind": (0, 10), "money_weight": (1, 10),
+    # Snowfall only: how many flakes are in the air, and which way the wind blows them (negative = left, positive = right, 0 = calm).
+    "snow_count": (20, 200), "snow_wind": (-10, 10),
+}
+# Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
+DEFAULT_EFFECT_OPTIONS = {
+    "brightness": 40, "size": 14, "speed": 4, "glow": False,
+    # Bouncing DVD only:
+    "count": 1, "color_change": True, "color": "#ffffff",
+    # Matrix rain only:
+    "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
+    # Floating emoji only (a tuple, so no request can end up sharing and changing one list):
+    "emojis": ("🚀", "✨", "🔥", "💻", "🦄", "🍕"), "emoji_count": 14, "emoji_angle": 45,
+    "emoji_path": "straight", "emoji_spin": 2,
+    # Scrolling slogans only ("slogan_alternate": every other row scrolls the opposite way):
+    "slogans": ("NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"),
+    "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
+    # Volatile market only ("chart_label" shows the ticker and price, "chart_ticker" is its 1-8 letters or numbers):
+    "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
+    # Money rain only:
+    "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
+    # Snowfall only:
+    "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
+}
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label")
+COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
+# Options that must be one of a fixed set of names. The rain's characters themselves live in the
+# frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
+RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
+EMOJI_PATHS = ("straight", "wave", "bounce")
+SLOGAN_STYLES = ("solid", "outline", "mixed")  # mixed = solid and outlined rows take turns
+CHART_MOODS = ("bull", "bear", "choppy")  # which way the market tends to go; the candles themselves are made in the browser
+CHART_PALETTES = ("classic", "swapped", "neon", "mono")  # candle colors; the frontend holds the actual colors (CHART_PALETTES in utils/theme.ts)
+MONEY_KINDS = ("bills", "coins", "mixed")  # what falls; the sprites are drawn in the browser (FallingMoney.tsx)
+SNOW_KINDS = ("dots", "crystals", "mixed")  # soft round flakes, six-armed crystals, or both; drawn in the browser (FallingSnow.tsx)
+CHOICE_EFFECT_OPTIONS = {
+    "rain_symbols": RAIN_SYMBOL_SETS,
+    "emoji_path": EMOJI_PATHS,
+    "slogan_style": SLOGAN_STYLES,
+    "chart_mood": CHART_MOODS,
+    "chart_palette": CHART_PALETTES,
+    "money_kind": MONEY_KINDS,
+    "snow_kind": SNOW_KINDS,
+}
+TICKER_PATTERN = re.compile(r"[A-Za-z0-9]{1,8}")
+# How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).
+MAX_EMOJIS = 12
+MAX_EMOJI_CODEPOINTS = 12
+# How many slogans a profile may list, and how long each may be.
+MAX_SLOGANS = 8
+MAX_SLOGAN_LENGTH = 40
+# Characters that flip the direction text is drawn in; harmless on a canvas, but never what anyone means to type.
+BIDI_CONTROLS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
+# The UI's text is light, so the card background has to be dark enough to keep it readable.
+# 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
+MAX_BACKGROUND_LUMINANCE = 0.05
 
 
 class ValidationError(Exception):
@@ -140,6 +219,22 @@ def _iso(value) -> str | None:
     return value.isoformat() if value else None
 
 
+def _read_theme(stored: dict | None) -> dict[str, Any]:
+    """The theme as sent to clients: the stored values laid over the defaults.
+
+    An effect or option saved by an older version that no longer exists is ignored (it reads back as the
+    default look) instead of being passed on, where the edit form would send it back and get a 400.
+    """
+    stored = stored or {}
+    effect = stored.get("effect")
+    options = {key: value for key, value in (stored.get("effect_options") or {}).items() if key in DEFAULT_EFFECT_OPTIONS}
+    return {
+        "background": stored.get("background"),
+        "effect": effect if effect in THEME_EFFECTS else None,
+        "effect_options": {**DEFAULT_EFFECT_OPTIONS, **options},
+    }
+
+
 def to_dict(profile: Profile) -> dict[str, Any]:
     data = {
         "id": str(profile.id),
@@ -157,6 +252,8 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "interests": list(profile.interests),
         "experience_level": profile.experience_level,
         "looking_for": list(profile.looking_for),
+        # Always an object so the frontend never has to null-check it; null = default look.
+        "theme": _read_theme(profile.theme),
         "links": [
             {"id": str(link.id), "label": link.label, "url": link.url} for link in profile.links
         ],
@@ -295,6 +392,153 @@ def _clean_choices(values: list[str], field: str, allowed: tuple[str, ...], erro
     return known
 
 
+def _relative_luminance(hex_color: str) -> float:
+    """WCAG relative luminance of '#rrggbb': 0 is black, 1 is white."""
+    r, g, b = (int(hex_color[i : i + 2], 16) / 255 for i in (1, 3, 5))
+
+    def linear(channel: float) -> float:
+        return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+
+
+def _looks_like_emoji(text: str) -> bool:
+    """A rough check, not a full emoji list: short, no ASCII, no letters/digits/spaces, and at least one symbol.
+
+    That keeps words and markup out while still allowing flags, skin tones and joined emoji like 👩‍💻.
+    Python's stdlib has no emoji data, and the picker only ever sends real emoji, so this is the safety net.
+    """
+    if not text or len(text) > MAX_EMOJI_CODEPOINTS:
+        return False
+    if any(ord(char) < 128 for char in text):
+        return False
+    categories = {unicodedata.category(char) for char in text}
+    # Cf = the joiner and tag characters, Mn = variation selectors, Sk = skin tones.
+    # Cn (unassigned) is allowed because emoji newer than this Python's Unicode data show up as Cn.
+    return categories <= {"So", "Sk", "Cf", "Mn", "Cn"} and bool(categories & {"So", "Cn"})
+
+
+def _clean_emojis(value: Any, field: str, errors: dict) -> list[str] | None:
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_EMOJIS:
+        errors[field] = f"Must be a list of 1 to {MAX_EMOJIS} emoji."
+        return None
+    cleaned: list[str] = []
+    for item in value:
+        item = item.strip() if isinstance(item, str) else item
+        if not isinstance(item, str) or not _looks_like_emoji(item):
+            errors[field] = "Every item must be an emoji."
+            return None
+        if item not in cleaned:  # a repeat would just make that emoji more common; drop it
+            cleaned.append(item)
+    return cleaned
+
+
+def _clean_slogans(value: Any, field: str, errors: dict) -> list[str] | None:
+    """Each slogan is short plain text: whitespace is tidied, repeats (ignoring case) are dropped."""
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_SLOGANS:
+        errors[field] = f"Must be a list of 1 to {MAX_SLOGANS} slogans."
+        return None
+    cleaned: list[str] = []
+    for item in value:
+        text = " ".join(item.split()) if isinstance(item, str) else ""
+        plain = all(unicodedata.category(char) not in ("Cc", "Cs", "Co") and char not in BIDI_CONTROLS for char in text)
+        if not 1 <= len(text) <= MAX_SLOGAN_LENGTH or not plain:
+            errors[field] = f"Every slogan must be 1 to {MAX_SLOGAN_LENGTH} characters of plain text."
+            return None
+        if text.lower() not in {existing.lower() for existing in cleaned}:
+            cleaned.append(text)
+    return cleaned
+
+
+def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
+    """Validate the effect's tuning knobs; returns only the ones that were sent."""
+    if not isinstance(value, dict):
+        errors["theme.effect_options"] = "Must be an object."
+        return {}
+
+    cleaned: dict[str, Any] = {}
+    for key, option in value.items():
+        field = f"theme.effect_options.{key}"
+        if key in EFFECT_OPTION_RANGES:
+            low, high = EFFECT_OPTION_RANGES[key]
+            # bool is a subclass of int in Python, so exclude it explicitly (True would pass as 1).
+            if not isinstance(option, int) or isinstance(option, bool) or not low <= option <= high:
+                errors[field] = f"Must be a whole number from {low} to {high}."
+            else:
+                cleaned[key] = option
+        elif key in BOOLEAN_EFFECT_OPTIONS:
+            if not isinstance(option, bool):
+                errors[field] = "Must be true or false."
+            else:
+                cleaned[key] = option
+        elif key in COLOR_EFFECT_OPTIONS:
+            # Strict #rrggbb only, like the background: the frontend hands it straight to a canvas.
+            if not isinstance(option, str) or not HEX_COLOR.fullmatch(option.strip()):
+                errors[field] = "Must be a hex color like #ff00ff."
+            else:
+                cleaned[key] = option.strip().lower()
+        elif key in CHOICE_EFFECT_OPTIONS:
+            names = CHOICE_EFFECT_OPTIONS[key]
+            if option not in names:  # also catches non-strings, which can't equal a name
+                errors[field] = f"Must be one of: {', '.join(names)}."
+            else:
+                cleaned[key] = option
+        elif key == "emojis":
+            emojis = _clean_emojis(option, field, errors)
+            if emojis is not None:
+                cleaned[key] = emojis
+        elif key == "slogans":
+            slogans = _clean_slogans(option, field, errors)
+            if slogans is not None:
+                cleaned[key] = slogans
+        elif key == "chart_ticker":
+            if not isinstance(option, str) or not TICKER_PATTERN.fullmatch(option.strip()):
+                errors[field] = "Must be 1 to 8 letters or numbers."
+            else:
+                cleaned[key] = option.strip().upper()
+        else:
+            errors[field] = "Unknown effect option."
+    return cleaned
+
+
+def _clean_theme(value: Any, errors: dict) -> dict[str, Any]:
+    """Return the theme to store: only options that are set, so `{}` (or null) means default."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        errors["theme"] = "Must be an object."
+        return {}
+    for key in value:
+        if key not in THEME_FIELDS:
+            errors[f"theme.{key}"] = "Unknown theme option."
+
+    cleaned: dict[str, Any] = {}
+    background = value.get("background")
+    if background is not None:
+        # Only a strict #rrggbb ever reaches the database, because the frontend puts this
+        # value straight into a style attribute.
+        if not isinstance(background, str) or not HEX_COLOR.fullmatch(background.strip()):
+            errors["theme.background"] = "Must be a hex color like #172554."
+        elif _relative_luminance(background.strip()) > MAX_BACKGROUND_LUMINANCE:
+            errors["theme.background"] = "That color is too light for the text. Pick a darker one."
+        else:
+            cleaned["background"] = background.strip().lower()
+
+    effect = value.get("effect")
+    if effect is not None:
+        if effect not in THEME_EFFECTS:  # also catches non-strings, which can't equal a name
+            errors["theme.effect"] = f"Must be one of: {', '.join(THEME_EFFECTS)}."
+        else:
+            cleaned["effect"] = effect
+
+    # Kept even while the effect is off, so someone can switch it off and on without retuning.
+    if value.get("effect_options") is not None:
+        options = _clean_effect_options(value["effect_options"], errors)
+        if options:
+            cleaned["effect_options"] = options
+    return cleaned
+
+
 def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
     if not isinstance(value, list):
         errors["projects"] = "Must be a list."
@@ -334,7 +578,7 @@ def validate_update(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValidationError({}, "Request body must be a JSON object.")
 
-    allowed = set(STRING_FIELDS) | set(LIST_FIELDS) | {"links", "projects"}
+    allowed = set(STRING_FIELDS) | set(LIST_FIELDS) | {"links", "projects", "theme"}
     errors: dict[str, str] = {}
     for key in data:
         if key not in allowed:
@@ -357,6 +601,8 @@ def validate_update(data: Any) -> dict[str, Any]:
         cleaned["links"] = _clean_links(data["links"], errors)
     if "projects" in data:
         cleaned["projects"] = _clean_projects(data["projects"], errors)
+    if "theme" in data:
+        cleaned["theme"] = _clean_theme(data["theme"], errors)
 
     username = cleaned.get("username")
     if username and not USERNAME_PATTERN.match(username):
@@ -405,6 +651,10 @@ def update_profile(profile: Profile, data: Any, photo=None, extra_errors=None) -
     for field in LIST_FIELDS:
         if field in cleaned:
             setattr(profile, field, cleaned[field])  # assign a new list so SQLAlchemy sees the change
+
+    # The theme is replaced as a whole too; an empty one is stored as NULL (default look).
+    if "theme" in cleaned:
+        profile.theme = cleaned["theme"] or None
 
     # Links and projects are replaced as a whole: the edit form always sends the full list.
     if "links" in cleaned:

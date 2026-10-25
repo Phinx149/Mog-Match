@@ -14,7 +14,8 @@ Run everything from `backend/` with the venv active. Schema overview: `docs/ARCH
 4. Apply: `flask db upgrade`
 5. Update `seed.py` if the feature needs demo data, `profile_service.to_dict` / `frontend/src/types/` if the API shape changes.
 6. Run `pytest` (tests build the schema with `db.create_all()` from the models).
-7. Commit the model change **and** the migration file together.
+7. If you can, check it on Postgres too: `TEST_DATABASE_URL=postgresql://<throwaway db> pytest`, or `DATABASE_URL=<empty postgres> flask db upgrade && flask db check`.
+8. Commit the model change **and** the migration file together. In the PR, say that production needs `flask db upgrade` with the production `DATABASE_URL` (see `docs/DEPLOY.md`).
 
 Never edit a migration that's already merged into `dev` — add a new one.
 
@@ -36,7 +37,7 @@ class Swipe(TimestampMixin, db.Model):
 ```
 - List data → `db.Column(db.JSON, nullable=False, default=list)`. When updating, **assign a new list** (`profile.skills = [...]`); in-place `.append()` isn't detected.
 - Owned children → `relationship(..., cascade="all, delete-orphan")` + `ondelete="CASCADE"` on the FK.
-- Avoid SQLite-only SQL so `DATABASE_URL=postgresql://...` keeps working.
+- Avoid SQLite-only SQL: production is **Postgres**. Postgres also rejects strings longer than `String(n)`, so keep validation limits ≤ column sizes.
 - Migrations run in batch mode (`render_as_batch=True`) so SQLite can alter tables.
 
 ## Seed data (`app/seed.py`)

@@ -112,6 +112,13 @@ The current deployment target is a **single backend process**, with threading an
 `simple-websocket`. Multiple backend workers need a shared Socket.IO message queue and a
 distributed generation lock before scaling beyond that configuration.
 
+The merged Vercel configuration routes `/socket.io/*` to the Flask service, uses a same-origin
+production API URL, and selects direct WebSocket transport in production. Vercel-specific
+deployment and cross-instance delivery have not been exercised by the local browser tests.
+Provision shared room/pub-sub coordination and distributed AI locks before using multiple
+function instances; connection-local rooms and in-memory locks alone are insufficient.
+See [Vercel WebSocket routing and state guidance](https://vercel.com/docs/functions/websockets).
+
 ## Verification
 
 From `backend/`: `.venv/Scripts/python.exe -m pytest -q`.

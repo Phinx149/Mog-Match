@@ -34,7 +34,7 @@ Three devs, 24 hours. Split work by **vertical feature** so each person ships en
 - [x] Mog Score (see `MOG_SCORE.md`)
 - [ ] Real-time chat for matches
 - [ ] GitHub OAuth (replace demo user)
-- [ ] Deploy
+- [x] Deploy-ready: Postgres + Vercel config (`vercel.json`, `docs/DEPLOY.md`). Actual deploy: connect the repo in Vercel and follow the guide
 
 ## Demo prep (last 2 hours)
 - [ ] Feature freeze — bug fixes only

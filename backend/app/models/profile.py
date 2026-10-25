@@ -26,6 +26,11 @@ class Profile(TimestampMixin, db.Model):
     favorite_ai_agents = db.Column(db.JSON, nullable=False, default=list)
     looking_for = db.Column(db.JSON, nullable=False, default=list)
 
+    # Cosmetic preferences for how this profile's card/page looks, e.g. {"background": "#172554"}.
+    # NULL = default look. A JSON object (not one column per option) so new options don't need
+    # a migration each. Assign a new dict when updating, like the list columns above.
+    theme = db.Column(db.JSON, nullable=True)
+
     user = db.relationship("User", back_populates="profile")
     links = db.relationship(
         "ProfileLink",

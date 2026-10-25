@@ -39,7 +39,8 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!user) return;
-    const client = io(API_URL, { withCredentials: true, transports: ["websocket", "polling"] });
+    const client = io(API_URL, { withCredentials: true,
+      transports: import.meta.env.PROD ? ["websocket"] : ["websocket", "polling"] });
     setSocket(client);
     const onConnect = () => { setConnected(true); void refresh(); };
     const offline = () => setConnected(false);
