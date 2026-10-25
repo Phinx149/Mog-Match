@@ -41,8 +41,9 @@ body {
 .profile-theme[data-effect="emoji"] {
   --panel-opacity: 55%;
 }
-.profile-theme[data-effect="slogans"] {
-  --panel-opacity: 70%; /* big letters behind small text: keep the panels more solid */
+.profile-theme[data-effect="slogans"],
+.profile-theme[data-effect="market"] {
+  --panel-opacity: 70%; /* big letters (or a busy chart) behind small text: keep the panels more solid */
 }
 
 /* Shared form control look. In the components layer so utility classes can override it. */

@@ -1,4 +1,13 @@
-import type { EffectOptions, EmojiPath, ProfileTheme, RainSymbols, SloganStyle, ThemeEffect } from "../types/profile";
+import type {
+  ChartMood,
+  ChartPalette,
+  EffectOptions,
+  EmojiPath,
+  ProfileTheme,
+  RainSymbols,
+  SloganStyle,
+  ThemeEffect,
+} from "../types/profile";
 
 // Helpers for profile themes. The backend is the authority on what's allowed
 // (backend/app/services/profile_service.py `_clean_theme`); these let the edit form warn
@@ -48,6 +57,11 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   slogan_style: "mixed",
   slogan_tilt: -8,
   slogan_alternate: true,
+  chart_volatility: 6,
+  chart_mood: "choppy",
+  chart_palette: "classic",
+  chart_ticker: "MOG",
+  chart_label: true,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -63,6 +77,7 @@ export const EFFECT_OPTION_RANGES = {
   emoji_angle: { label: "Direction", min: 0, max: 359, step: 15, unit: "°" },
   emoji_spin: { label: "Spin", min: -10, max: 10, step: 1, unit: "" },
   slogan_tilt: { label: "Tilt", min: -45, max: 45, step: 5, unit: "°" },
+  chart_volatility: { label: "Volatility", min: 1, max: 10, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -125,6 +140,21 @@ export const SLOGAN_COLOR_SWATCHES = [
   { name: "Magenta", hex: "#ff2bd6" },
   { name: "White", hex: "#ffffff" },
 ] as const;
+
+/** How the chart's mood is worded in the edit form. */
+export const CHART_MOOD_INFO: Record<ChartMood, { label: string; description: string }> = {
+  bull: { label: "Bull run", description: "Mostly climbing, with the odd crash" },
+  bear: { label: "Bear market", description: "Mostly sliding, with the odd rally" },
+  choppy: { label: "Choppy", description: "Anything can happen" },
+};
+
+/** The candle colors (and how the edit form names them). Green up and red down is the Western habit; East Asian markets swap them. */
+export const CHART_PALETTE_INFO: Record<ChartPalette, { label: string; up: string; down: string }> = {
+  classic: { label: "Green / red", up: "#22c55e", down: "#ef4444" },
+  swapped: { label: "Red / green", up: "#ef4444", down: "#22c55e" },
+  neon: { label: "Cyan / magenta", up: "#22e5ff", down: "#ff2bd6" },
+  mono: { label: "Light / dim", up: "#e2e8f0", down: "#64748b" },
+};
 
 /** The ways the emoji can travel, as the edit form words them. */
 export const EMOJI_PATH_INFO: Record<EmojiPath, { label: string; description: string }> = {
@@ -192,6 +222,7 @@ export const EFFECT_INFO: Record<
     hasRainStyle: boolean;
     hasEmojiStyle: boolean;
     hasSloganStyle: boolean;
+    hasMarketStyle: boolean;
   }
 > = {
   matrix: {
@@ -203,6 +234,7 @@ export const EFFECT_INFO: Record<
     hasRainStyle: true,
     hasEmojiStyle: false,
     hasSloganStyle: false,
+    hasMarketStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -213,6 +245,7 @@ export const EFFECT_INFO: Record<
     hasRainStyle: false,
     hasEmojiStyle: false,
     hasSloganStyle: false,
+    hasMarketStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -223,6 +256,7 @@ export const EFFECT_INFO: Record<
     hasRainStyle: false,
     hasEmojiStyle: true,
     hasSloganStyle: false,
+    hasMarketStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -233,6 +267,18 @@ export const EFFECT_INFO: Record<
     hasRainStyle: false,
     hasEmojiStyle: false,
     hasSloganStyle: true,
+    hasMarketStyle: false,
+  },
+  market: {
+    label: "Volatile market",
+    tuneTitle: "Tune the market",
+    sizeLabel: "Candle size",
+    sliders: ["brightness", "size", "speed", "chart_volatility"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: true,
   },
 };
 
@@ -377,6 +423,51 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         slogans: packSlogans("Mog"),
         slogan_color: "#a78bfa",
         slogan_tilt: -14,
+      },
+    },
+  },
+  {
+    name: "Wall Street",
+    description: "A jumpy green and red chart",
+    theme: {
+      background: "#060b14",
+      effect: "market",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 50, size: 16, speed: 4, chart_volatility: 6 },
+    },
+  },
+  {
+    name: "To The Moon",
+    description: "A neon bull run, mostly up",
+    theme: {
+      background: "#05060f",
+      effect: "market",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 55,
+        size: 18,
+        speed: 5,
+        glow: true,
+        chart_volatility: 8,
+        chart_mood: "bull",
+        chart_palette: "neon",
+        chart_ticker: "MOON",
+      },
+    },
+  },
+  {
+    name: "Bear Market",
+    description: "Red candles and bad news",
+    theme: {
+      background: "#12070a",
+      effect: "market",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 50,
+        size: 16,
+        speed: 4,
+        chart_volatility: 7,
+        chart_mood: "bear",
+        chart_ticker: "REKT",
       },
     },
   },

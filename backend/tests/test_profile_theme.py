@@ -9,6 +9,7 @@ DEFAULT_OPTIONS = {
     "emoji_path": "straight", "emoji_spin": 2,
     "slogans": ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"],
     "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
+    "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -138,6 +139,7 @@ CRANKED = {
     "emojis": ["👻", "🎃"], "emoji_count": 60, "emoji_angle": 359, "emoji_path": "bounce", "emoji_spin": -10,
     "slogans": ["LET'S GOOO", "STAY HARD"], "slogan_color": "#00ffcc", "slogan_style": "outline",
     "slogan_tilt": 45, "slogan_alternate": False,
+    "chart_volatility": 10, "chart_mood": "bull", "chart_palette": "neon", "chart_ticker": "GIGA42", "chart_label": False,
 }
 
 
@@ -547,6 +549,74 @@ def test_slogan_tilt_edges_are_accepted(client, option, value):
 def test_slogan_options_do_not_change_the_mog_score(client):
     before = client.get("/api/profiles/me").get_json()["mog"]
     client.patch("/api/profiles/me", json={"theme": {"effect": "slogans", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- volatile market ----------
+
+def test_market_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 55, "size": 18, "speed": 7, "glow": True,
+        "chart_volatility": 9, "chart_mood": "bear", "chart_palette": "swapped", "chart_ticker": "REKT", "chart_label": False,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#050a14", "effect": "market", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#050a14", "effect": "market", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_market_defaults_are_a_choppy_classic_chart_called_mog(client):
+    options = _theme(client)["effect_options"]
+    assert (options["chart_volatility"], options["chart_mood"], options["chart_palette"]) == (6, "choppy", "classic")
+    assert (options["chart_ticker"], options["chart_label"]) == ("MOG", True)
+
+
+@pytest.mark.parametrize("option, value", [("chart_mood", "bull"), ("chart_mood", "bear"), ("chart_mood", "choppy"),
+                                           ("chart_palette", "classic"), ("chart_palette", "swapped"), ("chart_palette", "neon"), ("chart_palette", "mono"),
+                                           ("chart_volatility", 1), ("chart_volatility", 10), ("chart_label", True), ("chart_label", False)])
+def test_market_option_values_are_accepted_and_persist(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "market", "effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+@pytest.mark.parametrize("ticker, expected", [("MOG", "MOG"), ("giga", "GIGA"), ("  mog42 ", "MOG42"), ("A", "A"), ("ABCDEFGH", "ABCDEFGH"), ("007", "007")])
+def test_ticker_is_trimmed_and_uppercased(client, ticker, expected):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"chart_ticker": ticker}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["chart_ticker"] == expected
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("chart_ticker", ""), ("chart_ticker", "   "), ("chart_ticker", "ABCDEFGHI"), ("chart_ticker", "AB CD"), ("chart_ticker", "$MOG"),
+        ("chart_ticker", "A-B"), ("chart_ticker", "<b>"), ("chart_ticker", "ÅNGEL"), ("chart_ticker", "MO\nG"), ("chart_ticker", 5),
+        ("chart_ticker", None), ("chart_ticker", ["MOG"]),
+        ("chart_volatility", 0), ("chart_volatility", 11), ("chart_volatility", 5.5), ("chart_volatility", "5"), ("chart_volatility", True), ("chart_volatility", None),
+        ("chart_mood", "sideways"), ("chart_mood", "Bull"), ("chart_mood", ""), ("chart_mood", 1), ("chart_mood", ["bull"]), ("chart_mood", None),
+        ("chart_palette", "rainbow"), ("chart_palette", "Neon"), ("chart_palette", ""), ("chart_palette", 2), ("chart_palette", None),
+        ("chart_label", 1), ("chart_label", "yes"), ("chart_label", None),
+    ],
+)
+def test_market_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "market", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_market_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "market", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
 

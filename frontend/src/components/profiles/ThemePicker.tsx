@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
+  CHART_MOODS,
+  CHART_PALETTES,
   EMOJI_PATHS,
   RAIN_SYMBOL_SETS,
   SLOGAN_STYLES,
@@ -11,6 +13,8 @@ import {
 } from "../../types/profile";
 import {
   BACKGROUND_SWATCHES,
+  CHART_MOOD_INFO,
+  CHART_PALETTE_INFO,
   DEFAULT_BACKGROUND,
   EFFECT_INFO,
   EMOJI_PATH_INFO,
@@ -333,6 +337,67 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                 </label>
               </>
             )}
+            {EFFECT_INFO[effect].hasMarketStyle && (
+              <>
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Market mood</span>
+                  <div role="group" aria-label="Market mood" className="flex flex-wrap gap-2">
+                    {CHART_MOODS.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={options.chart_mood === name}
+                        onClick={() => setOption({ chart_mood: name })}
+                        className={chipClass(options.chart_mood === name)}
+                      >
+                        {CHART_MOOD_INFO[name].label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="mt-1 block text-xs text-muted">{CHART_MOOD_INFO[options.chart_mood].description}.</span>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Candle colors</span>
+                  <div role="group" aria-label="Candle colors" className="flex flex-wrap gap-2">
+                    {CHART_PALETTES.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={options.chart_palette === name}
+                        onClick={() => setOption({ chart_palette: name })}
+                        className={chipClass(options.chart_palette === name)}
+                      >
+                        <span aria-hidden className="flex gap-0.5">
+                          <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].up }} />
+                          <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].down }} />
+                        </span>
+                        {CHART_PALETTE_INFO[name].label}
+                      </button>
+                    ))}
+                  </div>
+                  {options.chart_palette === "swapped" && (
+                    <span className="mt-1 block text-xs text-muted">Red up and green down, the way East Asian markets show it.</span>
+                  )}
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-cyan-400"
+                    checked={options.chart_label}
+                    onChange={(e) => setOption({ chart_label: e.target.checked })}
+                  />
+                  Show the ticker and price <span className="text-xs text-muted">(and the price tag on the right)</span>
+                </label>
+                {options.chart_label && (
+                  <TickerField value={options.chart_ticker} onChange={(chart_ticker) => setOption({ chart_ticker })} />
+                )}
+                <p className="text-xs text-muted sm:col-span-2">
+                  Everything on the chart is made up, and it is not financial advice. Pumps and crashes throw up popups now and then.
+                </p>
+              </>
+            )}
             {EFFECT_INFO[effect].hasLogoColor && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
@@ -394,6 +459,36 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
         </ThemeScope>
       </div>
     </>
+  );
+}
+
+/** The made-up stock's symbol. Typing is cleaned as it goes (letters and numbers, uppercase), and it can't be left empty. */
+function TickerField({ value, onChange }: { value: string; onChange: (ticker: string) => void }) {
+  const id = useId();
+  // Kept separately so the box can be emptied while retyping; only a non-empty symbol is passed up.
+  const [draft, setDraft] = useState(value);
+  return (
+    <div className="sm:col-span-2">
+      <label htmlFor={id} className="mb-1 block text-sm text-slate-300">
+        Ticker symbol
+      </label>
+      <input
+        id={id}
+        type="text"
+        className="field w-40 font-mono uppercase"
+        value={draft}
+        maxLength={8}
+        spellCheck={false}
+        autoComplete="off"
+        onChange={(e) => {
+          const ticker = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+          setDraft(ticker);
+          if (ticker) onChange(ticker);
+        }}
+        onBlur={() => setDraft(value)}
+      />
+      <span className="mt-1 block text-xs text-muted">Up to 8 letters or numbers, like MOG or GIGA42.</span>
+    </div>
   );
 }
 

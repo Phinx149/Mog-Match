@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -59,6 +59,8 @@ EFFECT_OPTION_RANGES = {
     "emoji_count": (3, 60), "emoji_angle": (0, 359), "emoji_spin": (-10, 10),
     # Scrolling slogans only: the tilt of the rows in degrees (negative leans up to the right).
     "slogan_tilt": (-45, 45),
+    # Volatile market only: how wildly the price swings, from sleepy (1) to unhinged (10).
+    "chart_volatility": (1, 10),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -73,15 +75,26 @@ DEFAULT_EFFECT_OPTIONS = {
     # Scrolling slogans only ("slogan_alternate": every other row scrolls the opposite way):
     "slogans": ("NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"),
     "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
+    # Volatile market only ("chart_label" shows the ticker and price, "chart_ticker" is its 1-8 letters or numbers):
+    "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
 }
-BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate")
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label")
 COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
 # Options that must be one of a fixed set of names. The rain's characters themselves live in the
 # frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
 RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
 EMOJI_PATHS = ("straight", "wave", "bounce")
 SLOGAN_STYLES = ("solid", "outline", "mixed")  # mixed = solid and outlined rows take turns
-CHOICE_EFFECT_OPTIONS = {"rain_symbols": RAIN_SYMBOL_SETS, "emoji_path": EMOJI_PATHS, "slogan_style": SLOGAN_STYLES}
+CHART_MOODS = ("bull", "bear", "choppy")  # which way the market tends to go; the candles themselves are made in the browser
+CHART_PALETTES = ("classic", "swapped", "neon", "mono")  # candle colors; the frontend holds the actual colors (CHART_PALETTES in utils/theme.ts)
+CHOICE_EFFECT_OPTIONS = {
+    "rain_symbols": RAIN_SYMBOL_SETS,
+    "emoji_path": EMOJI_PATHS,
+    "slogan_style": SLOGAN_STYLES,
+    "chart_mood": CHART_MOODS,
+    "chart_palette": CHART_PALETTES,
+}
+TICKER_PATTERN = re.compile(r"[A-Za-z0-9]{1,8}")
 # How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).
 MAX_EMOJIS = 12
 MAX_EMOJI_CODEPOINTS = 12
@@ -467,6 +480,11 @@ def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
             slogans = _clean_slogans(option, field, errors)
             if slogans is not None:
                 cleaned[key] = slogans
+        elif key == "chart_ticker":
+            if not isinstance(option, str) or not TICKER_PATTERN.fullmatch(option.strip()):
+                errors[field] = "Must be 1 to 8 letters or numbers."
+            else:
+                cleaned[key] = option.strip().upper()
         else:
             errors[field] = "Unknown effect option."
     return cleaned

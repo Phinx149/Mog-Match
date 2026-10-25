@@ -5,6 +5,7 @@ import BouncingDvd from "./BouncingDvd";
 import FloatingEmoji from "./FloatingEmoji";
 import MatrixRain from "./MatrixRain";
 import ScrollingSlogans from "./ScrollingSlogans";
+import VolatileMarket from "./VolatileMarket";
 
 /** What to draw for each effect name. Adding an effect = a component here + its name in THEME_EFFECTS. */
 const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = {
@@ -12,6 +13,7 @@ const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = 
   dvd: BouncingDvd,
   emoji: FloatingEmoji,
   slogans: ScrollingSlogans,
+  market: VolatileMarket,
 };
 
 interface ThemeScopeProps {

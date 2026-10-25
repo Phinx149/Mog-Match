@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -55,11 +55,19 @@ export type EmojiPath = (typeof EMOJI_PATHS)[number];
 export const SLOGAN_STYLES = ["solid", "outline", "mixed"] as const;
 export type SloganStyle = (typeof SLOGAN_STYLES)[number];
 
+/** Which way the market tends to go. Keep in sync with CHART_MOODS in the backend. */
+export const CHART_MOODS = ["bull", "bear", "choppy"] as const;
+export type ChartMood = (typeof CHART_MOODS)[number];
+
+/** Candle colors. Keep in sync with CHART_PALETTES in the backend. */
+export const CHART_PALETTES = ["classic", "swapped", "neon", "mono"] as const;
+export type ChartPalette = (typeof CHART_PALETTES)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size or text size (slogans), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans) or candle width (market), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -97,6 +105,16 @@ export interface EffectOptions {
   slogan_tilt: number;
   /** Every other row scrolls the opposite way (slogans only). */
   slogan_alternate: boolean;
+  /** How wildly the price swings, 1-10 (market only). */
+  chart_volatility: number;
+  /** Which way the market tends to go (market only). */
+  chart_mood: ChartMood;
+  /** Which colors the candles are (market only). */
+  chart_palette: ChartPalette;
+  /** The made-up stock's symbol, 1-8 letters or numbers, uppercase (market only). */
+  chart_ticker: string;
+  /** Whether the ticker, price and price tag are drawn (market only). */
+  chart_label: boolean;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */
