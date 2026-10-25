@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -61,6 +61,9 @@ EFFECT_OPTION_RANGES = {
     "slogan_tilt": (-45, 45),
     # Volatile market only: how wildly the price swings, from sleepy (1) to unhinged (10).
     "chart_volatility": (1, 10),
+    # Money rain only: how many bills or coins are in the air, how hard the wind blows them around (0 = still air),
+    # and how heavy the coins are (heavier = falls faster, turns over slower, blown about less).
+    "money_count": (5, 80), "money_wind": (0, 10), "money_weight": (1, 10),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -77,6 +80,8 @@ DEFAULT_EFFECT_OPTIONS = {
     "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
     # Volatile market only ("chart_label" shows the ticker and price, "chart_ticker" is its 1-8 letters or numbers):
     "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
+    # Money rain only:
+    "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
 }
 BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label")
 COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
@@ -87,12 +92,14 @@ EMOJI_PATHS = ("straight", "wave", "bounce")
 SLOGAN_STYLES = ("solid", "outline", "mixed")  # mixed = solid and outlined rows take turns
 CHART_MOODS = ("bull", "bear", "choppy")  # which way the market tends to go; the candles themselves are made in the browser
 CHART_PALETTES = ("classic", "swapped", "neon", "mono")  # candle colors; the frontend holds the actual colors (CHART_PALETTES in utils/theme.ts)
+MONEY_KINDS = ("bills", "coins", "mixed")  # what falls; the sprites are drawn in the browser (FallingMoney.tsx)
 CHOICE_EFFECT_OPTIONS = {
     "rain_symbols": RAIN_SYMBOL_SETS,
     "emoji_path": EMOJI_PATHS,
     "slogan_style": SLOGAN_STYLES,
     "chart_mood": CHART_MOODS,
     "chart_palette": CHART_PALETTES,
+    "money_kind": MONEY_KINDS,
 }
 TICKER_PATTERN = re.compile(r"[A-Za-z0-9]{1,8}")
 # How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).

@@ -4,6 +4,7 @@ import {
   CHART_MOODS,
   CHART_PALETTES,
   EMOJI_PATHS,
+  MONEY_KINDS,
   RAIN_SYMBOL_SETS,
   SLOGAN_STYLES,
   THEME_EFFECTS,
@@ -20,6 +21,7 @@ import {
   EMOJI_PATH_INFO,
   EFFECT_OPTION_RANGES,
   isDarkEnough,
+  MONEY_KIND_INFO,
   RAIN_COLOR_SWATCHES,
   RAIN_SYMBOLS,
   sameTheme,
@@ -170,19 +172,22 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                 <SloganPicker slogans={options.slogans} onChange={(slogans) => setOption({ slogans })} />
               </div>
             )}
-            {EFFECT_INFO[effect].sliders.map((key) => {
-              const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
-              return (
-                <RangeField
-                  key={key}
-                  label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
-                  value={options[key]}
-                  display={describeOption(key, options[key], unit)}
-                  {...{ min, max, step }}
-                  onChange={(value) => setOption({ [key]: value })}
-                />
-              );
-            })}
+            {EFFECT_INFO[effect].sliders
+              // Weight is only about coins, so it has no use while bills are all that falls.
+              .filter((key) => key !== "money_weight" || options.money_kind !== "bills")
+              .map((key) => {
+                const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
+                return (
+                  <RangeField
+                    key={key}
+                    label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
+                    value={options[key]}
+                    display={describeOption(key, options[key], unit)}
+                    {...{ min, max, step }}
+                    onChange={(value) => setOption({ [key]: value })}
+                  />
+                );
+              })}
             {EFFECT_INFO[effect].hasEmojiStyle && (
               <div className="sm:col-span-2">
                 <span className="mb-1.5 block text-sm text-slate-300">Path</span>
@@ -200,6 +205,25 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                   ))}
                 </div>
                 <span className="mt-1 block text-xs text-muted">{EMOJI_PATH_INFO[options.emoji_path].description}.</span>
+              </div>
+            )}
+            {EFFECT_INFO[effect].hasMoneyStyle && (
+              <div className="sm:col-span-2">
+                <span className="mb-1.5 block text-sm text-slate-300">Cash</span>
+                <div role="group" aria-label="Kind of cash" className="flex flex-wrap gap-2">
+                  {MONEY_KINDS.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={options.money_kind === name}
+                      onClick={() => setOption({ money_kind: name })}
+                      className={chipClass(options.money_kind === name)}
+                    >
+                      {MONEY_KIND_INFO[name].label}
+                    </button>
+                  ))}
+                </div>
+                <span className="mt-1 block text-xs text-muted">{MONEY_KIND_INFO[options.money_kind].description}.</span>
               </div>
             )}
             {EFFECT_INFO[effect].hasRainStyle && (
@@ -504,6 +528,7 @@ function describeOption(key: keyof typeof EFFECT_OPTION_RANGES, value: number, u
     );
   }
   if (key === "emoji_spin") return value === 0 ? "none" : `${value > 0 ? "↻" : "↺"} ${Math.abs(value)}`;
+  if (key === "money_wind") return value === 0 ? "calm" : value;
   return `${value}${unit}`;
 }
 

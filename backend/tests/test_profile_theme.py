@@ -10,6 +10,7 @@ DEFAULT_OPTIONS = {
     "slogans": ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"],
     "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
     "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
+    "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -140,6 +141,7 @@ CRANKED = {
     "slogans": ["LET'S GOOO", "STAY HARD"], "slogan_color": "#00ffcc", "slogan_style": "outline",
     "slogan_tilt": 45, "slogan_alternate": False,
     "chart_volatility": 10, "chart_mood": "bull", "chart_palette": "neon", "chart_ticker": "GIGA42", "chart_label": False,
+    "money_kind": "mixed", "money_count": 80, "money_wind": 10, "money_weight": 10,
 }
 
 
@@ -617,6 +619,62 @@ def test_market_options_out_of_range_or_wrong_type_are_rejected(client, option, 
 def test_market_options_do_not_change_the_mog_score(client):
     before = client.get("/api/profiles/me").get_json()["mog"]
     client.patch("/api/profiles/me", json={"theme": {"effect": "market", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- money rain ----------
+
+def test_money_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 65, "size": 18, "speed": 6, "glow": True,
+        "money_kind": "coins", "money_count": 45, "money_wind": 9, "money_weight": 8,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#04150b", "effect": "money", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#04150b", "effect": "money", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_money_defaults_are_a_moderate_shower_of_bills_in_a_breeze(client):
+    options = _theme(client)["effect_options"]
+    assert (options["money_kind"], options["money_count"], options["money_wind"], options["money_weight"]) == ("bills", 30, 5, 5)
+
+
+@pytest.mark.parametrize("option, value", [("money_kind", "bills"), ("money_kind", "coins"), ("money_kind", "mixed"),
+                                           ("money_count", 5), ("money_count", 80), ("money_wind", 0), ("money_wind", 10),
+                                           ("money_weight", 1), ("money_weight", 10)])
+def test_money_option_values_are_accepted_and_persist(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "money", "effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("money_kind", "cash"), ("money_kind", "Bills"), ("money_kind", ""), ("money_kind", 1), ("money_kind", ["bills"]), ("money_kind", None),
+        ("money_count", 4), ("money_count", 81), ("money_count", 12.5), ("money_count", "30"), ("money_count", True), ("money_count", None),
+        ("money_wind", -1), ("money_wind", 11), ("money_wind", 2.5), ("money_wind", "5"), ("money_wind", False), ("money_wind", None),
+        ("money_weight", 0), ("money_weight", 11), ("money_weight", 5.5), ("money_weight", "5"), ("money_weight", True), ("money_weight", None),
+    ],
+)
+def test_money_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "money", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_money_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "money", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
 

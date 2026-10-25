@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -63,11 +63,15 @@ export type ChartMood = (typeof CHART_MOODS)[number];
 export const CHART_PALETTES = ["classic", "swapped", "neon", "mono"] as const;
 export type ChartPalette = (typeof CHART_PALETTES)[number];
 
+/** What falls in the money rain: green bills, gold and silver coins, or both. Keep in sync with MONEY_KINDS in the backend. */
+export const MONEY_KINDS = ["bills", "coins", "mixed"] as const;
+export type MoneyKind = (typeof MONEY_KINDS)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans) or candle width (market), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market) or bill size (money), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -115,6 +119,14 @@ export interface EffectOptions {
   chart_ticker: string;
   /** Whether the ticker, price and price tag are drawn (market only). */
   chart_label: boolean;
+  /** Bills, coins or both (money only). */
+  money_kind: MoneyKind;
+  /** How many bills or coins are in the air at once, 5-80 (money only). */
+  money_count: number;
+  /** How hard the wind blows them around, 0-10: 0 is still air, so they just fall (money only). */
+  money_wind: number;
+  /** How heavy the coins are, 1-10: heavier ones fall faster, turn over slower and are blown about less (money only, and only coins). */
+  money_weight: number;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

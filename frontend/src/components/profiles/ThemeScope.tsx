@@ -2,6 +2,7 @@ import type { ComponentType, CSSProperties, ReactNode } from "react";
 import type { EffectOptions, ProfileTheme, ThemeEffect } from "../../types/profile";
 import { DEFAULT_BACKGROUND, HEX_COLOR } from "../../utils/theme";
 import BouncingDvd from "./BouncingDvd";
+import FallingMoney from "./FallingMoney";
 import FloatingEmoji from "./FloatingEmoji";
 import MatrixRain from "./MatrixRain";
 import ScrollingSlogans from "./ScrollingSlogans";
@@ -14,6 +15,7 @@ const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = 
   emoji: FloatingEmoji,
   slogans: ScrollingSlogans,
   market: VolatileMarket,
+  money: FallingMoney,
 };
 
 interface ThemeScopeProps {

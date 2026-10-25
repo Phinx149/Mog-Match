@@ -3,6 +3,7 @@ import type {
   ChartPalette,
   EffectOptions,
   EmojiPath,
+  MoneyKind,
   ProfileTheme,
   RainSymbols,
   SloganStyle,
@@ -62,6 +63,10 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   chart_palette: "classic",
   chart_ticker: "MOG",
   chart_label: true,
+  money_kind: "bills",
+  money_count: 30,
+  money_wind: 5,
+  money_weight: 5,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -78,6 +83,9 @@ export const EFFECT_OPTION_RANGES = {
   emoji_spin: { label: "Spin", min: -10, max: 10, step: 1, unit: "" },
   slogan_tilt: { label: "Tilt", min: -45, max: 45, step: 5, unit: "°" },
   chart_volatility: { label: "Volatility", min: 1, max: 10, step: 1, unit: "" },
+  money_count: { label: "How much", min: 5, max: 80, step: 5, unit: "" },
+  money_wind: { label: "Wind", min: 0, max: 10, step: 1, unit: "" },
+  money_weight: { label: "Coin weight", min: 1, max: 10, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -156,6 +164,13 @@ export const CHART_PALETTE_INFO: Record<ChartPalette, { label: string; up: strin
   mono: { label: "Light / dim", up: "#e2e8f0", down: "#64748b" },
 };
 
+/** What can rain down, as the edit form words it. */
+export const MONEY_KIND_INFO: Record<MoneyKind, { label: string; description: string }> = {
+  bills: { label: "Bills", description: "Green bills, flipping over as they fall" },
+  coins: { label: "Coins", description: "Gold and silver coins, spinning as they fall" },
+  mixed: { label: "Both", description: "Bills and coins together" },
+};
+
 /** The ways the emoji can travel, as the edit form words them. */
 export const EMOJI_PATH_INFO: Record<EmojiPath, { label: string; description: string }> = {
   straight: { label: "Straight", description: "Drift one way and come back around the other side" },
@@ -223,6 +238,7 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: boolean;
     hasSloganStyle: boolean;
     hasMarketStyle: boolean;
+    hasMoneyStyle: boolean;
   }
 > = {
   matrix: {
@@ -235,6 +251,7 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: false,
     hasSloganStyle: false,
     hasMarketStyle: false,
+    hasMoneyStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -246,6 +263,7 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: false,
     hasSloganStyle: false,
     hasMarketStyle: false,
+    hasMoneyStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -257,6 +275,7 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: true,
     hasSloganStyle: false,
     hasMarketStyle: false,
+    hasMoneyStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -268,6 +287,7 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: false,
     hasSloganStyle: true,
     hasMarketStyle: false,
+    hasMoneyStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -279,6 +299,19 @@ export const EFFECT_INFO: Record<
     hasEmojiStyle: false,
     hasSloganStyle: false,
     hasMarketStyle: true,
+    hasMoneyStyle: false,
+  },
+  money: {
+    label: "Money rain",
+    tuneTitle: "Tune the money",
+    sizeLabel: "Cash size",
+    sliders: ["brightness", "size", "money_count", "speed", "money_wind", "money_weight"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: true,
   },
 };
 
@@ -468,6 +501,50 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         chart_volatility: 7,
         chart_mood: "bear",
         chart_ticker: "REKT",
+      },
+    },
+  },
+  {
+    name: "Make It Rain",
+    description: "Green bills fluttering down on a breeze",
+    theme: {
+      background: "#04150b",
+      effect: "money",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 16, speed: 4, money_count: 30, money_wind: 5 },
+    },
+  },
+  {
+    name: "Gold Rush",
+    description: "Gold and silver coins, glinting",
+    theme: {
+      background: "#140e03",
+      effect: "money",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 65,
+        size: 18,
+        speed: 5,
+        glow: true,
+        money_kind: "coins",
+        money_count: 24,
+        money_wind: 2,
+      },
+    },
+  },
+  {
+    name: "Cash Storm",
+    description: "Bills and coins whipped around by a gale",
+    theme: {
+      background: "#030f0a",
+      effect: "money",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 65,
+        size: 16,
+        speed: 5,
+        money_kind: "mixed",
+        money_count: 50,
+        money_wind: 10,
       },
     },
   },
