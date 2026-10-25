@@ -57,7 +57,7 @@ Nothing to do: each deploy applies new migrations during the build, before the n
 - **Services is a beta feature.** If the `services` config ever stops working, the fallback is two Vercel projects (frontend and backend). That needs `CORS_ORIGINS` set to the frontend's URL and the login cookie to use `SameSite=None`, so stay on one project if you can.
 - **Live chat (Socket.IO) is best-effort on Vercel.** Functions are short-lived and requests can hit different instances, so long-polling sessions and WebSocket upgrades may drop. Reliable real-time chat needs a long-running server (or a hosted realtime service); saving and loading messages works regardless.
 - Functions sleep when idle; the first request after a while is slower (cold start). The DB pool pings connections before use (`pool_pre_ping`) so stale connections are replaced automatically.
-- Seeded accounts all share `SEED_PASSWORD`, and there's no sign-up yet. Fine for a demo, not for real users.
+- Seeded accounts all share `SEED_PASSWORD`. Anyone can sign up (`/signup`), with no email verification, rate limiting or password reset. Fine for a demo, not for real users.
 
 ## Running against Postgres locally (optional)
 

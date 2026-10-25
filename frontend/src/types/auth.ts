@@ -7,7 +7,7 @@ export interface SessionUser {
   avatar_url: string | null;
 }
 
-/** GET /api/auth/session, POST /api/auth/login and /logout. `user` is null when logged out. */
+/** GET /api/auth/session, POST /api/auth/login, /signup and /logout. `user` is null when logged out. */
 export interface SessionResponse {
   user: SessionUser | null;
 }

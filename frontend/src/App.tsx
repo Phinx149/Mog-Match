@@ -10,6 +10,7 @@ import MatchPage from "./pages/MatchPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import SignUpPage from "./pages/SignUpPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="login" element={<LoginPage />} />
+          <Route path="signup" element={<SignUpPage />} />
           {/* Everything else needs a login. */}
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>

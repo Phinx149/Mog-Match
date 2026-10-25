@@ -1,6 +1,6 @@
 import { LogIn } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -72,6 +72,13 @@ export default function LoginPage() {
           {submitting ? "Logging in…" : "Log in"}
         </button>
       </form>
+
+      <p className="mt-4 text-center text-sm text-muted">
+        New here?{" "}
+        <Link to="/signup" state={location.state} className="font-medium text-violet-300 hover:text-violet-200">
+          Create an account
+        </Link>
+      </p>
 
       <p className="mt-4 text-center text-xs text-muted">
         Demo accounts: any seeded username (e.g. <span className="font-mono">jordan-dev</span>,{" "}
