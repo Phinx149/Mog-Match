@@ -58,6 +58,14 @@ def record_swipe(me: Profile, data: Any) -> dict[str, Any]:
     return {"target_id": str(target.id), "action": action, "match": match}
 
 
+def get_swipe(me: Profile, target_id: uuid.UUID) -> dict[str, Any]:
+    """My like/pass on one person, or action None if I haven't swiped (the profile page's Like button)."""
+    if profile_service.get_profile(target_id) is None:
+        raise NotFoundError("Profile not found.")
+    swipe = Swipe.query.filter_by(swiper_id=me.id, target_id=target_id).one_or_none()
+    return {"target_id": str(target_id), "action": swipe.action if swipe else None}
+
+
 def swiped_ids(me: Profile) -> set[uuid.UUID]:
     """Everyone I've already liked or passed, so Discover can hide them."""
     return {row.target_id for row in Swipe.query.filter_by(swiper_id=me.id)}
