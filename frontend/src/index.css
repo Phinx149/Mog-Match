@@ -29,9 +29,14 @@ body {
 
 /* With an animated effect, panels nested inside the scope (the cards on a profile page) turn
    slightly see-through so the effect shows around and faintly behind them. The scope itself
-   (e.g. a Discover card) stays solid, and so do raised surfaces (chips, project cards) for legibility. */
+   (e.g. a Discover card) stays solid, and so do raised surfaces (chips, project cards) for legibility.
+   --panel-opacity is how solid those panels stay; a lone bouncing logo needs them much glassier than
+   the dense rain does, or it would be hidden behind the cards almost all the time. */
 .profile-theme[data-effect] > * {
-  --color-surface: color-mix(in oklab, var(--profile-bg) 80%, transparent);
+  --color-surface: color-mix(in oklab, var(--profile-bg) var(--panel-opacity, 80%), transparent);
+}
+.profile-theme[data-effect="dvd"] {
+  --panel-opacity: 35%;
 }
 
 /* Shared form control look. In the components layer so utility classes can override it. */

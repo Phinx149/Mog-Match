@@ -1,10 +1,19 @@
 import { useId } from "react";
-import type { EffectOptions, ProfileTheme, ThemeEffect } from "../../types/profile";
+import {
+  RAIN_SYMBOL_SETS,
+  THEME_EFFECTS,
+  type EffectOptions,
+  type ProfileTheme,
+  type ThemeEffect,
+} from "../../types/profile";
 import {
   BACKGROUND_SWATCHES,
   DEFAULT_BACKGROUND,
+  EFFECT_INFO,
   EFFECT_OPTION_RANGES,
   isDarkEnough,
+  RAIN_COLOR_SWATCHES,
+  RAIN_SYMBOLS,
   sameTheme,
   THEME_PRESETS,
 } from "../../utils/theme";
@@ -15,7 +24,7 @@ import ThemeScope from "./ThemeScope";
 /** Effects the picker offers, in order. `null` = no effect. */
 const EFFECT_OPTIONS: { label: string; value: ThemeEffect | null }[] = [
   { label: "None", value: null },
-  { label: "Matrix rain", value: "matrix" },
+  ...THEME_EFFECTS.map((value) => ({ label: EFFECT_INFO[value].label, value })),
 ];
 
 interface ThemePickerProps {
@@ -135,13 +144,15 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
 
         {effect && (
           <fieldset className="mt-3 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
-            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">Tune the rain</legend>
-            {(Object.keys(EFFECT_OPTION_RANGES) as (keyof typeof EFFECT_OPTION_RANGES)[]).map((key) => {
+            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
+              {EFFECT_INFO[effect].tuneTitle}
+            </legend>
+            {EFFECT_INFO[effect].sliders.map((key) => {
               const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
               return (
                 <RangeField
                   key={key}
-                  label={label}
+                  label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
                   value={options[key]}
                   display={`${options[key]}${unit}`}
                   {...{ min, max, step }}
@@ -149,6 +160,69 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                 />
               );
             })}
+            {EFFECT_INFO[effect].hasRainStyle && (
+              <>
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Symbols</span>
+                  <div role="group" aria-label="Rain symbols" className="flex flex-wrap gap-2">
+                    {RAIN_SYMBOL_SETS.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={options.rain_symbols === name}
+                        onClick={() => setOption({ rain_symbols: name })}
+                        className={chipClass(options.rain_symbols === name)}
+                      >
+                        {RAIN_SYMBOLS[name].label}
+                        <span className="font-mono text-xs font-normal text-muted">{RAIN_SYMBOLS[name].sample}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Rain color</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {/* Picking any color leaves rainbow mode, since that's clearly what was meant. */}
+                    <div role="group" aria-label="Rain color quick picks" className="flex flex-wrap gap-2">
+                      {RAIN_COLOR_SWATCHES.map(({ name, hex }) => {
+                        const selected = !options.rain_rainbow && options.rain_color.toLowerCase() === hex;
+                        return (
+                          <button
+                            key={hex}
+                            type="button"
+                            title={name}
+                            aria-label={name}
+                            aria-pressed={selected}
+                            onClick={() => setOption({ rain_color: hex, rain_rainbow: false })}
+                            style={{ backgroundColor: hex }}
+                            className={`size-7 rounded-full border border-white/20 transition ${
+                              selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <input
+                      type="color"
+                      aria-label="Custom rain color"
+                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                      value={options.rain_color}
+                      onChange={(e) => setOption({ rain_color: e.target.value, rain_rainbow: false })}
+                    />
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-cyan-400"
+                        checked={options.rain_rainbow}
+                        onChange={(e) => setOption({ rain_rainbow: e.target.checked })}
+                      />
+                      Rainbow
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
               <input
                 type="checkbox"
@@ -156,11 +230,41 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                 checked={options.glow}
                 onChange={(e) => setOption({ glow: e.target.checked })}
               />
-              Neon glow <span className="text-xs text-muted">(bold letters with a halo)</span>
+              Neon glow <span className="text-xs text-muted">(a bright halo)</span>
             </label>
+            {EFFECT_INFO[effect].hasLogoColor && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-cyan-400"
+                    checked={options.color_change}
+                    onChange={(e) => setOption({ color_change: e.target.checked })}
+                  />
+                  Change color on every bounce
+                </label>
+                {/* A fixed color only matters while the color isn't changing. */}
+                {!options.color_change && (
+                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                    Logo color
+                    <input
+                      type="color"
+                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                      value={options.color}
+                      onChange={(e) => setOption({ color: e.target.value })}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+            {EFFECT_INFO[effect].hasLogoColor && (
+              <p className="text-xs text-muted sm:col-span-2">
+                Land a logo in a corner for a sparkle burst. Near misses count if they are close enough.
+              </p>
+            )}
             {options.brightness > 60 && (
               <p className="text-xs text-amber-300/90 sm:col-span-2">
-                Bright rain behind text can make a card harder to read. Check the preview.
+                A bright effect behind text can make a card harder to read. Check the preview.
               </p>
             )}
           </fieldset>

@@ -27,7 +27,7 @@ users ──1:1── profiles ──1:N── profile_links
 | Table | Columns |
 |---|---|
 | `users` | `id` UUID PK, `email` unique nullable, `created_at`, `updated_at` |
-| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix", "effect_options": {"brightness", "size", "speed", "glow"}}`), timestamps |
+| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix" | "dvd", "effect_options": {"brightness", "size", "speed", "glow", "count", "color_change", "color", "rain_color", "rain_rainbow", "rain_symbols"}}`), timestamps |
 | `profile_links` | `id` UUID PK, `profile_id` FK (cascade), `label`, `url`, `position` |
 | `projects` | `id` UUID PK, `profile_id` FK (cascade), `title`, `description`, `project_url`, JSON `technologies`, `position`, timestamps |
 
@@ -54,7 +54,7 @@ No auth. The backend reads `DEMO_USER_EMAIL` from config and treats that user as
 ## Frontend structure
 - `pages/` — route-level components (Discover, Profile, EditProfile, Settings, NotFound)
 - `components/layout/` — `AppLayout` (outlet + `BottomNav`), `Navbar` (logo + slot + `PingIndicator`)
-- `components/profiles/` — `ProfileCard`, `ProfileHeader`, `SkillBadge`, `ProjectCard`, `Avatar`, `ThemeScope` (applies a profile's theme to everything inside it), `ThemePicker` (presets, background color and effect picker on Edit Profile), `MatrixRain` (the `matrix` effect: a canvas animation)
+- `components/profiles/` — `ProfileCard`, `ProfileHeader`, `SkillBadge`, `ProjectCard`, `Avatar`, `ThemeScope` (applies a profile's theme to everything inside it), `ThemePicker` (presets, background color and effect picker on Edit Profile), `MatrixRain` and `BouncingDvd` (the `matrix` and `dvd` effects: canvas animations; the logo's bounce rules live in `utils/dvdMotion.ts`)
 - `components/discover/` — `SearchBar`, `FilterBar`
 - `components/forms/` — `TagInput`
 - `components/common/` — loading / error / empty states

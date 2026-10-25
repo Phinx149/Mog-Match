@@ -1,7 +1,11 @@
 import pytest
 
 
-DEFAULT_OPTIONS = {"brightness": 40, "size": 14, "speed": 4, "glow": False}
+DEFAULT_OPTIONS = {
+    "brightness": 40, "size": 14, "speed": 4, "glow": False,
+    "count": 1, "color_change": True, "color": "#ffffff",
+    "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
+}
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
 
@@ -123,7 +127,11 @@ def test_effect_must_be_a_known_name(client, value):
     assert _theme(client) == DEFAULT_THEME  # nothing was saved
 
 
-CRANKED = {"brightness": 100, "size": 48, "speed": 10, "glow": True}
+CRANKED = {
+    "brightness": 100, "size": 48, "speed": 10, "glow": True,
+    "count": 10, "color_change": False, "color": "#ff00ff",
+    "rain_color": "#00ffff", "rain_rainbow": True, "rain_symbols": "chaos",
+}
 
 
 def test_effect_options_persist_and_show_up_for_other_viewers(client):
@@ -174,6 +182,13 @@ def test_updating_other_fields_keeps_effect_options(client):
         ("brightness", 0), ("brightness", 101), ("brightness", -5),
         ("speed", 0), ("speed", 11), ("speed", [4]),
         ("glow", 1), ("glow", "yes"), ("glow", None),
+        ("count", 0), ("count", 11), ("count", 2.5), ("count", True),
+        ("color_change", 0), ("color_change", "no"), ("color_change", None),
+        ("color", "red"), ("color", "#fff"), ("color", "#gggggg"), ("color", 255), ("color", "#ff00ff;x"), ("color", None),
+        ("rain_color", "green"), ("rain_color", "#0f0"), ("rain_color", 0x00FF00), ("rain_color", "#00ff00;x"), ("rain_color", None),
+        ("rain_rainbow", 1), ("rain_rainbow", "on"), ("rain_rainbow", None),
+        ("rain_symbols", "emoji"), ("rain_symbols", "Binary"), ("rain_symbols", ""), ("rain_symbols", 1),
+        ("rain_symbols", ["binary"]), ("rain_symbols", None),
     ],
 )
 def test_effect_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
@@ -206,3 +221,79 @@ def test_effect_options_do_not_change_the_mog_score(client):
     client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+def test_bouncing_dvd_effect_persists_with_its_own_tuning(client):
+    options = {**DEFAULT_OPTIONS, "brightness": 100, "size": 20, "speed": 8, "count": 4, "glow": True, "color_change": False, "color": "#00ffcc"}
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#000000", "effect": "dvd", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#000000", "effect": "dvd", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_switching_effects_keeps_the_tuning(client):
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": CRANKED}})
+
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "dvd", "effect_options": CRANKED}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {**DEFAULT_THEME, "effect": "dvd", "effect_options": CRANKED}
+
+
+def test_dvd_color_is_trimmed_and_lowercased(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"color": " #FF00AA "}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["color"] == "#ff00aa"
+
+
+def test_a_logo_color_does_not_need_to_be_dark(client):
+    # Unlike the card background, this is drawn on a canvas and never sits behind text as a fill.
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"color": "#ffffff"}}})
+
+    assert response.status_code == 200, response.get_json()
+
+
+def test_old_saved_options_get_the_new_defaults(client):
+    # A profile saved before count/color existed only has the older keys; reading it must still give a full set.
+    client.patch("/api/profiles/me", json={"theme": {"effect": "dvd", "effect_options": {"size": 20, "glow": True}}})
+
+    options = _theme(client)["effect_options"]
+    assert options == {**DEFAULT_OPTIONS, "size": 20, "glow": True}
+
+
+@pytest.mark.parametrize("symbols", ["katakana", "binary", "code", "chaos"])
+def test_every_rain_symbol_set_is_accepted_and_persists(client, symbols):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": {"rain_symbols": symbols}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["rain_symbols"] == symbols
+
+
+def test_rain_color_is_trimmed_and_lowercased_and_may_be_any_brightness(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"rain_color": " #FF2BD6 "}}})
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["rain_color"] == "#ff2bd6"
+
+    # Drawn on a canvas, never behind text as a fill, so unlike the background there is no darkness rule.
+    assert client.patch("/api/profiles/me", json={"theme": {"effect_options": {"rain_color": "#ffffff"}}}).status_code == 200
+
+
+def test_rain_and_logo_colors_are_independent(client):
+    client.patch("/api/profiles/me", json={"theme": {"effect_options": {"rain_color": "#ff0000"}}})
+
+    options = _theme(client)["effect_options"]
+    assert options["rain_color"] == "#ff0000"
+    assert options["color"] == "#ffffff"  # the DVD logo's own default is untouched
+
+
+def test_existing_matrix_themes_keep_their_green_default(client):
+    # A profile saved before the rain had colors or symbols must still look the same.
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": {"size": 20}}})
+
+    options = _theme(client)["effect_options"]
+    assert (options["rain_color"], options["rain_rainbow"], options["rain_symbols"]) == ("#22ff66", False, "katakana")

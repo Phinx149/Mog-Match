@@ -40,19 +40,35 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
-/** How the animated effect looks. The server fills in defaults, so every field is always present. */
+/** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
+export const RAIN_SYMBOL_SETS = ["katakana", "binary", "code", "chaos"] as const;
+export type RainSymbols = (typeof RAIN_SYMBOL_SETS)[number];
+
+/** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size, 10-48 (px). */
+  /** Letter size (rain) or logo size (DVD), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
-  /** Bold letters with a neon halo. */
+  /** Neon halo (and bold letters for the rain). */
   glow: boolean;
+  /** How many bouncing logos (DVD only), 1-10. */
+  count: number;
+  /** Whether a logo takes a new color each time it bounces (DVD only). */
+  color_change: boolean;
+  /** The logo's color as `#rrggbb` when it doesn't change color (DVD only). */
+  color: string;
+  /** The rain's color as `#rrggbb` (matrix only). */
+  rain_color: string;
+  /** Every column of the rain gets its own hue, drifting over time, instead of `rain_color` (matrix only). */
+  rain_rainbow: boolean;
+  /** Which characters fall (matrix only). */
+  rain_symbols: RainSymbols;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

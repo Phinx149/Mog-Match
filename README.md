@@ -191,7 +191,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
   "bio": "...", "favorite_ide": "VS Code", "favorite_ai_agents": ["Cursor", "Claude Code"],
   "skills": ["Frontend", "TypeScript", "React"], "interests": ["Design Systems"],
   "experience_level": "Senior", "looking_for": ["Side project"],
-  "theme": {"background": "#172554", "effect": null, "effect_options": {"brightness": 40, "size": 14, "speed": 4, "glow": false}},
+  "theme": {"background": "#172554", "effect": null, "effect_options": {"brightness": 40, "size": 14, "speed": 4, "glow": false, "count": 1, "color_change": true, "color": "#ffffff", "rain_color": "#22ff66", "rain_rainbow": false, "rain_symbols": "katakana"}},
   "links": [{"id": "uuid", "label": "GitHub", "url": "https://..."}],
   "projects": [{"id": "uuid", "title": "Prism UI", "description": "...", "project_url": "https://...", "technologies": ["React"]}],
   "created_at": "ISO-8601", "updated_at": "ISO-8601"
@@ -204,8 +204,13 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 - `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
 - `theme` is cosmetic only; nothing else (search, filters, Mog Score) reads it. Each option is `null` for the default look.
   - `theme.background`: `#rrggbb`. It must be dark enough for the light text to stay readable, otherwise `400` with a `theme.background` field error.
-  - `theme.effect`: an animation drawn behind the card, currently only `matrix` (falling green code, generated in the browser on a canvas, not an image). Any other name is a `400` with a `theme.effect` field error.
-  - `theme.effect_options` tunes the effect; send any subset and the rest use the defaults shown above (responses always include all four). `brightness` 10-100 (%), `size` 10-48 (px), `speed` 1-10, all whole numbers, and `glow` true/false. Anything else is a `400` with a `theme.effect_options.<name>` field error. They are kept while `effect` is `null`.
+  - `theme.effect`: an animation drawn behind the card: `matrix` (falling green code) or `dvd` (a bouncing DVD logo that changes color on every wall hit). Both are generated in the browser on a canvas, not images. Any other name is a `400` with a `theme.effect` field error.
+  - `theme.effect_options` tunes whichever effect is on; send any subset and the rest use the defaults shown above (responses always include every option). An effect ignores options that don't apply to it. They are kept while `effect` is `null`. Anything invalid is a `400` with a `theme.effect_options.<name>` field error.
+    - Whole numbers: `brightness` 10-100 (%), `size` 10-48 (letter size for `matrix`, logo size for `dvd`), `speed` 1-10, `count` 1-10 (how many `dvd` logos).
+    - `glow` true/false (neon halo). `color_change` true/false (`dvd`: a logo takes a new color on every bounce). `color` `#rrggbb` (`dvd`: the logo color while `color_change` is false).
+    - `matrix` only: `rain_color` `#rrggbb` (default classic green); `rain_rainbow` true/false (every column gets its own drifting hue instead of `rain_color`); `rain_symbols` one of `katakana` (default), `binary`, `code`, `chaos`. The characters themselves live in the frontend (`RAIN_SYMBOLS` in `utils/theme.ts`).
+    - Colors are strict `#rrggbb` and, unlike `theme.background`, have no darkness rule: they are drawn on a canvas, never used as a fill behind text.
+  - A `dvd` logo that lands in a corner (or bounces close enough to one, heading into it) sets off a sparkle burst; that part is not configurable.
 - `400` on invalid data or unknown fields, `409` if the username is taken.
 
 ## Known limitations (this milestone)

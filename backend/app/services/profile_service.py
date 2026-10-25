@@ -46,12 +46,24 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix",)
-# Tuning for the effect (currently the matrix rain's). Integers must be within these inclusive
-# ranges; the frontend sliders use the same ones (EFFECT_OPTION_RANGES in frontend/src/utils/theme.ts).
-EFFECT_OPTION_RANGES = {"brightness": (10, 100), "size": (10, 48), "speed": (1, 10)}  # percent, px, steps
+THEME_EFFECTS = ("matrix", "dvd")
+# Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
+# and an effect ignores options that don't apply to it, like the rain and `count`).
+# Integers must be within these inclusive ranges; the frontend sliders use the same ones
+# (EFFECT_OPTION_RANGES in frontend/src/utils/theme.ts).
+EFFECT_OPTION_RANGES = {"brightness": (10, 100), "size": (10, 48), "speed": (1, 10), "count": (1, 10)}
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
-DEFAULT_EFFECT_OPTIONS = {"brightness": 40, "size": 14, "speed": 4, "glow": False}
+DEFAULT_EFFECT_OPTIONS = {
+    "brightness": 40, "size": 14, "speed": 4, "glow": False,
+    # Bouncing DVD only:
+    "count": 1, "color_change": True, "color": "#ffffff",
+    # Matrix rain only:
+    "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
+}
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow")
+COLOR_EFFECT_OPTIONS = ("color", "rain_color")
+# What the rain is made of; the frontend holds the actual characters (RAIN_SYMBOLS in utils/theme.ts).
+RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
 HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 # The UI's text is light, so the card background has to be dark enough to keep it readable.
 # 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
@@ -344,9 +356,20 @@ def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
                 errors[field] = f"Must be a whole number from {low} to {high}."
             else:
                 cleaned[key] = option
-        elif key == "glow":
+        elif key in BOOLEAN_EFFECT_OPTIONS:
             if not isinstance(option, bool):
                 errors[field] = "Must be true or false."
+            else:
+                cleaned[key] = option
+        elif key in COLOR_EFFECT_OPTIONS:
+            # Strict #rrggbb only, like the background: the frontend hands it straight to a canvas.
+            if not isinstance(option, str) or not HEX_COLOR.fullmatch(option.strip()):
+                errors[field] = "Must be a hex color like #ff00ff."
+            else:
+                cleaned[key] = option.strip().lower()
+        elif key == "rain_symbols":
+            if option not in RAIN_SYMBOL_SETS:  # also catches non-strings, which can't equal a name
+                errors[field] = f"Must be one of: {', '.join(RAIN_SYMBOL_SETS)}."
             else:
                 cleaned[key] = option
         else:

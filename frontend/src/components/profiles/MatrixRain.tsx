@@ -1,22 +1,24 @@
 import { useEffect, useRef } from "react";
 import type { EffectOptions } from "../../types/profile";
+import { DEFAULT_EFFECT_OPTIONS, HEX_COLOR, RAIN_SYMBOLS } from "../../utils/theme";
 
-// Half-width katakana and digits, like the film.
-const GLYPHS = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789";
-const GREEN = "#22ff66";
 const STEPS_PER_SPEED = 4; // speed 1-10 -> 4-40 rows fallen per second (the default, 4, is the original slow fall)
 const MAX_STEPS_PER_FRAME = 3; // catch-up limit, e.g. right after the tab was in the background
+const HUE_PER_COLUMN = 9; // degrees: neighboring columns differ a little, so the rainbow reads as a smooth sweep
+const HUE_PER_STEP = 2; // degrees the whole rainbow drifts each step
 const FADE = 0.12; // how much of the older letters is erased each step; lower = longer trails
 const STATIC_STEPS = 40; // steps pre-drawn for people who prefer reduced motion
 
 /**
- * Falling green code, drawn on a canvas that fills its parent. It is generated, not an image:
+ * Falling code (green unless it's tuned otherwise), drawn on a canvas that fills its parent. It is generated, not an image:
  * it fits any card size, never repeats or shows a seam, and costs no download.
  * The parent must be `relative`; ThemeScope takes care of that.
  */
 export default function MatrixRain({ options }: { options: EffectOptions }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { size, speed, glow } = options;
+  const { size, speed, glow, rain_rainbow: rainbow } = options;
+  const rainColor = options.rain_color;
+  const symbolSet = options.rain_symbols;
 
   // Brightness is just the canvas opacity (below), so changing it never restarts the animation.
   useEffect(() => {
@@ -26,11 +28,15 @@ export default function MatrixRain({ options }: { options: EffectOptions }) {
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const stepMs = 1000 / (speed * STEPS_PER_SPEED);
+    // Both come from the server, but fall back rather than draw with something unexpected.
+    const glyphs = (RAIN_SYMBOLS[symbolSet] ?? RAIN_SYMBOLS.katakana).glyphs;
+    const color = HEX_COLOR.test(rainColor) ? rainColor : DEFAULT_EFFECT_OPTIONS.rain_color;
     let width = 0;
     let height = 0;
     let drops: number[] = []; // the row each column's falling letter is on
     let frame = 0; // requestAnimationFrame id; 0 = not running
     let lastStep = 0;
+    let steps = 0; // how many steps have been drawn; moves the rainbow along
 
     const step = () => {
       // Erase part of what is already there instead of repainting a background, so the canvas
@@ -41,18 +47,21 @@ export default function MatrixRain({ options }: { options: EffectOptions }) {
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "source-over";
 
-      ctx.fillStyle = GREEN;
       ctx.font = `${glow ? "bold " : ""}${size}px monospace`;
-      if (glow) {
-        ctx.shadowColor = GREEN;
-        ctx.shadowBlur = size * 0.7;
-      }
       drops.forEach((row, column) => {
-        const letter = GLYPHS.charAt(Math.floor(Math.random() * GLYPHS.length));
+        const letter = glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+        // A letter keeps the color it was drawn in while it fades, so the rainbow leaves colored trails.
+        const fill = rainbow ? `hsl(${(column * HUE_PER_COLUMN + steps * HUE_PER_STEP) % 360} 100% 60%)` : color;
+        ctx.fillStyle = fill;
+        if (glow) {
+          ctx.shadowColor = fill;
+          ctx.shadowBlur = size * 0.7;
+        }
         ctx.fillText(letter, column * size, row * size);
         // Once past the bottom, restart from the top at random so the columns drift out of sync.
         drops[column] = row * size > height && Math.random() > 0.96 ? 0 : row + 1;
       });
+      steps++;
     };
 
     const resize = () => {
@@ -96,7 +105,7 @@ export default function MatrixRain({ options }: { options: EffectOptions }) {
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
     };
-  }, [size, speed, glow]);
+  }, [size, speed, glow, rainbow, rainColor, symbolSet]);
 
   return (
     <canvas
