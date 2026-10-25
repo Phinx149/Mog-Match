@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning", "tron"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -75,7 +75,7 @@ export type SnowKind = (typeof SNOW_KINDS)[number];
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money), flake size (snow) or bolt thickness (lightning), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money), flake size (snow), bolt thickness (lightning) or grid size (tron), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -145,6 +145,14 @@ export interface EffectOptions {
   lightning_forks: number;
   /** Whether the sky lights up for a moment with each strike (lightning only). */
   lightning_flash: boolean;
+  /** The light cycles' color as `#rrggbb`; the head of each is always white (tron only). */
+  tron_color: string;
+  /** How many light cycles ride the grid, 1-10 (tron only). */
+  tron_cycles: number;
+  /** How long the trail behind each cycle is, 1-10 (tron only). */
+  tron_tail: number;
+  /** Whether the faint grid the cycles ride on is drawn (tron only). */
+  tron_grid: boolean;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

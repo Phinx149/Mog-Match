@@ -75,6 +75,10 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   lightning_strikes: 6,
   lightning_forks: 5,
   lightning_flash: true,
+  tron_color: "#22d3ee",
+  tron_cycles: 3,
+  tron_tail: 5,
+  tron_grid: true,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -98,6 +102,8 @@ export const EFFECT_OPTION_RANGES = {
   snow_wind: { label: "Wind", min: -10, max: 10, step: 1, unit: "" },
   lightning_strikes: { label: "Strikes", min: 1, max: 10, step: 1, unit: "" },
   lightning_forks: { label: "Forks", min: 0, max: 10, step: 1, unit: "" },
+  tron_cycles: { label: "Cycles", min: 1, max: 10, step: 1, unit: "" },
+  tron_tail: { label: "Trail length", min: 1, max: 10, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -256,6 +262,18 @@ export const LIGHTNING_COLOR_SWATCHES = [
   { name: "White", hex: "#ffffff" },
 ] as const;
 
+/** Quick picks for the light cycles' color: the classic cyan first, then the orange of the rival program. */
+export const TRON_COLOR_SWATCHES = [
+  { name: "Grid cyan", hex: "#22d3ee" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Orange", hex: "#ff8a00" },
+  { name: "Red", hex: "#ff2a2a" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Magenta", hex: "#ff2bd6" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
 /** What the edit form shows for each effect: its wording, and which of the tuning options it reads. */
 export const EFFECT_INFO: Record<
   ThemeEffect,
@@ -272,6 +290,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: boolean;
     hasSnowStyle: boolean;
     hasLightningStyle: boolean;
+    hasTronStyle: boolean;
   }
 > = {
   matrix: {
@@ -287,6 +306,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -301,6 +321,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -315,6 +336,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -329,6 +351,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -343,6 +366,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   money: {
     label: "Money rain",
@@ -357,6 +381,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: true,
     hasSnowStyle: false,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   snow: {
     label: "Snowfall",
@@ -371,6 +396,7 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: true,
     hasLightningStyle: false,
+    hasTronStyle: false,
   },
   lightning: {
     label: "Lightning",
@@ -385,6 +411,22 @@ export const EFFECT_INFO: Record<
     hasMoneyStyle: false,
     hasSnowStyle: false,
     hasLightningStyle: true,
+    hasTronStyle: false,
+  },
+  tron: {
+    label: "Light cycles",
+    tuneTitle: "Tune the cycles",
+    sizeLabel: "Grid size",
+    sliders: ["brightness", "size", "tron_cycles", "speed", "tron_tail"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: true,
   },
 };
 
@@ -705,6 +747,52 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         lightning_color: "#b794ff",
         lightning_strikes: 9,
         lightning_forks: 10,
+      },
+    },
+  },
+  {
+    name: "The Grid",
+    description: "Cyan light cycles on a dark grid",
+    theme: {
+      background: "#020a14",
+      effect: "tron",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 14, speed: 5, glow: true, tron_cycles: 4 },
+    },
+  },
+  {
+    name: "Rogue Program",
+    description: "A few long orange trails, fast",
+    theme: {
+      background: "#120802",
+      effect: "tron",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 18,
+        speed: 7,
+        glow: true,
+        tron_color: "#ff8a00",
+        tron_cycles: 3,
+        tron_tail: 8,
+      },
+    },
+  },
+  {
+    name: "Synthwave",
+    description: "Lots of short magenta cycles, no grid",
+    theme: {
+      background: "#0d0220",
+      effect: "tron",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 12,
+        speed: 5,
+        glow: true,
+        tron_color: "#ff2bd6",
+        tron_cycles: 8,
+        tron_tail: 3,
+        tron_grid: false,
       },
     },
   },

@@ -14,6 +14,7 @@ DEFAULT_OPTIONS = {
     "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
     "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
     "lightning_color": "#9ec5ff", "lightning_strikes": 6, "lightning_forks": 5, "lightning_flash": True,
+    "tron_color": "#22d3ee", "tron_cycles": 3, "tron_tail": 5, "tron_grid": True,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -147,6 +148,7 @@ CRANKED = {
     "money_kind": "mixed", "money_count": 80, "money_wind": 10, "money_weight": 10,
     "snow_kind": "crystals", "snow_count": 200, "snow_wind": -10,
     "lightning_color": "#ffd84a", "lightning_strikes": 10, "lightning_forks": 10, "lightning_flash": False,
+    "tron_color": "#ff8a00", "tron_cycles": 10, "tron_tail": 10, "tron_grid": False,
 }
 
 
@@ -802,6 +804,76 @@ def test_lightning_options_do_not_change_the_mog_score(client):
     client.patch("/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- light cycles ----------
+
+def test_tron_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 70, "size": 18, "speed": 7, "glow": True,
+        "tron_color": "#ff8a00", "tron_cycles": 6, "tron_tail": 8, "tron_grid": False,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#020a14", "effect": "tron", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#020a14", "effect": "tron", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_tron_defaults_are_a_few_cyan_cycles_on_a_visible_grid(client):
+    options = _theme(client)["effect_options"]
+    assert (options["tron_color"], options["tron_cycles"], options["tron_tail"], options["tron_grid"]) == ("#22d3ee", 3, 5, True)
+
+
+@pytest.mark.parametrize("option, value", [("tron_cycles", 1), ("tron_cycles", 10), ("tron_tail", 1), ("tron_tail", 10),
+                                           ("tron_grid", True), ("tron_grid", False)])
+def test_tron_option_values_are_accepted_and_persist(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "tron", "effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+def test_tron_color_is_trimmed_and_lowercased_and_may_be_any_brightness(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "tron", "effect_options": {"tron_color": " #FFFFFF "}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["tron_color"] == "#ffffff"
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("tron_cycles", 0), ("tron_cycles", 11), ("tron_cycles", 2.5), ("tron_cycles", "3"), ("tron_cycles", True), ("tron_cycles", None),
+        ("tron_tail", 0), ("tron_tail", 11), ("tron_tail", 5.5), ("tron_tail", "5"), ("tron_tail", False), ("tron_tail", None),
+        ("tron_grid", 1), ("tron_grid", "true"), ("tron_grid", None),
+        ("tron_color", "cyan"), ("tron_color", "#fff"), ("tron_color", "#22d3eg"), ("tron_color", "url(x)"), ("tron_color", 5), ("tron_color", None),
+    ],
+)
+def test_tron_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "tron", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_tron_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "tron", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+def test_old_saved_options_get_the_tron_defaults(client):
+    # A profile saved before the light cycles existed must still read back a full set of options.
+    client.patch("/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": {"size": 20}}})
+
+    options = _theme(client)["effect_options"]
+    assert (options["tron_color"], options["tron_cycles"], options["tron_tail"], options["tron_grid"]) == ("#22d3ee", 3, 5, True)
 
 
 # ---------- themes saved by an older version ----------

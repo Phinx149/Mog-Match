@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning", "tron")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -69,6 +69,8 @@ EFFECT_OPTION_RANGES = {
     # Lightning only: how often a bolt strikes (1 = now and then, 10 = a storm overhead, but never closer
     # than about a second apart) and how many branches fork off each bolt (0 = a single clean bolt).
     "lightning_strikes": (1, 10), "lightning_forks": (0, 10),
+    # Light cycles only: how many ride the grid, and how long the trail behind each one is.
+    "tron_cycles": (1, 10), "tron_tail": (1, 10),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -91,9 +93,11 @@ DEFAULT_EFFECT_OPTIONS = {
     "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
     # Lightning only ("lightning_flash": the sky lights up for a moment with each strike):
     "lightning_color": "#9ec5ff", "lightning_strikes": 6, "lightning_forks": 5, "lightning_flash": True,
+    # Light cycles only ("tron_grid": the faint grid lines the cycles ride on):
+    "tron_color": "#22d3ee", "tron_cycles": 3, "tron_tail": 5, "tron_grid": True,
 }
-BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label", "lightning_flash")
-COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color", "lightning_color")
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label", "lightning_flash", "tron_grid")
+COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color", "lightning_color", "tron_color")
 # Options that must be one of a fixed set of names. The rain's characters themselves live in the
 # frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
 RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
