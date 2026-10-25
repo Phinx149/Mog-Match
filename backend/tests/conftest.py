@@ -5,6 +5,7 @@ import pytest
 from app import create_app
 from app.config import normalize_database_url
 from app.extensions import db
+from app.models import Profile
 from app.seed import seed_database
 
 
@@ -24,6 +25,17 @@ def app(tmp_path):
         db.session.remove()
         db.drop_all()
         db.engine.dispose()  # release the file so Windows can delete tmp_path
+
+
+@pytest.fixture
+def blank_looks(app):
+    """Seeded accounts ship with a profile picture and theme. Tests about the default look, or about
+    uploading a photo, ask for this so every profile starts without either."""
+    for profile in Profile.query.all():
+        profile.theme = None
+        profile.user.photo_data = None
+        profile.user.photo_mimetype = None
+    db.session.commit()
 
 
 @pytest.fixture

@@ -1,14 +1,18 @@
 """Repeatable demo data. Run with `flask seed` (add `--reset` to restore seeded profiles)."""
 
+from pathlib import Path
+
 import click
 from flask import Flask, current_app
 
 from .extensions import db
-from .demo_users import DEMO_PASSWORD, DEMO_THEMES, DEMO_USERS
+from .demo_users import DEMO_PASSWORD, DEMO_THEMES, DEMO_USERS, SEED_THEMES
 from .models import Invite, Profile, ProfileLink, Project, Swipe, User
 from .services.auth_service import hash_password
 
 SEED_EMAIL_DOMAIN = "seed.mogmatch.dev"
+# Cartoon profile pictures, one PNG per username (made by scripts/make_seed_avatars.py).
+AVATAR_DIR = Path(__file__).resolve().parent / "seed_avatars"
 
 DEMO_PROFILE = {
     "full_name": "Jordan Avery",
@@ -302,30 +306,48 @@ TEST_USERS = [
         "full_name": "Test User One",
         "username": "user1",
         "location": "Testville",
-        "bio": "Quick-login account for testing.",
+        "education": "B.S. Computer Science, Testville State",
+        "bio": "Quick-login account for testing. I like small full-stack prototypes and "
+        "have strong opinions about tabs versus spaces.",
         "favorite_ide": "VS Code",
         "favorite_ai_agents": ["Claude Code"],
         "skills": ["Python", "React", "TypeScript"],
         "interests": ["Startups", "AI"],
         "experience_level": "Mid-level",
         "looking_for": ["Side project"],
-        "links": [],
-        "projects": [],
+        "links": [("GitHub", "https://github.com/user1")],
+        "projects": [
+            {
+                "title": "Test Tracker",
+                "description": "A tiny dashboard that tracks which manual test runs passed.",
+                "project_url": "https://example.com/user1/test-tracker",
+                "technologies": ["React", "TypeScript"],
+            }
+        ],
     },
     {
         "password": "234",
         "full_name": "Test User Two",
         "username": "user2",
         "location": "Testville",
-        "bio": "Quick-login account for testing.",
+        "education": "B.A. Information Systems, Testville College",
+        "bio": "Quick-login account for testing. Learning Flask by building things that "
+        "break, then fixing them.",
         "favorite_ide": "VS Code",
         "favorite_ai_agents": ["Cursor"],
         "skills": ["Python", "Flask", "React"],
         "interests": ["AI", "Open Source"],
         "experience_level": "Junior",
         "looking_for": ["Side project", "Mentor"],
-        "links": [],
-        "projects": [],
+        "links": [("GitHub", "https://github.com/user2")],
+        "projects": [
+            {
+                "title": "Bug Journal",
+                "description": "A Flask app for writing down every bug I hit and how I fixed it.",
+                "project_url": None,
+                "technologies": ["Flask", "Python"],
+            }
+        ],
     },
 ]
 
@@ -343,6 +365,18 @@ def _build_profile(user: User, data: dict) -> Profile:
     return profile
 
 
+def _fill_missing_looks(profile: Profile, data: dict) -> None:
+    """Give a seeded account the profile picture and theme it ships with, if it has none yet.
+    Only fills gaps (like `_seed_passwords`), so a photo, avatar link or theme someone chose is
+    never replaced, and `flask seed` can safely add them to accounts created before they existed."""
+    picture = AVATAR_DIR / f"{data['username']}.png"
+    if not profile.user.photo_data and not profile.avatar_url and picture.is_file():
+        profile.user.photo_data = picture.read_bytes()
+        profile.user.photo_mimetype = "image/png"
+    if profile.theme is None and data.get("theme"):
+        profile.theme = data["theme"]
+
+
 def _seed_one(email: str, data: dict, reset: bool) -> str:
     """Create one seeded user+profile. Returns 'created', 'reset' or 'skipped'."""
     user = User.query.filter_by(email=email).one_or_none()
@@ -358,11 +392,15 @@ def _seed_one(email: str, data: dict, reset: bool) -> str:
         db.session.flush()
         user = None
     elif (user is not None and user.profile is not None) or existing is not None:
-        return "skipped"  # never overwrite data someone may have edited
+        if user is not None and user.profile is not None:
+            _fill_missing_looks(user.profile, data)  # only gaps; the rest may have been edited
+        return "skipped"
 
     user = user or User(email=email)
+    profile = _build_profile(user, data)
     db.session.add(user)
-    db.session.add(_build_profile(user, data))
+    db.session.add(profile)
+    _fill_missing_looks(profile, data)
     return outcome
 
 
@@ -384,13 +422,17 @@ def _seed_invites(demo: Profile) -> None:
             db.session.add(Invite(sender_id=sender.id, recipient_id=demo.id, message=message))
 
 
+def _with_theme(data: dict) -> dict:
+    return {**data, "theme": SEED_THEMES.get(data["username"])}
+
+
 def seed_database(reset: bool = False) -> dict[str, int]:
     counts = {"created": 0, "reset": 0, "skipped": 0}
     demo_email = current_app.config["DEMO_USER_EMAIL"]
-    counts[_seed_one(demo_email, DEMO_PROFILE, reset)] += 1
+    counts[_seed_one(demo_email, _with_theme(DEMO_PROFILE), reset)] += 1
     for data in SEED_PROFILES:
         email = f"{data['username']}@{SEED_EMAIL_DOMAIN}"
-        counts[_seed_one(email, data, reset)] += 1
+        counts[_seed_one(email, _with_theme(data), reset)] += 1
     db.session.flush()  # so the new profiles can be found by username below
     _seed_passwords([demo_email] + [f"{d['username']}@{SEED_EMAIL_DOMAIN}" for d in SEED_PROFILES])
     demo = User.query.filter_by(email=demo_email).one().profile
@@ -421,15 +463,18 @@ def seed_test_users(reset: bool = False) -> int:
                 db.session.delete(existing.user)  # cascades to profile, swipes and invites
         db.session.flush()
     for data in accounts:
-        if Profile.query.filter_by(username=data["username"]).one_or_none() is not None:
+        email = f"{data['username']}@{TEST_USER_EMAIL_DOMAIN}"
+        existing = Profile.query.filter_by(username=data["username"]).one_or_none()
+        if existing is not None:
+            if existing.user.email == email:  # one of ours: only fill in a missing picture or theme
+                _fill_missing_looks(existing, data)
             continue  # already there (and maybe edited): leave it alone
         fields = {key: value for key, value in data.items() if key != "password"}
-        user = User(
-            email=f"{data['username']}@{TEST_USER_EMAIL_DOMAIN}",
-            password_hash=hash_password(data["password"]),
-        )
+        user = User(email=email, password_hash=hash_password(data["password"]))
+        profile = _build_profile(user, fields)
         db.session.add(user)
-        db.session.add(_build_profile(user, fields))
+        db.session.add(profile)
+        _fill_missing_looks(profile, data)
         created += 1
     db.session.flush()
 
