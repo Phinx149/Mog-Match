@@ -1,0 +1,28 @@
+{
+  "title": "StudySprint",
+  "summary": "An accessible study-session planner for two developers to build over a weekend.",
+  "problem": "Students struggle to break study goals into realistic sessions.",
+  "target_users": "Students preparing for exams with a study partner.",
+  "features": ["Create a study goal", "Break goals into sessions", "Track session completion"],
+  "discussion_notes": "Keeps the MVP small and uses the team's shared Python and React skills.",
+  "architecture": "A React client calls a Flask JSON API. Flask validates requests and stores goals and sessions in SQLite. Serve the built client and API from one origin.",
+  "tech_stack": [
+    {"component": "Client", "technology": "React + TypeScript", "rationale": "Both developers know React."},
+    {"component": "API", "technology": "Flask", "rationale": "Builds on the team's Python experience."},
+    {"component": "Database", "technology": "SQLite", "rationale": "Simple persistence for a weekend MVP."}
+  ],
+  "data_model": ["Goal: id, title, owner_id", "StudySession: id, goal_id, duration, completed"],
+  "api_contracts": ["POST /api/goals creates a goal", "PATCH /api/sessions/:id updates completion"],
+  "team_roles": [
+    {"username": "user1", "responsibility": "Build the accessible React interface.", "learning_goal": "Practice keyboard navigation."},
+    {"username": "user2", "responsibility": "Build the Flask API and database schema.", "learning_goal": "Practice API validation and persistence."}
+  ],
+  "milestones": [
+    {"title": "Agree on scope", "estimate": "1 hour", "deliverables": ["Sketch the main screen", "Write acceptance criteria"]},
+    {"title": "Ship one complete flow", "estimate": "1 day", "deliverables": ["Create a goal", "Complete a study session"]}
+  ],
+  "testing": ["Test input validation", "Verify persistence after reload", "Check keyboard and screen-reader access"],
+  "deployment": "Deploy a single Flask service with durable storage and serve the built client from the same origin.",
+  "risks": ["Scheduling scope can grow; defer calendar integrations."],
+  "open_questions": ["Should a study goal belong to one person or a team?"]
+}

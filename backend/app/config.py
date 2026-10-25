@@ -56,6 +56,8 @@ class Config:
     SESSION_COOKIE_SECURE = ON_VERCEL  # HTTPS-only cookie when deployed
     # Every seeded user gets this password (demo data). Use a different one when seeding production.
     SEED_PASSWORD = os.getenv("SEED_PASSWORD", "mogmatch-demo")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     # Vercel rejects request bodies over 4.5 MB, so keep uploads (plus form overhead) under that.
     MAX_PHOTO_BYTES = 4 * 1024 * 1024
     ON_VERCEL = ON_VERCEL

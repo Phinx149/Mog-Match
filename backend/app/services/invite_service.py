@@ -100,6 +100,8 @@ def send_invite(me: Profile, data: Any) -> dict[str, Any]:
     invite = Invite(sender_id=me.id, recipient_id=recipient.id, message=message, status="pending")
     db.session.add(invite)
     db.session.commit()
+    from .chat_service import notify
+    notify(invite)
     return to_dict(invite)
 
 
@@ -126,6 +128,8 @@ def respond_to_invite(me: Profile, invite_id: uuid.UUID, data: Any) -> dict[str,
         raise ConflictError(f"You already {invite.status} this invite.")
     invite.status = status
     db.session.commit()
+    from .chat_service import notify
+    notify(invite)
     return to_dict(invite)
 
 
@@ -136,5 +140,7 @@ def cancel_invite(me: Profile, invite_id: uuid.UUID) -> None:
         raise NotFoundError("Invite not found.")
     if invite.status != "pending":
         raise ConflictError(f"They already {invite.status} it, so it can't be cancelled.")
+    from .chat_service import notify
     db.session.delete(invite)
     db.session.commit()
+    notify(invite)

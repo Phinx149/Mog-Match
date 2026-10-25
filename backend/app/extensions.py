@@ -2,10 +2,12 @@ import sqlite3
 
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 db = SQLAlchemy()
+socketio = SocketIO(async_mode="threading")
 # Batch mode lets Alembic alter columns on SQLite (which lacks most ALTER TABLE support).
 migrate = Migrate(render_as_batch=True, compare_type=True)
 

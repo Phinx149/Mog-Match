@@ -18,6 +18,12 @@
   },
   "rewrites": [
     {
+      "source": "/socket.io/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
       "source": "/api/(.*)",
       "destination": {
         "service": "api"

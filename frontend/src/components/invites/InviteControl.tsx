@@ -1,4 +1,4 @@
-import { Check, Clock, Inbox, Send, UserPlus, X } from "lucide-react";
+import { Check, Clock, Inbox, MessageCircle, Send, UserPlus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { MAX_INVITE_MESSAGE_LENGTH, type Invite } from "../../types/invite";
@@ -19,6 +19,10 @@ export default function InviteControl({ name, invite, fromThem, onSend }: Invite
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messageId = useId();
+
+  if (invite?.status === "accepted") {
+    return <Link to={`/inbox?chat=${invite.id}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/20"><MessageCircle className="size-4" aria-hidden />Open chat</Link>;
+  }
 
   if (invite && fromThem) {
     const text = invite.status === "pending" ? `${name} invited you` : `You ${invite.status} their invite`;
@@ -53,7 +57,7 @@ export default function InviteControl({ name, invite, fromThem, onSend }: Invite
         className="inline-flex items-center gap-2 rounded-xl border border-violet-500/50 bg-violet-500/15 px-5 py-2.5 text-sm font-semibold text-violet-100 transition-colors hover:bg-violet-500/30"
       >
         <UserPlus className="size-4" aria-hidden />
-        Invite
+        Match request
       </button>
     );
   }
@@ -99,7 +103,7 @@ export default function InviteControl({ name, invite, fromThem, onSend }: Invite
           className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-60"
         >
           <Send className="size-4" aria-hidden />
-          {sending ? "Sending…" : "Send invite"}
+          {sending ? "Sending…" : "Send match request"}
         </button>
       </div>
     </form>
