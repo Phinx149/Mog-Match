@@ -1,8 +1,9 @@
-import { Compass, Settings, User } from "lucide-react";
+import { Compass, Settings, Sparkles, User } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const ITEMS = [
   { to: "/discover", label: "Discover", icon: Compass },
+  { to: "/match", label: "Match", icon: Sparkles },
   { to: "/profile", label: "Profile", icon: User },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

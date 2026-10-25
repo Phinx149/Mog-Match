@@ -77,6 +77,7 @@ def list_profiles(
     looking_for: list[str] | None = None,
     location: str = "",
     exclude_id: uuid.UUID | None = None,
+    hidden_ids: set[uuid.UUID] | None = None,
 ) -> list[Profile]:
     """Filter in Python for now; move to SQL once the dataset grows."""
     profiles = _profile_query().order_by(Profile.created_at, Profile.username).all()
@@ -89,6 +90,8 @@ def list_profiles(
     results = []
     for profile in profiles:
         if exclude_id is not None and profile.id == exclude_id:
+            continue
+        if hidden_ids and profile.id in hidden_ids:  # already liked/passed
             continue
         # Every selected skill/interest must be present (filter chips narrow results).
         if wanted_skills and not wanted_skills <= _lower_set(profile.skills):

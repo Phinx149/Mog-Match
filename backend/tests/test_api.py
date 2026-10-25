@@ -156,3 +156,4 @@ def test_seed_is_idempotent_and_reset_restores(app, client):
 
     seed_database(reset=True)
     assert client.get("/api/profiles/me").get_json()["full_name"] == "Jordan Avery"
+

@@ -1,5 +1,6 @@
-import { Heart, RefreshCw, X } from "lucide-react";
+import { Heart, RefreshCw, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import FilterBar from "../components/discover/FilterBar";
 import SearchBar from "../components/discover/SearchBar";
@@ -7,8 +8,8 @@ import MogFilter from "../components/mog/MogFilter";
 import Navbar from "../components/layout/Navbar";
 import ProfileCard from "../components/profiles/ProfileCard";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
-import { getFilterOptions, listProfiles } from "../services/api";
-import type { FilterOptions, MogTier, Profile, SwipeDecision } from "../types/profile";
+import { clearSwipes, createSwipe, getFilterOptions, listProfiles } from "../services/api";
+import type { FilterOptions, MogMatch, MogTier, Profile, SwipeDecision } from "../types/profile";
 
 const NO_OPTIONS: FilterOptions = { skills: [], looking_for: [] };
 
@@ -23,8 +24,11 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  // Likes/passes live only in memory for this milestone; persistence comes with matching.
+  // Hides a card the moment you swipe. Swipes are saved on the server, which leaves them out of
+  // the list from then on; this map just avoids waiting for a reload.
   const [decisions, setDecisions] = useState<Record<string, { name: string; decision: SwipeDecision }>>({});
+  const [lastMatch, setLastMatch] = useState<{ name: string; match: MogMatch } | null>(null);
+  const [swipeError, setSwipeError] = useState<string | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -66,13 +70,39 @@ export default function DiscoverPage() {
   const remaining = useMemo(() => profiles.filter((p) => !decisions[p.id]), [profiles, decisions]);
   const liked = Object.values(decisions).filter((d) => d.decision === "like");
   const passedCount = Object.keys(decisions).length - liked.length;
+  const filtersActive = Boolean(
+    debouncedSearch.trim() || selectedSkills.length || selectedLookingFor.length || minTier,
+  );
 
-  const decide = (profile: Profile, decision: SwipeDecision) =>
+  const decide = (profile: Profile, decision: SwipeDecision) => {
+    setSwipeError(null);
     setDecisions((current) => ({ ...current, [profile.id]: { name: profile.full_name, decision } }));
+    createSwipe(profile.id, decision)
+      .then(({ match }) => {
+        if (match) setLastMatch({ name: profile.full_name, match });
+      })
+      .catch((err: unknown) => {
+        // Not saved: put the card back so the swipe isn't silently lost.
+        setDecisions((current) => {
+          const next = { ...current };
+          delete next[profile.id];
+          return next;
+        });
+        setSwipeError(err instanceof Error ? err.message : "Couldn't save that swipe.");
+      });
+  };
 
-  const refresh = () => {
-    setDecisions({});
-    setReloadKey((key) => key + 1);
+  const refresh = () => setReloadKey((key) => key + 1);
+
+  /** Deletes every like/pass on the server, which also empties the Match page. */
+  const startOver = () => {
+    clearSwipes()
+      .then(() => {
+        setDecisions({});
+        setLastMatch(null);
+        refresh();
+      })
+      .catch((err: unknown) => setSwipeError(err instanceof Error ? err.message : "Couldn't start over."));
   };
 
   return (
@@ -82,7 +112,7 @@ export default function DiscoverPage() {
         <button
           type="button"
           onClick={refresh}
-          title="Refresh and reset likes/passes"
+          title="Refresh"
           aria-label="Refresh"
           className="shrink-0 rounded-full border border-line bg-surface p-2 text-muted transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
         >
@@ -117,22 +147,31 @@ export default function DiscoverPage() {
           </p>
         </div>
 
+        {lastMatch && (
+          <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm text-violet-100">
+            <Sparkles className="size-4 shrink-0 text-violet-300" aria-hidden />
+            <span>
+              Liked {lastMatch.name}: <strong className="font-mono">{lastMatch.match.score}%</strong> match,{" "}
+              <span className="italic">{lastMatch.match.label.toLowerCase()}</span>.
+            </span>
+            <Link to="/match" className="ml-auto text-cyan-300 hover:underline">
+              See your matches
+            </Link>
+          </p>
+        )}
+        {swipeError && <p className="mb-4 text-sm text-rose-300">{swipeError}</p>}
+
         {error ? (
           <ErrorState message={error} onRetry={refresh} />
         ) : loading && profiles.length === 0 ? (
           <LoadingState label="Finding developers…" />
         ) : remaining.length === 0 ? (
-          <EmptyState title={profiles.length ? "You've seen everyone here" : "No developers match"}>
-            {profiles.length ? (
-              <>
-                {liked.length > 0 && <p className="mb-2">You liked {liked.map((d) => d.name).join(", ")}.</p>}
-                <button type="button" onClick={refresh} className="text-cyan-300 hover:underline">
-                  Refresh to start over
-                </button>
-              </>
-            ) : (
-              "Try removing a filter or changing your search."
-            )}
+          <EmptyState title={filtersActive && !profiles.length ? "No developers match" : "You've seen everyone here"}>
+            {filtersActive && !profiles.length && <p className="mb-2">Try removing a filter or changing your search.</p>}
+            <p className="mb-2">Liked profiles are on your Match page; people you've swiped on don't come back.</p>
+            <button type="button" onClick={startOver} className="text-cyan-300 hover:underline">
+              Start over (clears your likes and matches)
+            </button>
           </EmptyState>
         ) : (
           <ul className={`flex flex-col gap-4 transition-opacity ${loading ? "opacity-60" : ""}`}>

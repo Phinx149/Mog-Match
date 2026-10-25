@@ -61,6 +61,42 @@ export interface Profile {
   mog: MogScore;
 }
 
+export type MatchComponent =
+  | "skills"
+  | "interests"
+  | "looking_for"
+  | "experience"
+  | "ai_agents"
+  | "ide"
+  | "location";
+
+/** Mirrors backend/app/services/mog_match.py `compute_match`: how similar a profile is to mine. */
+export interface MogMatch {
+  score: number;
+  label: string;
+  breakdown: Record<MatchComponent, number>;
+  max_breakdown: Record<MatchComponent, number>;
+  /** What both profiles have, in the other person's spelling. */
+  shared: { skills: string[]; interests: string[]; looking_for: string[]; ai_agents: string[] };
+}
+
+export interface MatchedProfile extends Profile {
+  match: MogMatch;
+}
+
+/** POST /api/swipes. A like comes back with its Mog Match score; a pass has `match: null`. */
+export interface SwipeResult {
+  target_id: string;
+  action: SwipeDecision;
+  match: MogMatch | null;
+}
+
+/** GET /api/profiles/me/matches: everyone I liked, most similar first. */
+export interface MatchListResponse {
+  matches: MatchedProfile[];
+  count: number;
+}
+
 export interface ProfileListResponse {
   profiles: Profile[];
   count: number;

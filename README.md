@@ -168,6 +168,9 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | GET | `/api/profiles/me` | The demo user's profile |
 | PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
+| GET | `/api/profiles/me/matches` | Mog Match: everyone I liked, most similar first, each with a `match` score. See `docs/MOG_MATCH.md` |
+| POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
+| DELETE | `/api/swipes` | Forget all my likes/passes → `{"removed": n}` |
 
 **`GET /api/profiles` query params** (all optional, case-insensitive):
 | Param | Example | Behavior |

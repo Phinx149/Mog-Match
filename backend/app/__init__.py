@@ -27,10 +27,12 @@ def create_app(test_config: dict | None = None) -> Flask:
     from . import models  # noqa: F401  (registers models with SQLAlchemy/Alembic)
     from .routes.health import bp as health_bp
     from .routes.profiles import bp as profiles_bp
+    from .routes.swipes import bp as swipes_bp
     from .seed import register_commands
 
     app.register_blueprint(health_bp)
     app.register_blueprint(profiles_bp)
+    app.register_blueprint(swipes_bp)
     register_commands(app)
     _register_error_handlers(app)
 
