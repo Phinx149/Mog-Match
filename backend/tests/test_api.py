@@ -229,3 +229,33 @@ def test_seed_is_idempotent_and_reset_restores(app, client, log_in):
     log_in(client)  # reset recreates users, which logs everyone out
     assert client.get("/api/profiles/me").get_json()["full_name"] == "Jordan Avery"
 
+
+
+def test_every_field_at_its_max_length_saves(client):
+    # Postgres rejects strings longer than the column (SQLite doesn't), so validation limits must
+    # never exceed the column sizes. Run with TEST_DATABASE_URL=postgresql://... to check for real.
+    from app.services.profile_service import STRING_FIELDS
+
+    update = {
+        field: ("https://example.com/" + "a" * (limit - 20) if field == "avatar_url" else "a" * limit)
+        for field, (limit, _) in STRING_FIELDS.items()
+        if field not in ("experience_level", "username")
+    }
+    update["username"] = "u" * STRING_FIELDS["username"][0]
+    update["links"] = [{"label": "L" * 40, "url": "https://example.com/" + "b" * 480}]
+    update["projects"] = [{
+        "title": "T" * 120, "description": "D" * 2000,
+        "project_url": "https://example.com/" + "c" * 480, "technologies": ["React"],
+    }]
+    response = client.patch("/api/profiles/me", json=update)
+    assert response.status_code == 200, response.get_json()
+
+
+def test_invite_message_at_max_length_saves(client):
+    from app.models import Profile
+    from app.services.invite_service import MAX_MESSAGE_LENGTH
+
+    sam = str(Profile.query.filter_by(username="samfullstack").one().id)
+    client.post("/api/swipes", json={"target_id": sam, "action": "like"})
+    response = client.post("/api/invites", json={"recipient_id": sam, "message": "m" * MAX_MESSAGE_LENGTH})
+    assert response.status_code == 201

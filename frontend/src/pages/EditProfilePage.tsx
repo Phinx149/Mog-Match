@@ -188,7 +188,7 @@ export default function EditProfilePage() {
         <p className="text-sm text-muted">Complete the required fields before saving. Projects are optional; each added project needs a title, description, and at least one technology.</p>
 
         <Card title="Basics">
-          <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 5 MB. Saved when you save your profile.">
+          <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 4 MB. Saved when you save your profile.">
             <input className="field cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           </Field>
           {(photoPreview || form.avatar_url) && <img src={photoPreview || form.avatar_url} alt="Profile photo preview" className="size-24 rounded-full object-cover" />}

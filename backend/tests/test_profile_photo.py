@@ -64,7 +64,7 @@ def test_photo_not_saved_when_profile_invalid(client):
 
 def test_oversize_photo_rejected(client):
     response = client.patch("/api/profiles/me", data={
-        "profile": "{}", "photo": (BytesIO(b"x" * (5 * 1024 * 1024 + 1)), "large.png"),
+        "profile": "{}", "photo": (BytesIO(b"x" * (4 * 1024 * 1024 + 1)), "large.png"),
     })
     assert response.status_code == 400
     assert "photo" in response.get_json()["error"]["fields"]

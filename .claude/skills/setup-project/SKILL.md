@@ -38,4 +38,6 @@ Full instructions live in `README.md` (Backend setup / Frontend setup). Walk the
 | Browser console CORS error | frontend not on `http://localhost:5173`; add its origin to `CORS_ORIGINS` in `backend/.env` and restart Flask |
 | `Port 5173 is already in use` | another Vite is running; stop it (strictPort is on so CORS stays correct) |
 | macOS: port 5000 busy | we use 5001 already; change `PORT` in `.env` if needed (and `VITE_API_URL`) |
+| `ModuleNotFoundError: psycopg` | `pip install -r requirements.txt` (Postgres driver, added for production) |
+| Want to use Postgres locally | Put `DATABASE_URL=postgresql://...` in `backend/.env`, then `flask db upgrade && flask seed`. Default SQLite is fine for dev |
 | Local DB in a weird state | stop Flask, delete `backend/instance/mogmatch.db`, `flask db upgrade && flask seed` |

@@ -12,8 +12,11 @@
    └─ seed.py      `flask seed` CLI
               │  SQLAlchemy ORM
               ▼
- SQLite (backend/instance/mogmatch.db)  ── or PostgreSQL via DATABASE_URL
+ Local dev: SQLite (backend/instance/mogmatch.db)
+ Production: PostgreSQL (Neon) via DATABASE_URL, psycopg 3 driver
 ```
+
+**Production (Vercel):** one project, `vercel.json` Services. `/api/*` goes to the Flask app (`backend/run.py`'s `app`, as a Vercel Function). Everything else goes to the static Vite build, with `index.html` as the fallback for client-side routes. Same domain, so the frontend calls relative `/api` and the login cookie is first-party. `ProxyFix` trusts Vercel's `X-Forwarded-*` headers so external URLs are `https://<domain>`. See `docs/DEPLOY.md`.
 
 Monorepo, two processes in dev. CORS on `/api/*` allows the Vite origin(s) from `CORS_ORIGINS`, **with credentials**, so the browser sends the login cookie (`fetch(..., {credentials: "include"})` in `api.ts`).
 
@@ -39,7 +42,7 @@ Deleting a profile removes its swipes and invites in both directions (ORM cascad
 
 The original hand-drawn schema (`id, users_id, loc, langs, fav_ide, fav_agents`) maps to `profiles.id`, `profiles.user_id`, `location`, `skills` (languages are skills), `favorite_ide`, `favorite_ai_agents`.
 
-**Portability:** `db.Uuid` → native `uuid` on Postgres, `CHAR(32)` on SQLite. `db.JSON` → `json` on Postgres. No SQLite-only SQL anywhere.
+**Portability:** `db.Uuid` → native `uuid` on Postgres, `CHAR(32)` on SQLite. `db.JSON` → `json` on Postgres. `LargeBinary` → `bytea`. `DateTime(timezone=True)` → `timestamptz`. No SQLite-only SQL anywhere. Verified: the full test suite, every migration (upgrade, `db check`, downgrade to base) and the seeds run on Postgres 17. Postgres enforces `String(n)` lengths, so validation limits match the columns.
 
 ### Planned tables (later milestones)
 ```
