@@ -5,7 +5,7 @@ Context for Claude Code working in this repo.
 ## Project
 MogMatch — a developer matchmaking web app (hackathon theme: *Connect & Intersect*). Users log in, have technical profiles, discover and like other devs (Mog Match ranks them by similarity), and send invites that land in the other person's Inbox. Next up: chat for accepted invites. Planned differentiator: the **Intersect Engine** (recommends projects two devs could build together). Three-person, 24-hour hackathon: favor simple, working code.
 
-See `README.md` for setup, API docs and current scope; `docs/` for product/architecture/roadmap.
+`README.md` is the public showcase (what the app does + the live link). Setup, environment variables, seed data, logins for testing, the API reference and the data model live in `docs/ARCHITECTURE.md`; `docs/` also has deploy, chat, scoring and roadmap notes. Keep the README about features, not setup.
 
 ## Stack
 - `frontend/`: React 19 + Vite + TypeScript (strict), Tailwind CSS v4 (`@tailwindcss/vite`, theme tokens in `src/index.css`), React Router 7, lucide-react.
