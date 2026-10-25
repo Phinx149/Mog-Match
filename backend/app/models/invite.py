@@ -21,6 +21,7 @@ class Invite(TimestampMixin, db.Model):
     status = db.Column(db.String(10), nullable=False, default="pending")
     sender_read_id = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     recipient_read_id = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    team_mog = db.Column(db.JSON, nullable=True)
     messages = db.relationship("ChatMessage", back_populates="invite", cascade="all, delete-orphan")
     ideas = db.relationship("ProjectIdea", back_populates="invite", cascade="all, delete-orphan")
 

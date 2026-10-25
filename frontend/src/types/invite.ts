@@ -18,6 +18,15 @@ export interface Invite {
   status: InviteStatus;
   created_at: string;
   updated_at: string;
+  team_mog: TeamMog | null;
+}
+
+export interface TeamMog {
+  score: number;
+  max_score: number;
+  tier: string;
+  members: (InvitePerson & { mog_score: number })[];
+  breakdown: { key: string; label: string; points: number; max: number; reason: string }[];
 }
 
 /** GET /api/invites/inbox */

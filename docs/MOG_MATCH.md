@@ -53,4 +53,4 @@ If both lists are shorter than `FULL_AT`, sharing the whole longer list is enoug
 Discover (`GET /api/profiles`) hides anyone I've already liked or passed. The frontend shows matches on the **Match** page (`/match`), and Discover shows the score right after a like.
 
 ## Not yet
-Similarity ≠ a good team. Complementary skills (the Team Mog Score and Intersect Engine in `MOG_SCORE.md` / `ROADMAP.md`) are a separate, later feature.
+Similarity and team potential measure different things. Accepted matches now reveal the complementary Team Mog Score described in `MOG_SCORE.md`. The Intersect Engine remains on the roadmap.
