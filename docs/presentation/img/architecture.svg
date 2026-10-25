@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 460" role="img"
+     aria-label="One Vercel domain routes by path: the React app is served as static files, while /api and /socket.io both reach one Flask app. Flask calls services, services use SQLAlchemy models stored in Postgres, and only the Project studio calls OpenAI.">
+  <title>MogMatch architecture</title>
+  <defs>
+    <marker id="a-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="#67e8f9"/></marker>
+    <marker id="a-pink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="#f0abfc"/></marker>
+    <marker id="a-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="#a78bfa"/></marker>
+    <marker id="a-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="#fbbf24"/></marker>
+    <marker id="a-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L10 5 L0 9 z" fill="#9aa0bd"/></marker>
+  </defs>
+
+  <rect width="1280" height="460" fill="#0b0d17"/>
+
+  <g font-family="Inter, -apple-system, 'Segoe UI', system-ui, sans-serif" font-size="12" fill="#9aa0bd">
+
+    <!-- ============ BROWSER ============ -->
+    <rect x="16" y="20" width="184" height="334" rx="14" fill="#0f1224" stroke="#2e3354"/>
+    <text x="30" y="44" font-size="11.5" font-weight="600" letter-spacing="1.5">BROWSER</text>
+
+    <rect x="28" y="56" width="160" height="120" rx="10" fill="#131629" stroke="#a78bfa"/>
+    <text x="38" y="80" font-size="14" font-weight="700" fill="#e8eaf6">React 19 SPA</text>
+    <text x="38" y="102">TypeScript · Vite</text>
+    <text x="38" y="120">Tailwind v4</text>
+    <text x="38" y="138">React Router 7</text>
+    <text x="38" y="156">canvas theme effects</text>
+
+    <rect x="28" y="190" width="160" height="62" rx="10" fill="#131629" stroke="#67e8f9"/>
+    <text x="38" y="214" font-size="14" font-weight="700" fill="#e8eaf6">api.ts</text>
+    <text x="38" y="234">fetch · cookie</text>
+
+    <rect x="28" y="278" width="160" height="62" rx="10" fill="#131629" stroke="#f0abfc"/>
+    <text x="38" y="302" font-size="14" font-weight="700" fill="#e8eaf6">socket.io-client</text>
+    <text x="38" y="322">WebSocket transport</text>
+
+    <!-- ============ VERCEL ============ -->
+    <rect x="370" y="20" width="630" height="418" rx="16" fill="#0f1224" stroke="#2e3354"/>
+    <text x="386" y="44" font-size="11.5" font-weight="600" letter-spacing="1.5">VERCEL · ONE PROJECT, ONE DOMAIN · ROUTES BY PATH</text>
+
+    <!-- web (static) -->
+    <rect x="384" y="56" width="602" height="52" rx="10" fill="#131629" stroke="#9aa0bd" stroke-dasharray="5 4"/>
+    <text x="400" y="78" font-size="14" font-weight="700" fill="#e8eaf6">web <tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="400" fill="#9aa0bd"> /*</tspan></text>
+    <text x="400" y="96">static Vite build · index.html fallback for client-side routes</text>
+
+    <!-- api (Flask) -->
+    <rect x="384" y="124" width="602" height="300" rx="12" fill="#101426" stroke="#3b4170"/>
+    <text x="400" y="146" font-size="14" font-weight="700" fill="#e8eaf6">api <tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="400" fill="#9aa0bd"> /api/*  /socket.io/*</tspan></text>
+    <text x="400" y="164">Flask 3 app factory · Flask-CORS · Flask-SocketIO (simple-websocket)</text>
+
+    <!-- entry points -->
+    <rect x="396" y="184" width="160" height="74" rx="10" fill="#131629" stroke="#67e8f9"/>
+    <text x="406" y="206" font-size="13.5" font-weight="700" fill="#e8eaf6">REST routes</text>
+    <text x="406" y="224">auth · profiles · chat</text>
+    <text x="406" y="240">swipes · invites</text>
+
+    <rect x="396" y="272" width="160" height="74" rx="10" fill="#131629" stroke="#f0abfc"/>
+    <text x="406" y="294" font-size="13.5" font-weight="700" fill="#e8eaf6">Socket.IO events</text>
+    <text x="406" y="312">chat:send → save</text>
+    <text x="406" y="328">→ emit to rooms</text>
+
+    <!-- services -->
+    <rect x="592" y="184" width="190" height="162" rx="10" fill="#131629" stroke="#a78bfa"/>
+    <text x="604" y="206" font-size="14" font-weight="700" fill="#e8eaf6">services</text>
+    <text x="604" y="224">logic · validation · JSON</text>
+    <text x="604" y="248" font-size="11">pure functions</text>
+    <text x="694" y="248" font-size="11">DB-backed</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" fill="#e8eaf6" text-anchor="middle">
+      <rect x="604" y="256" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#a78bfa"/><text x="644" y="272">mog_score</text>
+      <rect x="604" y="284" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#a78bfa"/><text x="644" y="300">mog_match</text>
+      <rect x="604" y="312" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#a78bfa"/><text x="644" y="328">team_mog</text>
+      <rect x="694" y="256" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#6b7194"/><text x="734" y="272">invite</text>
+      <rect x="694" y="284" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#6b7194"/><text x="734" y="300">chat</text>
+      <rect x="694" y="312" width="80" height="24" rx="6" fill="#1b1f3a" stroke="#fbbf24"/><text x="734" y="328">studio</text>
+    </g>
+
+    <!-- identity invariant: both entry points read "me" from the same cookie -->
+    <text x="400" y="378" font-size="12" font-weight="700" fill="#e8eaf6">Identity</text>
+    <text x="400" y="394">“me” = signed session cookie,</text>
+    <text x="400" y="410">never a client-sent user id</text>
+
+    <!-- models -->
+    <rect x="818" y="184" width="156" height="162" rx="10" fill="#131629" stroke="#a78bfa"/>
+    <text x="830" y="206" font-size="14" font-weight="700" fill="#e8eaf6">models</text>
+    <text x="830" y="228">SQLAlchemy 2</text>
+    <text x="830" y="246">Flask-Migrate</text>
+    <text x="830" y="274" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" fill="#e8eaf6">db.Uuid · db.JSON</text>
+    <text x="830" y="298">same code on</text>
+    <text x="830" y="314">SQLite + Postgres</text>
+
+    <!-- ============ EXTERNAL ============ -->
+    <rect x="1120" y="224" width="144" height="82" rx="10" fill="#131629" stroke="#a78bfa"/>
+    <g text-anchor="middle">
+      <text x="1192" y="250" font-size="14" font-weight="700" fill="#e8eaf6">PostgreSQL</text>
+      <text x="1192" y="268">Neon in production</text>
+      <text x="1192" y="286">SQLite in local dev</text>
+    </g>
+
+    <rect x="1120" y="364" width="144" height="56" rx="10" fill="#131629" stroke="#fbbf24" stroke-dasharray="5 4"/>
+    <g text-anchor="middle">
+      <text x="1192" y="388" font-size="14" font-weight="700" fill="#e8eaf6">OpenAI API</text>
+      <text x="1192" y="406">structured outputs</text>
+    </g>
+
+    <!-- ============ ARROWS (the claim lives here) ============ -->
+    <g fill="none" stroke-width="2" text-anchor="middle" font-size="12">
+      <!-- static bundle: web -> browser, once per page load -->
+      <line x1="384" y1="82" x2="190" y2="82" stroke="#9aa0bd" stroke-dasharray="5 4" marker-end="url(#a-gray)"/>
+      <text x="292" y="72" stroke="none" fill="#9aa0bd">HTML · JS · CSS</text>
+
+      <!-- fetch: browser <-> REST routes -->
+      <line x1="190" y1="221" x2="394" y2="221" stroke="#67e8f9" marker-start="url(#a-cyan)" marker-end="url(#a-cyan)"/>
+      <text x="292" y="199" stroke="none" fill="#67e8f9">fetch /api/*</text>
+      <text x="292" y="213" stroke="none" fill="#67e8f9">+ signed cookie</text>
+
+      <!-- websocket: browser <-> Socket.IO events -->
+      <line x1="190" y1="309" x2="394" y2="309" stroke="#f0abfc" marker-start="url(#a-pink)" marker-end="url(#a-pink)"/>
+      <text x="292" y="287" stroke="none" fill="#f0abfc">WebSocket /socket.io</text>
+      <text x="292" y="301" stroke="none" fill="#f0abfc">+ same cookie</text>
+
+      <!-- entry points -> services -->
+      <line x1="558" y1="221" x2="590" y2="221" stroke="#9aa0bd" marker-end="url(#a-gray)"/>
+      <text x="574" y="213" stroke="none" font-size="11" fill="#9aa0bd">calls</text>
+      <line x1="558" y1="309" x2="590" y2="309" stroke="#9aa0bd" marker-end="url(#a-gray)"/>
+      <text x="574" y="301" stroke="none" font-size="11" fill="#9aa0bd">calls</text>
+
+      <!-- services -> models -->
+      <line x1="784" y1="265" x2="816" y2="265" stroke="#a78bfa" marker-end="url(#a-violet)"/>
+      <text x="800" y="257" stroke="none" font-size="11" fill="#a78bfa">ORM</text>
+
+      <!-- models -> database -->
+      <line x1="976" y1="265" x2="1118" y2="265" stroke="#a78bfa" marker-end="url(#a-violet)"/>
+      <text x="1062" y="257" stroke="none" fill="#a78bfa">SQL (psycopg 3)</text>
+
+      <!-- studio -> OpenAI: only on a Generate click -->
+      <path d="M734 336 V392 H1118" stroke="#fbbf24" stroke-dasharray="5 4" marker-end="url(#a-amber)"/>
+      <text x="900" y="370" stroke="none" fill="#fbbf24">plan on Generate click</text>
+      <text x="900" y="385" stroke="none" fill="#fbbf24">key stays server-side</text>
+    </g>
+  </g>
+</svg>
