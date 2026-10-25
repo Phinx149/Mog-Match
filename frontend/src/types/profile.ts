@@ -40,18 +40,22 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
 export const RAIN_SYMBOL_SETS = ["katakana", "binary", "code", "chaos"] as const;
 export type RainSymbols = (typeof RAIN_SYMBOL_SETS)[number];
 
+/** How the floating emoji travel. Keep in sync with EMOJI_PATHS in the backend. */
+export const EMOJI_PATHS = ["straight", "wave", "bounce"] as const;
+export type EmojiPath = (typeof EMOJI_PATHS)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain) or logo size (DVD), 10-48. */
+  /** Letter size (rain), logo size (DVD) or emoji size, 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -69,6 +73,16 @@ export interface EffectOptions {
   rain_rainbow: boolean;
   /** Which characters fall (matrix only). */
   rain_symbols: RainSymbols;
+  /** The emoji that float around, 1-12 (emoji only). */
+  emojis: string[];
+  /** How many emoji float around at once, 3-60 (emoji only). */
+  emoji_count: number;
+  /** Direction of travel in degrees, 0-359: 0 is right and 90 is down (emoji only). */
+  emoji_angle: number;
+  /** Straight line, a wobbling wave, or bouncing off the edges (emoji only). */
+  emoji_path: EmojiPath;
+  /** How fast each emoji turns, -10 to 10: negative is counter-clockwise, 0 is no spin (emoji only). */
+  emoji_spin: number;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

@@ -5,6 +5,8 @@ DEFAULT_OPTIONS = {
     "brightness": 40, "size": 14, "speed": 4, "glow": False,
     "count": 1, "color_change": True, "color": "#ffffff",
     "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
+    "emojis": ["🚀", "✨", "🔥", "💻", "🦄", "🍕"], "emoji_count": 14, "emoji_angle": 45,
+    "emoji_path": "straight", "emoji_spin": 2,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -131,6 +133,7 @@ CRANKED = {
     "brightness": 100, "size": 48, "speed": 10, "glow": True,
     "count": 10, "color_change": False, "color": "#ff00ff",
     "rain_color": "#00ffff", "rain_rainbow": True, "rain_symbols": "chaos",
+    "emojis": ["👻", "🎃"], "emoji_count": 60, "emoji_angle": 359, "emoji_path": "bounce", "emoji_spin": -10,
 }
 
 
@@ -297,3 +300,127 @@ def test_existing_matrix_themes_keep_their_green_default(client):
 
     options = _theme(client)["effect_options"]
     assert (options["rain_color"], options["rain_rainbow"], options["rain_symbols"]) == ("#22ff66", False, "katakana")
+
+
+# ---------- floating emoji ----------
+
+def test_emoji_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 90, "size": 30, "speed": 6, "glow": True,
+        "emojis": ["🎉", "🥳"], "emoji_count": 24, "emoji_angle": 90, "emoji_path": "wave", "emoji_spin": -3,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#1e0a2e", "effect": "emoji", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#1e0a2e", "effect": "emoji", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_emoji_defaults_are_fun_and_not_shared_between_responses(client):
+    options = _theme(client)["effect_options"]
+    assert options["emojis"] == ["🚀", "✨", "🔥", "💻", "🦄", "🍕"]
+    assert (options["emoji_count"], options["emoji_angle"], options["emoji_path"], options["emoji_spin"]) == (14, 45, "straight", 2)
+
+
+@pytest.mark.parametrize("path", ["straight", "wave", "bounce"])
+def test_every_emoji_path_is_accepted_and_persists(client, path):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "emoji", "effect_options": {"emoji_path": path}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["emoji_path"] == path
+
+
+@pytest.mark.parametrize(
+    "emoji",
+    ["🚀", "❤️", "👍🏽", "🇺🇸", "👩\u200d💻", "🏴\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f", "☄️", "🕸️"],
+)
+def test_emoji_of_every_shape_are_accepted(client, emoji):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"emojis": [emoji]}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["emojis"] == [emoji]
+
+
+def test_emoji_are_trimmed_and_deduplicated_in_order(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"emojis": [" 🔥 ", "🚀", "🔥", "🚀"]}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["emojis"] == ["🔥", "🚀"]
+
+
+@pytest.mark.parametrize(
+    "emojis",
+    [
+        [], "🚀", None, 5, {"a": "🚀"},                      # not a list, or empty
+        ["a"], ["hello"], ["1"], ["#"], [" "], [""],          # words, digits, ASCII, blanks
+        ["<script>"], ["🚀<b>"], ["🚀 x"], ["🚀\n🔥"], ["é"],  # markup or letters mixed in
+        ["\u200d"], ["\ufe0f"],                              # invisible characters only
+        [1], [None], [["🚀"]], [{"e": "🚀"}], ["🚀", 7],      # wrong item types
+        ["🚀", "x"],                                          # one bad item spoils the list
+        ["🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"],                        # too long to be one emoji
+        ["🌀", "🌁", "🌂", "🌃", "🌄", "🌅", "🌆", "🌇", "🌈", "🌉", "🌊", "🌋", "🌌"],  # 13 distinct: too many
+    ],
+)
+def test_bad_emoji_lists_are_rejected(client, emojis):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "emoji", "effect_options": {"emojis": emojis}}})
+
+    assert response.status_code == 400
+    assert "theme.effect_options.emojis" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_twelve_emoji_is_the_limit(client):
+    twelve = ["🌀", "🌁", "🌂", "🌃", "🌄", "🌅", "🌆", "🌇", "🌈", "🌉", "🌊", "🌋"]
+
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"emojis": twelve}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["emojis"] == twelve
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("emoji_count", 2), ("emoji_count", 61), ("emoji_count", 5.5), ("emoji_count", True), ("emoji_count", "10"),
+        ("emoji_angle", -1), ("emoji_angle", 360), ("emoji_angle", 45.5), ("emoji_angle", None), ("emoji_angle", False),
+        ("emoji_spin", -11), ("emoji_spin", 11), ("emoji_spin", 0.5), ("emoji_spin", "1"), ("emoji_spin", True),
+        ("emoji_path", "zigzag"), ("emoji_path", "Wave"), ("emoji_path", ""), ("emoji_path", 1), ("emoji_path", ["wave"]),
+        ("emoji_path", None),
+    ],
+)
+def test_emoji_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "emoji", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [("emoji_count", 3), ("emoji_count", 60), ("emoji_angle", 0), ("emoji_angle", 359), ("emoji_spin", -10), ("emoji_spin", 0), ("emoji_spin", 10)],
+)
+def test_emoji_option_range_edges_are_accepted(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+def test_old_saved_options_get_the_emoji_defaults(client):
+    # A profile saved before the emoji effect existed must still read back a full set of options.
+    client.patch("/api/profiles/me", json={"theme": {"effect": "matrix", "effect_options": {"size": 20}}})
+
+    options = _theme(client)["effect_options"]
+    assert options["emojis"] == DEFAULT_OPTIONS["emojis"]
+    assert options["emoji_path"] == "straight"
+
+
+def test_emoji_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "emoji", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before

@@ -1,5 +1,7 @@
-import { useId } from "react";
+import { ArrowRight } from "lucide-react";
+import { useId, type ReactNode } from "react";
 import {
+  EMOJI_PATHS,
   RAIN_SYMBOL_SETS,
   THEME_EFFECTS,
   type EffectOptions,
@@ -10,6 +12,7 @@ import {
   BACKGROUND_SWATCHES,
   DEFAULT_BACKGROUND,
   EFFECT_INFO,
+  EMOJI_PATH_INFO,
   EFFECT_OPTION_RANGES,
   isDarkEnough,
   RAIN_COLOR_SWATCHES,
@@ -18,6 +21,8 @@ import {
   THEME_PRESETS,
 } from "../../utils/theme";
 import Avatar from "./Avatar";
+import { chipClass } from "./chipClass";
+import EmojiPicker from "./EmojiPicker";
 import SkillBadge from "./SkillBadge";
 import ThemeScope from "./ThemeScope";
 
@@ -147,6 +152,11 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
             <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
               {EFFECT_INFO[effect].tuneTitle}
             </legend>
+            {EFFECT_INFO[effect].hasEmojiStyle && (
+              <div className="sm:col-span-2">
+                <EmojiPicker emojis={options.emojis} onChange={(emojis) => setOption({ emojis })} />
+              </div>
+            )}
             {EFFECT_INFO[effect].sliders.map((key) => {
               const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
               return (
@@ -154,12 +164,31 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                   key={key}
                   label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
                   value={options[key]}
-                  display={`${options[key]}${unit}`}
+                  display={describeOption(key, options[key], unit)}
                   {...{ min, max, step }}
                   onChange={(value) => setOption({ [key]: value })}
                 />
               );
             })}
+            {EFFECT_INFO[effect].hasEmojiStyle && (
+              <div className="sm:col-span-2">
+                <span className="mb-1.5 block text-sm text-slate-300">Path</span>
+                <div role="group" aria-label="Emoji path" className="flex flex-wrap gap-2">
+                  {EMOJI_PATHS.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={options.emoji_path === name}
+                      onClick={() => setOption({ emoji_path: name })}
+                      className={chipClass(options.emoji_path === name)}
+                    >
+                      {EMOJI_PATH_INFO[name].label}
+                    </button>
+                  ))}
+                </div>
+                <span className="mt-1 block text-xs text-muted">{EMOJI_PATH_INFO[options.emoji_path].description}.</span>
+              </div>
+            )}
             {EFFECT_INFO[effect].hasRainStyle && (
               <>
                 <div className="sm:col-span-2">
@@ -296,20 +325,26 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
   );
 }
 
-/** Look shared by the preset and effect buttons. */
-function chipClass(selected: boolean): string {
-  return `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-    selected
-      ? "border-cyan-400 bg-cyan-400/10 text-cyan-200"
-      : "border-line text-slate-200 hover:border-cyan-500/50 hover:text-cyan-200"
-  }`;
+/** What a slider's current value reads as: the direction gets an arrow, and the spin gets its turning direction. */
+function describeOption(key: keyof typeof EFFECT_OPTION_RANGES, value: number, unit: string): ReactNode {
+  if (key === "emoji_angle") {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <ArrowRight aria-hidden className="size-3.5" style={{ transform: `rotate(${value}deg)` }} />
+        {value}
+        {unit}
+      </span>
+    );
+  }
+  if (key === "emoji_spin") return value === 0 ? "none" : `${value > 0 ? "↻" : "↺"} ${Math.abs(value)}`;
+  return `${value}${unit}`;
 }
 
 interface RangeFieldProps {
   label: string;
   value: number;
   /** The value as shown to people, e.g. "40%". */
-  display: string;
+  display: ReactNode;
   min: number;
   max: number;
   step: number;

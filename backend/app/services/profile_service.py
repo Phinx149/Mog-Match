@@ -2,6 +2,7 @@
 
 import re
 import hashlib
+import unicodedata
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -46,12 +47,17 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd")
+THEME_EFFECTS = ("matrix", "dvd", "emoji")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
 # (EFFECT_OPTION_RANGES in frontend/src/utils/theme.ts).
-EFFECT_OPTION_RANGES = {"brightness": (10, 100), "size": (10, 48), "speed": (1, 10), "count": (1, 10)}
+EFFECT_OPTION_RANGES = {
+    "brightness": (10, 100), "size": (10, 48), "speed": (1, 10), "count": (1, 10),
+    # Floating emoji only. The angle is the direction of travel in degrees (0 = right, 90 = down);
+    # the spin is in tenths of a turn per second, negative = counter-clockwise, 0 = none.
+    "emoji_count": (3, 60), "emoji_angle": (0, 359), "emoji_spin": (-10, 10),
+}
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
     "brightness": 40, "size": 14, "speed": 4, "glow": False,
@@ -59,11 +65,20 @@ DEFAULT_EFFECT_OPTIONS = {
     "count": 1, "color_change": True, "color": "#ffffff",
     # Matrix rain only:
     "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
+    # Floating emoji only (a tuple, so no request can end up sharing and changing one list):
+    "emojis": ("🚀", "✨", "🔥", "💻", "🦄", "🍕"), "emoji_count": 14, "emoji_angle": 45,
+    "emoji_path": "straight", "emoji_spin": 2,
 }
 BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow")
 COLOR_EFFECT_OPTIONS = ("color", "rain_color")
-# What the rain is made of; the frontend holds the actual characters (RAIN_SYMBOLS in utils/theme.ts).
+# Options that must be one of a fixed set of names. The rain's characters themselves live in the
+# frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
 RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
+EMOJI_PATHS = ("straight", "wave", "bounce")
+CHOICE_EFFECT_OPTIONS = {"rain_symbols": RAIN_SYMBOL_SETS, "emoji_path": EMOJI_PATHS}
+# How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).
+MAX_EMOJIS = 12
+MAX_EMOJI_CODEPOINTS = 12
 HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 # The UI's text is light, so the card background has to be dark enough to keep it readable.
 # 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
@@ -340,6 +355,37 @@ def _relative_luminance(hex_color: str) -> float:
     return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
 
 
+def _looks_like_emoji(text: str) -> bool:
+    """A rough check, not a full emoji list: short, no ASCII, no letters/digits/spaces, and at least one symbol.
+
+    That keeps words and markup out while still allowing flags, skin tones and joined emoji like 👩‍💻.
+    Python's stdlib has no emoji data, and the picker only ever sends real emoji, so this is the safety net.
+    """
+    if not text or len(text) > MAX_EMOJI_CODEPOINTS:
+        return False
+    if any(ord(char) < 128 for char in text):
+        return False
+    categories = {unicodedata.category(char) for char in text}
+    # Cf = the joiner and tag characters, Mn = variation selectors, Sk = skin tones.
+    # Cn (unassigned) is allowed because emoji newer than this Python's Unicode data show up as Cn.
+    return categories <= {"So", "Sk", "Cf", "Mn", "Cn"} and bool(categories & {"So", "Cn"})
+
+
+def _clean_emojis(value: Any, field: str, errors: dict) -> list[str] | None:
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_EMOJIS:
+        errors[field] = f"Must be a list of 1 to {MAX_EMOJIS} emoji."
+        return None
+    cleaned: list[str] = []
+    for item in value:
+        item = item.strip() if isinstance(item, str) else item
+        if not isinstance(item, str) or not _looks_like_emoji(item):
+            errors[field] = "Every item must be an emoji."
+            return None
+        if item not in cleaned:  # a repeat would just make that emoji more common; drop it
+            cleaned.append(item)
+    return cleaned
+
+
 def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
     """Validate the effect's tuning knobs; returns only the ones that were sent."""
     if not isinstance(value, dict):
@@ -367,11 +413,16 @@ def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
                 errors[field] = "Must be a hex color like #ff00ff."
             else:
                 cleaned[key] = option.strip().lower()
-        elif key == "rain_symbols":
-            if option not in RAIN_SYMBOL_SETS:  # also catches non-strings, which can't equal a name
-                errors[field] = f"Must be one of: {', '.join(RAIN_SYMBOL_SETS)}."
+        elif key in CHOICE_EFFECT_OPTIONS:
+            names = CHOICE_EFFECT_OPTIONS[key]
+            if option not in names:  # also catches non-strings, which can't equal a name
+                errors[field] = f"Must be one of: {', '.join(names)}."
             else:
                 cleaned[key] = option
+        elif key == "emojis":
+            emojis = _clean_emojis(option, field, errors)
+            if emojis is not None:
+                cleaned[key] = emojis
         else:
             errors[field] = "Unknown effect option."
     return cleaned

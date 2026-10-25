@@ -1,4 +1,4 @@
-import type { EffectOptions, ProfileTheme, RainSymbols, ThemeEffect } from "../types/profile";
+import type { EffectOptions, EmojiPath, ProfileTheme, RainSymbols, ThemeEffect } from "../types/profile";
 
 // Helpers for profile themes. The backend is the authority on what's allowed
 // (backend/app/services/profile_service.py `_clean_theme`); these let the edit form warn
@@ -38,6 +38,11 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   rain_color: "#22ff66",
   rain_rainbow: false,
   rain_symbols: "katakana",
+  emojis: ["🚀", "✨", "🔥", "💻", "🦄", "🍕"],
+  emoji_count: 14,
+  emoji_angle: 45,
+  emoji_path: "straight",
+  emoji_spin: 2,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -49,7 +54,49 @@ export const EFFECT_OPTION_RANGES = {
   size: { label: "Text size", min: 10, max: 48, step: 2, unit: "px" },
   speed: { label: "Speed", min: 1, max: 10, step: 1, unit: "" },
   count: { label: "Logos", min: 1, max: 10, step: 1, unit: "" },
+  emoji_count: { label: "How many", min: 3, max: 60, step: 1, unit: "" },
+  emoji_angle: { label: "Direction", min: 0, max: 359, step: 15, unit: "°" },
+  emoji_spin: { label: "Spin", min: -10, max: 10, step: 1, unit: "" },
 } as const;
+
+/** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
+export const MAX_EMOJIS = 12;
+
+/** One-click emoji lists for the edit form. */
+export const EMOJI_PACKS: readonly { name: string; emojis: string[] }[] = [
+  { name: "Dev", emojis: ["💻", "🐛", "☕", "🔥", "⚡", "🚀"] },
+  { name: "Party", emojis: ["🎉", "🥳", "🎈", "🎊", "✨", "🍾"] },
+  { name: "Space", emojis: ["🚀", "🌙", "⭐", "🪐", "👽", "☄️"] },
+  { name: "Snacks", emojis: ["🍕", "🌮", "🍔", "🍩", "🍟", "🧋"] },
+  { name: "Critters", emojis: ["🦄", "🐱", "🐸", "🦊", "🐙", "🐧"] },
+  { name: "Spooky", emojis: ["👻", "🎃", "🦇", "💀", "🕸️", "🧛"] },
+  { name: "Chill", emojis: ["🌸", "🍃", "☁️", "🌈", "🌙", "🦋"] },
+];
+
+const packEmojis = (name: string): string[] => EMOJI_PACKS.find((pack) => pack.name === name)?.emojis ?? DEFAULT_EFFECT_OPTIONS.emojis;
+
+/** The ways the emoji can travel, as the edit form words them. */
+export const EMOJI_PATH_INFO: Record<EmojiPath, { label: string; description: string }> = {
+  straight: { label: "Straight", description: "Drift one way and come back around the other side" },
+  wave: { label: "Wave", description: "Drift one way while wobbling side to side" },
+  bounce: { label: "Bounce", description: "Ricochet off the edges, starting in the chosen direction" },
+};
+
+// Emoji are told apart from other text by Unicode properties, so letters, digits and punctuation are left out.
+const EMOJI_PICTOGRAPH = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+
+/**
+ * The emoji in a typed or pasted string, one entry per emoji, in order and without repeats.
+ * A flag, a skin tone or a joined emoji like 👩‍💻 counts as one, which is why this splits by
+ * "grapheme" (what people see as one character) and not by JavaScript's own characters.
+ */
+export function parseEmojis(text: string): string[] {
+  const pieces =
+    typeof Intl.Segmenter === "function"
+      ? Array.from(new Intl.Segmenter().segment(text), ({ segment }) => segment)
+      : Array.from(text); // very old browsers: a flag or a joined emoji would split, but plain emoji still work
+  return [...new Set(pieces.filter((piece) => EMOJI_PICTOGRAPH.test(piece)))];
+}
 
 /** The characters each symbol set draws, and its name in the edit form. */
 export const RAIN_SYMBOLS: Record<RainSymbols, { label: string; sample: string; glyphs: string }> = {
@@ -85,7 +132,15 @@ export const RAIN_COLOR_SWATCHES = [
 /** What the edit form shows for each effect: its wording, and which of the tuning options it reads. */
 export const EFFECT_INFO: Record<
   ThemeEffect,
-  { label: string; tuneTitle: string; sizeLabel: string; sliders: (keyof typeof EFFECT_OPTION_RANGES)[]; hasLogoColor: boolean; hasRainStyle: boolean }
+  {
+    label: string;
+    tuneTitle: string;
+    sizeLabel: string;
+    sliders: (keyof typeof EFFECT_OPTION_RANGES)[];
+    hasLogoColor: boolean;
+    hasRainStyle: boolean;
+    hasEmojiStyle: boolean;
+  }
 > = {
   matrix: {
     label: "Matrix rain",
@@ -94,6 +149,7 @@ export const EFFECT_INFO: Record<
     sliders: ["brightness", "size", "speed"],
     hasLogoColor: false,
     hasRainStyle: true,
+    hasEmojiStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -102,6 +158,16 @@ export const EFFECT_INFO: Record<
     sliders: ["brightness", "size", "speed", "count"],
     hasLogoColor: true,
     hasRainStyle: false,
+    hasEmojiStyle: false,
+  },
+  emoji: {
+    label: "Floating emoji",
+    tuneTitle: "Tune the emoji",
+    sizeLabel: "Emoji size",
+    sliders: ["brightness", "size", "emoji_count", "speed", "emoji_angle", "emoji_spin"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: true,
   },
 };
 
@@ -147,14 +213,80 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
       effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 100 },
     },
   },
+  {
+    name: "Party Rain",
+    description: "Confetti emoji, swaying down",
+    theme: {
+      background: "#1e0a2e",
+      effect: "emoji",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 26,
+        speed: 4,
+        emojis: packEmojis("Party"),
+        emoji_count: 24,
+        emoji_angle: 90,
+        emoji_path: "wave",
+        emoji_spin: 3,
+      },
+    },
+  },
+  {
+    name: "Space Drift",
+    description: "Planets and rockets sailing by, slowly turning",
+    theme: {
+      background: "#050816",
+      effect: "emoji",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 30,
+        speed: 3,
+        emojis: packEmojis("Space"),
+        emoji_count: 14,
+        emoji_angle: 20,
+        emoji_path: "straight",
+        emoji_spin: 2,
+      },
+    },
+  },
+  {
+    name: "Snack Pinball",
+    description: "Food ricocheting around, spinning fast",
+    theme: {
+      background: "#1a0b05",
+      effect: "emoji",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 32,
+        speed: 5,
+        emojis: packEmojis("Snacks"),
+        emoji_count: 10,
+        emoji_angle: 35,
+        emoji_path: "bounce",
+        emoji_spin: -6,
+      },
+    },
+  },
 ];
+
+export function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
+/** Options are numbers, strings and booleans, except the emoji list, which has to be compared item by item. */
+function sameOption(a: EffectOptions[keyof EffectOptions], b: EffectOptions[keyof EffectOptions]): boolean {
+  return Array.isArray(a) && Array.isArray(b) ? sameList(a, b) : a === b;
+}
 
 export function sameTheme(a: ProfileTheme, b: ProfileTheme): boolean {
   const keys = Object.keys(DEFAULT_EFFECT_OPTIONS) as (keyof EffectOptions)[];
   return (
     a.background?.toLowerCase() === b.background?.toLowerCase() &&
     a.effect === b.effect &&
-    keys.every((key) => a.effect_options[key] === b.effect_options[key])
+    keys.every((key) => sameOption(a.effect_options[key], b.effect_options[key]))
   );
 }
 
