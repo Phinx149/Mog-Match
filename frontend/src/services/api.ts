@@ -1,9 +1,13 @@
 import type {
+  FilterOptions,
   HealthResponse,
+  MatchListResponse,
   Profile,
   ProfileFilters,
   ProfileListResponse,
   ProfileUpdate,
+  SwipeDecision,
+  SwipeResult,
 } from "../types/profile";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
@@ -25,7 +29,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init.headers },
+      headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...init.headers },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
@@ -49,9 +53,16 @@ export function listProfiles(filters: ProfileFilters = {}, signal?: AbortSignal)
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.skills?.length) params.set("skills", filters.skills.join(","));
   if (filters.interests?.length) params.set("interests", filters.interests.join(","));
+  if (filters.looking_for?.length) params.set("looking_for", filters.looking_for.join(","));
   if (filters.location?.trim()) params.set("location", filters.location.trim());
+  if (filters.min_tier) params.set("min_tier", filters.min_tier);
+  if (filters.sort) params.set("sort", filters.sort);
   const query = params.toString();
   return request<ProfileListResponse>(`/api/profiles${query ? `?${query}` : ""}`, { signal });
+}
+
+export function getFilterOptions(signal?: AbortSignal) {
+  return request<FilterOptions>("/api/profiles/filter-options", { signal });
 }
 
 export function getProfile(id: string, signal?: AbortSignal) {
@@ -62,9 +73,33 @@ export function getMyProfile(signal?: AbortSignal) {
   return request<Profile>("/api/profiles/me", { signal });
 }
 
-export function updateMyProfile(update: ProfileUpdate) {
+export function getMyMatches(signal?: AbortSignal) {
+  return request<MatchListResponse>("/api/profiles/me/matches", { signal });
+}
+
+export function createSwipe(targetId: string, action: SwipeDecision) {
+  return request<SwipeResult>("/api/swipes", {
+    method: "POST",
+    body: JSON.stringify({ target_id: targetId, action }),
+  });
+}
+
+/** Unlike one person: they leave my matches and come back to Discover. */
+export function removeSwipe(targetId: string) {
+  return request<{ removed: boolean }>(`/api/swipes/${encodeURIComponent(targetId)}`, { method: "DELETE" });
+}
+
+/** Forget all my likes/passes (and so all my matches). */
+export function clearSwipes() {
+  return request<{ removed: number }>("/api/swipes", { method: "DELETE" });
+}
+
+export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
+  const body = new FormData();
+  body.append("profile", JSON.stringify(update));
+  if (photo) body.append("photo", photo);
   return request<Profile>("/api/profiles/me", {
     method: "PATCH",
-    body: JSON.stringify(update),
+    body: photo ? body : JSON.stringify(update),
   });
 }

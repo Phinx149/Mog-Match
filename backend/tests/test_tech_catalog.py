@@ -36,10 +36,18 @@ def test_all_seed_technologies_are_known():
                 assert normalize_technology(tech) == tech, f"{profile['username']}: {tech!r}"
 
 
+def test_all_seed_looking_for_values_are_allowed():
+    from app.services.profile_service import LOOKING_FOR_OPTIONS
+
+    for profile in [DEMO_PROFILE, *SEED_PROFILES]:
+        for item in profile["looking_for"]:
+            assert item in LOOKING_FOR_OPTIONS, f"{profile['username']} looking_for: {item!r}"
+
+
 def test_patch_normalizes_project_technologies(client):
     response = client.patch(
         "/api/profiles/me",
-        json={"projects": [{"title": "App", "technologies": ["react", "ts", "TypeScript", "k8s"]}]},
+        json={"projects": [{"title": "App", "description": "A web app.", "technologies": ["react", "ts", "TypeScript", "k8s"]}]},
     )
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["projects"][0]["technologies"] == ["React", "TypeScript", "Kubernetes"]
@@ -48,7 +56,7 @@ def test_patch_normalizes_project_technologies(client):
 def test_patch_rejects_unknown_project_technology(client):
     response = client.patch(
         "/api/profiles/me",
-        json={"projects": [{"title": "App", "technologies": ["React", "Blorptastic"]}]},
+        json={"projects": [{"title": "App", "description": "A web app.", "technologies": ["React", "Blorptastic"]}]},
     )
     assert response.status_code == 400
     message = response.get_json()["error"]["fields"]["projects[0].technologies"]

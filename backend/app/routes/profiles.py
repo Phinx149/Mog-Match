@@ -1,8 +1,12 @@
 import uuid
+import json
+from io import BytesIO
+import warnings
 
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, jsonify, request, send_file
+from PIL import Image, UnidentifiedImageError
 
-from ..services import profile_service
+from ..services import profile_service, swipe_service
 from ..services.profile_service import ValidationError
 
 bp = Blueprint("profiles", __name__, url_prefix="/api/profiles")
@@ -30,12 +34,25 @@ def list_profiles():
         query=request.args.get("q", ""),
         skills=_list_arg("skills"),
         interests=_list_arg("interests"),
+        looking_for=_list_arg("looking_for"),
         location=request.args.get("location", ""),
         exclude_id=demo.id if demo else None,
+        hidden_ids=swipe_service.swiped_ids(demo) if demo else None,
     )
-    return jsonify(
-        {"profiles": [profile_service.to_dict(p) for p in profiles], "count": len(profiles)}
-    )
+    try:
+        results = profile_service.apply_mog_filters(
+            [profile_service.to_dict(p) for p in profiles],
+            min_tier=request.args.get("min_tier", "").strip(),
+            sort=request.args.get("sort", "").strip(),
+        )
+    except ValidationError as error:
+        return jsonify({"error": {"message": error.message, "fields": error.fields}}), 400
+    return jsonify({"profiles": results, "count": len(results)})
+
+
+@bp.get("/filter-options")
+def get_filter_options():
+    return jsonify(profile_service.filter_options())
 
 
 @bp.get("/me")
@@ -43,16 +60,55 @@ def get_my_profile():
     return jsonify(profile_service.to_dict(_demo_profile_or_404()))
 
 
+@bp.get("/me/matches")
+def get_my_matches():
+    """Everyone I liked, ranked by how similar they are to me (Mog Match)."""
+    matches = swipe_service.list_matches(_demo_profile_or_404())
+    return jsonify({"matches": matches, "count": len(matches)})
+
+
 @bp.patch("/me")
 def update_my_profile():
     profile = _demo_profile_or_404()
     data = request.get_json(silent=True)
+    photo = None
+    errors = {}
+    if request.mimetype == "multipart/form-data":
+        try:
+            data = json.loads(request.form.get("profile", "{}"))
+        except ValueError:
+            data = None
+        upload = request.files.get("photo")
+        if upload:
+            raw = upload.read(5 * 1024 * 1024 + 1)
+            if len(raw) > 5 * 1024 * 1024:
+                errors["photo"] = "Choose a photo smaller than 5 MB."
+            else:
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("error", Image.DecompressionBombWarning)
+                        with Image.open(BytesIO(raw)) as image:
+                            if image.format not in ("JPEG", "PNG", "WEBP"):
+                                raise ValueError()
+                            image.verify()
+                            photo = (raw, Image.MIME[image.format])
+                except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning):
+                    errors["photo"] = "Choose a valid JPEG, PNG or WebP image."
     try:
-        profile_service.update_profile(profile, data)
+        profile_service.update_profile(profile, data, photo=photo, extra_errors=errors)
     except ValidationError as error:
         status = 409 if error.conflict else 400
         return jsonify({"error": {"message": error.message, "fields": error.fields}}), status
     return jsonify(profile_service.to_dict(profile))
+
+
+@bp.get("/<uuid:profile_id>/photo")
+def get_photo(profile_id):
+    profile = profile_service.get_profile(profile_id)
+    if profile is None or not profile.user.photo_data:
+        abort(404)
+    return send_file(BytesIO(profile.user.photo_data), mimetype=profile.user.photo_mimetype,
+                     download_name="profile-photo", max_age=0)
 
 
 @bp.get("/<uuid:profile_id>")

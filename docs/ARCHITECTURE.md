@@ -44,7 +44,7 @@ messages (id, match_id → matches, sender_id → profiles, body, created_at)
 
 ## Request flow examples
 
-**Discover:** `DiscoverPage` → debounced `listProfiles({q, skills})` → `GET /api/profiles?q=..&skills=..` → `profile_service.list_profiles` (filters in Python, excludes demo profile) → `{profiles, count}`. Like/Pass recorded in React state only.
+**Discover:** `DiscoverPage` → debounced `listProfiles({q, skills})` → `GET /api/profiles?q=..&skills=..` → `profile_service.list_profiles` (filters in Python, excludes demo profile) → `{profiles, count}`. Like/Pass → `POST /api/swipes` (saved in `swipes`); swiped profiles are left out of the list. Everyone liked shows on the Match page (`GET /api/profiles/me/matches`).
 
 **Edit profile:** `EditProfilePage` loads `GET /me` → form state → `PATCH /me` with the full form → `validate_update` cleans/validates → links/projects replaced → commit → returns updated profile.
 

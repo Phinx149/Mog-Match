@@ -1,10 +1,11 @@
 import { ArrowLeft, CheckCircle2, Loader2, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { cloneElement, useEffect, useId, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ErrorState, LoadingState } from "../components/common/States";
 import TagInput from "../components/forms/TagInput";
+import ToggleChips from "../components/forms/ToggleChips";
 import Navbar from "../components/layout/Navbar";
-import { ApiError, getMyProfile, updateMyProfile } from "../services/api";
+import { ApiError, getFilterOptions, getMyProfile, updateMyProfile } from "../services/api";
 import { EXPERIENCE_LEVELS, type Profile, type ProfileUpdate } from "../types/profile";
 
 type LinkDraft = { label: string; url: string };
@@ -29,7 +30,7 @@ interface FormState {
 
 type SaveStatus = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
-function toForm(p: Profile): FormState {
+function toForm(p: Profile, lookingForOptions: string[]): FormState {
   return {
     full_name: p.full_name,
     username: p.username,
@@ -42,7 +43,10 @@ function toForm(p: Profile): FormState {
     skills: p.skills,
     interests: p.interests,
     favorite_ai_agents: p.favorite_ai_agents,
-    looking_for: p.looking_for,
+    // Keep only values on the allowed list; older free-text entries would be rejected on save.
+    looking_for: lookingForOptions.filter((option) =>
+      p.looking_for.some((value) => value.toLowerCase() === option.toLowerCase()),
+    ),
     links: p.links.map(({ label, url }) => ({ label, url })),
     projects: p.projects.map(({ title, description, project_url, technologies }) => ({
       title,
@@ -76,14 +80,27 @@ function toUpdate(form: FormState): ProfileUpdate {
 
 export default function EditProfilePage() {
   const [form, setForm] = useState<FormState | null>(null);
+  const [lookingForOptions, setLookingForOptions] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photo) { setPhotoPreview(null); return; }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
 
   useEffect(() => {
     const controller = new AbortController();
-    getMyProfile(controller.signal)
-      .then((profile) => setForm(toForm(profile)))
+    Promise.all([getMyProfile(controller.signal), getFilterOptions(controller.signal)])
+      .then(([profile, options]) => {
+        setLookingForOptions(options.looking_for);
+        setForm(toForm(profile, options.looking_for));
+      })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setLoadError(err instanceof Error ? err.message : "Failed to load your profile.");
@@ -106,11 +123,32 @@ export default function EditProfilePage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const errors: Record<string, string> = {};
+    for (const key of ["full_name", "username", "bio", "favorite_ide"] as const) {
+      if (!form[key].trim()) errors[key] = "This field is required.";
+    }
+    if (!form.favorite_ai_agents.some((agent) => agent.trim())) {
+      errors.favorite_ai_agents = "Add at least one coding agent.";
+    }
+    form.projects.forEach((project, index) => {
+      for (const key of ["title", "description"] as const) {
+        if (!project[key].trim()) errors[`projects[${index}].${key}`] = "This field is required.";
+      }
+      if (!project.technologies.some((technology) => technology.trim())) {
+        errors[`projects[${index}].technologies`] = "Add at least one technology.";
+      }
+    });
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setStatus({ kind: "error", message: "Please complete the required fields." });
+      return;
+    }
     setStatus({ kind: "saving" });
     setFieldErrors({});
     try {
-      const saved = await updateMyProfile(toUpdate(form));
-      setForm(toForm(saved)); // reflect server-side cleanup (trimmed, de-duplicated tags)
+      const saved = await updateMyProfile(toUpdate(form), photo);
+      setForm(toForm(saved, lookingForOptions)); // reflect server-side cleanup and allowed categories
+      setPhoto(null);
       setStatus({ kind: "saved" });
     } catch (err) {
       if (err instanceof ApiError) setFieldErrors(err.fields);
@@ -131,8 +169,13 @@ export default function EditProfilePage() {
 
       <form onSubmit={onSubmit} className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6" noValidate>
         <h1 className="text-2xl font-bold">Edit Profile</h1>
+        <p className="text-sm text-muted">Complete the required fields before saving. Projects are optional; each added project needs a title, description, and at least one technology.</p>
 
         <Card title="Basics">
+          <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 5 MB. Saved when you save your profile.">
+            <input className="field cursor-pointer" type="file" accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          </Field>
+          {(photoPreview || form.avatar_url) && <img src={photoPreview || form.avatar_url} alt="Profile photo preview" className="size-24 rounded-full object-cover" />}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Full name" error={err("full_name")}>
               <input className="field" value={form.full_name} maxLength={120} required onChange={(e) => update("full_name", e.target.value)} />
@@ -146,7 +189,7 @@ export default function EditProfilePage() {
             <Field label="Education" error={err("education")}>
               <input className="field" value={form.education} maxLength={200} placeholder="School, degree, year" onChange={(e) => update("education", e.target.value)} />
             </Field>
-            <Field label="Avatar URL" error={err("avatar_url")}>
+            <Field label="Avatar URL" error={err("avatar_url")} hint="Used when no profile photo has been uploaded.">
               <input className="field" type="url" value={form.avatar_url} maxLength={500} placeholder="https://…" onChange={(e) => update("avatar_url", e.target.value)} />
             </Field>
             <Field label="Experience level" error={err("experience_level")}>
@@ -160,26 +203,28 @@ export default function EditProfilePage() {
               </select>
             </Field>
           </div>
-          <Field label="About" error={err("bio")}>
-            <textarea className="field min-h-28" value={form.bio} maxLength={2000} placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} />
+          <Field label="About me" required error={err("bio")}>
+            <textarea className="field min-h-28" value={form.bio} maxLength={2000} required placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} />
           </Field>
         </Card>
 
         <Card title="Skills & interests">
-          <TagInput label="Technical skills (languages, frameworks, specialties)" values={form.skills} onChange={(v) => update("skills", v)} placeholder="Rust, React, Frontend…" maxTags={30} />
-          <FieldError message={err("skills")} />
-          <TagInput label="Interests" variant="interest" values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
-          <FieldError message={err("interests")} />
-          <TagInput label="Looking for" variant="neutral" values={form.looking_for} onChange={(v) => update("looking_for", v)} placeholder="Hackathon team, Mentor…" maxTags={10} />
-          <FieldError message={err("looking_for")} />
+          <TagInput label="Technical skills (languages, frameworks, specialties)" error={err("skills")} values={form.skills} onChange={(v) => update("skills", v)} placeholder="Rust, React, Frontend…" maxTags={30} />
+
+          <TagInput label="Interests" variant="interest" error={err("interests")} values={form.interests} onChange={(v) => update("interests", v)} placeholder="AI, Gaming, Startups…" maxTags={30} />
+
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-slate-300">Looking for</span>
+            <ToggleChips label="Looking for" error={err("looking_for")} options={lookingForOptions} selected={form.looking_for} onChange={(v) => update("looking_for", v)} />
+          </div>
         </Card>
 
         <Card title="Setup">
-          <Field label="Favorite IDE" error={err("favorite_ide")}>
-            <input className="field" value={form.favorite_ide} maxLength={80} placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
+          <Field label="Favorite IDE" required error={err("favorite_ide")}>
+            <input className="field" value={form.favorite_ide} maxLength={80} required placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
           </Field>
-          <TagInput label="Favorite AI coding agents" variant="neutral" values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
-          <FieldError message={err("favorite_ai_agents")} />
+          <TagInput label="Favorite AI coding agents" required variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
+
         </Card>
 
         <Card
@@ -220,8 +265,8 @@ export default function EditProfilePage() {
             <div key={index} className="flex flex-col gap-3 rounded-xl border border-line bg-surface-raised p-4">
               <div className="flex items-start gap-2">
                 <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                  <Field label="Title" error={err(`projects[${index}].title`)} compact>
-                    <input className="field" value={project.title} maxLength={120} onChange={(e) => updateProject(index, { title: e.target.value })} />
+                  <Field label="Title" required error={err(`projects[${index}].title`)} compact>
+                    <input className="field" value={project.title} maxLength={120} required onChange={(e) => updateProject(index, { title: e.target.value })} />
                   </Field>
                   <Field label="Project URL" error={err(`projects[${index}].project_url`)} compact>
                     <input className="field" type="url" value={project.project_url} maxLength={500} placeholder="https://…" onChange={(e) => updateProject(index, { project_url: e.target.value })} />
@@ -229,16 +274,16 @@ export default function EditProfilePage() {
                 </div>
                 <RemoveButton label="Remove project" onClick={() => update("projects", form.projects.filter((_, i) => i !== index))} />
               </div>
-              <Field label="Description" error={err(`projects[${index}].description`)} compact>
-                <textarea className="field min-h-20" value={project.description} maxLength={2000} onChange={(e) => updateProject(index, { description: e.target.value })} />
+              <Field label="Description" required error={err(`projects[${index}].description`)} compact>
+                <textarea className="field min-h-20" value={project.description} maxLength={2000} required onChange={(e) => updateProject(index, { description: e.target.value })} />
               </Field>
-              <TagInput label="Technologies" variant="neutral" values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
-              <FieldError message={err(`projects[${index}].technologies`)} />
+              <TagInput label="Technologies" required variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
+
             </div>
           ))}
         </Card>
 
-        <div className="sticky bottom-20 z-10 flex flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm" aria-live="polite">
             {status.kind === "saved" && (
               <span className="inline-flex items-center gap-1.5 text-emerald-300">
@@ -281,14 +326,17 @@ function Card({ title, action, children }: { title: string; action?: ReactNode; 
   );
 }
 
-function Field({ label, error, hint, compact, children }: { label: string; error?: string; hint?: string; compact?: boolean; children: ReactNode }) {
+function Field({ label, required, error, hint, compact, children }: { label: string; required?: boolean; error?: string; hint?: string; compact?: boolean; children: ReactElement<{ id?: string; "aria-invalid"?: boolean; "aria-describedby"?: string }> }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}</span>
-      <div className={error ? "[&_.field]:border-rose-500" : ""}>{children}</div>
+    <div className="min-w-0">
+      <label htmlFor={id} className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}{required && <span className="text-muted"> (required)</span>}</label>
+      <div className={error ? "[&_.field]:border-rose-500" : ""}>{cloneElement(children, { id, "aria-invalid": !!error, "aria-describedby": error || hint ? `${id}-help` : undefined })}</div>
+      <div id={`${id}-help`}>
       {hint && !error && <span className="mt-1 block text-xs text-muted">{hint}</span>}
       <FieldError message={error} />
-    </label>
+      </div>
+    </div>
   );
 }
 

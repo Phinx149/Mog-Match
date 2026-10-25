@@ -6,9 +6,9 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 ## Current milestone
 
-✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only)
+✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only) · ✅ Mog Score (on every profile, plus a Discover tier filter and sort)
 
-⏳ Later: persistent swipes & matches, Intersect Engine, Mog Score, chat, voice, GitHub login.
+⏳ Later: persistent swipes & matches, Intersect Engine, Team Mog Score, chat, voice, GitHub login.
 
 ## Tech stack
 
@@ -164,9 +164,14 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
 | GET | `/api/profiles` | Discoverable profiles (excludes the demo user) → `{"profiles": [...], "count": n}` |
+| GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "looking_for": [...]}`. Powers the Discover filter menu and the Edit Profile "Looking for" picker |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | GET | `/api/profiles/me` | The demo user's profile |
 | PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
+| GET | `/api/profiles/me/matches` | Mog Match: everyone I liked, most similar first, each with a `match` score. See `docs/MOG_MATCH.md` |
+| POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
+| DELETE | `/api/swipes/<uuid>` | Unlike one person: removes them from my matches and returns them to Discover (`404` if never swiped) |
+| DELETE | `/api/swipes` | Forget all my likes/passes → `{"removed": n}` |
 
 **`GET /api/profiles` query params** (all optional, case-insensitive):
 | Param | Example | Behavior |
@@ -174,7 +179,12 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | `q` | `q=rust` | Text search over name, username, bio, location, education, IDE, skills, interests, AI agents, project titles |
 | `skills` | `skills=Rust,Frontend` or repeated | Profile must have **all** listed skills |
 | `interests` | `interests=AI` | Profile must have **all** listed interests |
+| `looking_for` | `looking_for=Mentor,Mentee` | Profile must be looking for **any** listed option |
 | `location` | `location=berlin` | Substring match |
+| `min_tier` | `min_tier=Mid Mogger` | Only profiles at or above this Mog tier (`400` if unknown) |
+| `sort` | `sort=mog` | Highest Mog Score first |
+
+Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roast`, `breakdown`, `max_breakdown`, `tips`). See `docs/MOG_SCORE.md`.
 
 **Profile shape**
 ```json
@@ -191,9 +201,10 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 }
 ```
 
-**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for`, `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
+**`PATCH /api/profiles/me`** accepts any subset of: `full_name`, `username`, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level` (`Student | Junior | Mid-level | Senior | Lead`), `skills`, `interests`, `favorite_ai_agents`, `looking_for` (fixed list, see below), `links` (`[{label, url}]`), `projects` (`[{title, description, project_url, technologies}]`).
 - `links` and `projects`, when sent, **replace** the existing lists.
 - Tags are trimmed and de-duplicated (case-insensitive). URLs must be `http(s)`.
+- `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
 - `400` on invalid data or unknown fields, `409` if the username is taken.
 
 ## Known limitations (this milestone)
@@ -201,4 +212,4 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 - No authentication: `/me` is always the server-configured demo user.
 - Likes/passes reset on page reload (React state only).
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
-- No avatar upload; avatars are URLs with an initials fallback.
+- Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

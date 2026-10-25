@@ -18,6 +18,23 @@ body {
   @apply bg-canvas text-slate-100 font-sans antialiased;
 }
 
+.mog-score-flame {
+  overflow: visible;
+  flex-shrink: 0;
+  transform-origin: center bottom;
+  filter: drop-shadow(0 0 10px #8b5cf680);
+  animation: mog-flame-pulse var(--mog-flame-duration) ease-in-out infinite alternate;
+}
+
+@keyframes mog-flame-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(var(--mog-flame-peak)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mog-score-flame { animation: none; }
+}
+
 /* Shared form control look. In the components layer so utility classes can override it. */
 @layer components {
   .field {

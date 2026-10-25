@@ -1,18 +1,23 @@
 """Profile reads, filtering, serialization and validated updates."""
 
 import re
+import hashlib
 import uuid
 from typing import Any
 from urllib.parse import urlparse
 
-from flask import current_app
+from flask import current_app, url_for
 from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..models import Profile, ProfileLink, Project, User
-from .tech_catalog import normalize_technology
+from .mog_score import compute_mog_score, tier_floor
+from .tech_catalog import ALL_TECHNOLOGIES, normalize_technology
 
 EXPERIENCE_LEVELS = ("Student", "Junior", "Mid-level", "Senior", "Lead")
+# What a profile can say it wants from a match. Fixed (not free text) so filtering and the
+# Mog Score's shared-intent / Mentor-Mentee rules can rely on exact values. Order = display order.
+LOOKING_FOR_OPTIONS = ("Hackathon team", "Side project", "Open source", "Cofounder", "Mentor", "Mentee", "Just vibes")
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,40}$")
 
 # field -> (max length, required)
@@ -22,8 +27,8 @@ STRING_FIELDS: dict[str, tuple[int, bool]] = {
     "avatar_url": (500, False),
     "location": (120, False),
     "education": (200, False),
-    "bio": (2000, False),
-    "favorite_ide": (80, False),
+    "bio": (2000, True),
+    "favorite_ide": (80, True),
     "experience_level": (40, False),
 }
 # field -> max number of items
@@ -69,8 +74,10 @@ def list_profiles(
     query: str = "",
     skills: list[str] | None = None,
     interests: list[str] | None = None,
+    looking_for: list[str] | None = None,
     location: str = "",
     exclude_id: uuid.UUID | None = None,
+    hidden_ids: set[uuid.UUID] | None = None,
 ) -> list[Profile]:
     """Filter in Python for now; move to SQL once the dataset grows."""
     profiles = _profile_query().order_by(Profile.created_at, Profile.username).all()
@@ -78,15 +85,22 @@ def list_profiles(
     location = location.strip().lower()
     wanted_skills = _lower_set(skills or [])
     wanted_interests = _lower_set(interests or [])
+    wanted_looking_for = _lower_set(looking_for or [])
 
     results = []
     for profile in profiles:
         if exclude_id is not None and profile.id == exclude_id:
             continue
+        if hidden_ids and profile.id in hidden_ids:  # already liked/passed
+            continue
         # Every selected skill/interest must be present (filter chips narrow results).
         if wanted_skills and not wanted_skills <= _lower_set(profile.skills):
             continue
         if wanted_interests and not wanted_interests <= _lower_set(profile.interests):
+            continue
+        # "Looking for" matches ANY selected option: people only list a few, so requiring
+        # all of them (e.g. both Mentor and Hackathon team) would hide almost everyone.
+        if wanted_looking_for and wanted_looking_for.isdisjoint(_lower_set(profile.looking_for)):
             continue
         if location and location not in (profile.location or "").lower():
             continue
@@ -94,6 +108,18 @@ def list_profiles(
             continue
         results.append(profile)
     return results
+
+
+def filter_options() -> dict[str, list[str]]:
+    """Every value a profile may use for `skills` and `looking_for` (see `validate_update`).
+
+    The Discover filter menu and the Edit Profile pickers both read this, so they can't drift
+    from what the backend accepts.
+    """
+    return {
+        "skills": sorted(ALL_TECHNOLOGIES, key=str.lower),
+        "looking_for": list(LOOKING_FOR_OPTIONS),
+    }
 
 
 def _search_text(profile: Profile) -> str:
@@ -120,12 +146,13 @@ def _iso(value) -> str | None:
 
 
 def to_dict(profile: Profile) -> dict[str, Any]:
-    return {
+    data = {
         "id": str(profile.id),
         "user_id": str(profile.user_id),
         "full_name": profile.full_name,
         "username": profile.username,
-        "avatar_url": profile.avatar_url,
+        "avatar_url": (url_for("profiles.get_photo", profile_id=profile.id, v=hashlib.sha256(profile.user.photo_data).hexdigest()[:16], _external=True)
+                       if profile.user.photo_data else profile.avatar_url),
         "location": profile.location,
         "education": profile.education,
         "bio": profile.bio,
@@ -151,6 +178,22 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "created_at": _iso(profile.created_at),
         "updated_at": _iso(profile.updated_at),
     }
+    data["mog"] = compute_mog_score(data)
+    return data
+
+
+def apply_mog_filters(profiles: list[dict], min_tier: str = "", sort: str = "") -> list[dict]:
+    """Keep profiles at or above `min_tier`; `sort="mog"` puts the biggest moggers first."""
+    if min_tier:
+        floor = tier_floor(min_tier)
+        if floor is None:
+            raise ValidationError({"min_tier": "Unknown tier."}, "Unknown Mog tier.")
+        profiles = [p for p in profiles if p["mog"]["score"] >= floor]
+    if sort == "mog":
+        profiles = sorted(profiles, key=lambda p: p["mog"]["score"], reverse=True)
+    elif sort:
+        raise ValidationError({"sort": "Use 'mog' or leave it empty."}, "Unknown sort.")
+    return profiles
 
 
 # ---------- validation helpers ----------
@@ -244,6 +287,19 @@ def _clean_technologies(values: list[str], field: str, errors: dict, noun: str =
     return known
 
 
+def _clean_choices(values: list[str], field: str, allowed: tuple[str, ...], errors: dict) -> list[str]:
+    """Map each value to its spelling in `allowed` (ignoring case); report any that aren't in it."""
+    by_lower = {option.lower(): option for option in allowed}
+    known = [by_lower[value.lower()] for value in values if value.lower() in by_lower]
+    unknown = [value for value in values if value.lower() not in by_lower]
+    if unknown:
+        errors[field] = (
+            f"Unknown option: {', '.join(unknown[:3])}{'…' if len(unknown) > 3 else ''}. "
+            f"Choose from: {', '.join(allowed)}."
+        )
+    return known
+
+
 def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
     if not isinstance(value, list):
         errors["projects"] = "Must be a list."
@@ -258,13 +314,15 @@ def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
             errors[prefix] = "Must be an object."
             continue
         title = _clean_string(item.get("title"), f"{prefix}.title", 120, True, errors)
-        description = _clean_string(item.get("description", ""), f"{prefix}.description", 2000, False, errors)
+        description = _clean_string(item.get("description"), f"{prefix}.description", 2000, True, errors)
         project_url = _clean_string(item.get("project_url"), f"{prefix}.project_url", 500, False, errors)
         if project_url and not _is_http_url(project_url):
             errors[f"{prefix}.project_url"] = "Must be a valid http(s) URL."
         technologies = _clean_tags(item.get("technologies", []), f"{prefix}.technologies", 20, errors)
         if technologies:
             technologies = _clean_technologies(technologies, f"{prefix}.technologies", errors)
+        if not technologies and f"{prefix}.technologies" not in errors:
+            errors[f"{prefix}.technologies"] = "Add at least one technology."
         cleaned.append(
             {
                 "title": title,
@@ -294,8 +352,12 @@ def validate_update(data: Any) -> dict[str, Any]:
     for field, max_items in LIST_FIELDS.items():
         if field in data:
             cleaned[field] = _clean_tags(data[field], field, max_items, errors)
+    if "favorite_ai_agents" in cleaned and not cleaned["favorite_ai_agents"] and "favorite_ai_agents" not in errors:
+        errors["favorite_ai_agents"] = "Add at least one coding agent."
     if cleaned.get("skills"):
         cleaned["skills"] = _clean_technologies(cleaned["skills"], "skills", errors, noun="skill")
+    if cleaned.get("looking_for"):
+        cleaned["looking_for"] = _clean_choices(cleaned["looking_for"], "looking_for", LOOKING_FOR_OPTIONS, errors)
     if "links" in data:
         cleaned["links"] = _clean_links(data["links"], errors)
     if "projects" in data:
@@ -318,23 +380,33 @@ def validate_update(data: Any) -> dict[str, Any]:
 
 # ---------- writes ----------
 
-def update_profile(profile: Profile, data: Any) -> Profile:
-    cleaned = validate_update(data)
+def update_profile(profile: Profile, data: Any, photo=None, extra_errors=None) -> Profile:
+    errors = dict(extra_errors or {})
+    try:
+        cleaned = validate_update(data)
+    except ValidationError as error:
+        errors.update(error.fields)
+        cleaned = {}
+        if not error.fields:
+            raise
 
-    new_username = cleaned.get("username")
+    new_username = data.get("username") if isinstance(data, dict) else None
+    new_username = new_username.strip() if isinstance(new_username, str) else None
     if new_username and new_username.lower() != profile.username.lower():
         taken = Profile.query.filter(
             db.func.lower(Profile.username) == new_username.lower(), Profile.id != profile.id
         ).first()
         if taken:
-            raise ValidationError({"username": "That username is already taken."}, "Username taken.", conflict=True)
+            errors["username"] = "That username is already taken."
+
+    if errors:
+        raise ValidationError(errors, conflict=bool(new_username and errors.get("username") == "That username is already taken."))
+    if photo:
+        profile.user.photo_data, profile.user.photo_mimetype = photo
 
     for field in STRING_FIELDS:
         if field in cleaned:
-            value = cleaned[field]
-            if field == "bio" and value is None:
-                value = ""  # bio is NOT NULL; an emptied bio is stored as ""
-            setattr(profile, field, value)
+            setattr(profile, field, cleaned[field])
     for field in LIST_FIELDS:
         if field in cleaned:
             setattr(profile, field, cleaned[field])  # assign a new list so SQLAlchemy sees the change

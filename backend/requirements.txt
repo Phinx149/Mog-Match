@@ -5,3 +5,4 @@ Flask-Migrate>=4.0,<5
 SQLAlchemy>=2.0,<3
 python-dotenv>=1.0,<2
 pytest>=8.0,<10
+Pillow>=12,<14
