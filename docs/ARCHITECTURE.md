@@ -1,78 +1,58 @@
 # Architecture
 
-## Overview
+The key decisions behind MogMatch and why we made them. How-to material (setup, commands, API reference, code map) is in [DEVELOPMENT.md](DEVELOPMENT.md); deployment steps are in [DEPLOY.md](DEPLOY.md).
+
+## System at a glance
+
 ```
- Browser ── React SPA (Vite, :5173)
-              │  fetch JSON  (src/services/api.ts, VITE_API_URL)
+           Browser: React SPA (Vite, TypeScript, Tailwind)
+              │  HTTP /api/*  +  Socket.IO /socket.io/*   (same origin, login cookie)
               ▼
- Flask API (:5001)  app factory in backend/app/__init__.py
-   ├─ routes/      thin HTTP layer (health, auth, profiles, swipes, invites)
-   ├─ services/    validation, filtering, serialization
-   ├─ models/      SQLAlchemy models
-   └─ seed.py      `flask seed` CLI
-              │  SQLAlchemy ORM
+           Flask API: routes → services → SQLAlchemy models
+              │                         └─ OpenAI (AI project studio, optional)
               ▼
- Local dev: SQLite (backend/instance/mogmatch.db)
- Production: PostgreSQL (Neon) via DATABASE_URL, psycopg 3 driver
+           SQLite (local dev)  /  PostgreSQL on Neon (production)
+
+Production: one Vercel project, two Services:  /api/* + /socket.io/* → Flask,  everything else → static Vite build
 ```
 
-**Production (Vercel):** one project, `vercel.json` Services. `/api/*` goes to the Flask app (`backend/run.py`'s `app`, as a Vercel Function). Everything else goes to the static Vite build, with `index.html` as the fallback for client-side routes. Same domain, so the frontend calls relative `/api` and the login cookie is first-party. `ProxyFix` trusts Vercel's `X-Forwarded-*` headers so external URLs are `https://<domain>`. See `docs/DEPLOY.md`.
-
-Monorepo, two processes in dev. CORS on `/api/*` allows the Vite origin(s) from `CORS_ORIGINS`, **with credentials**, so the browser sends the login cookie (`fetch(..., {credentials: "include"})` in `api.ts`).
-
-## Data model
-
 ```
-users ──1:1── profiles ──1:N── profile_links
-                     ├──1:N── projects
-                     ├──N:N── swipes   (swiper → target, like | pass)
-                     └──N:N── invites  (sender → recipient, pending | accepted | declined)
+users 1─1 profiles ─┬─< profile_links, projects
+                    ├─< swipes   (me → them: like | pass)        a like = "they're on my Match page"
+                    ├─< invites  (me → them: pending | accepted | declined, + team_mog)
+                    │        └─< chat_messages, project_ideas, studio_turns   (an accepted invite is the chat)
+                    └─< user_blocks
 ```
 
-| Table | Columns |
-|---|---|
-| `users` | `id` UUID PK, `email` unique nullable, `password_hash` (werkzeug salted hash, null = can't log in), `photo_data`, `photo_mimetype`, `created_at`, `updated_at` |
-| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix" | "dvd" | "emoji" | "slogans" | "market" | "money" | "snow" | "lightning" | "tron" | "shapes", "effect_options": {"brightness", "size", "speed", "glow", "count", "color_change", "color", "rain_color", "rain_rainbow", "rain_symbols", "emojis", "emoji_count", "emoji_angle", "emoji_path", "emoji_spin", "slogans", "slogan_color", "slogan_style", "slogan_tilt", "slogan_alternate", "chart_volatility", "chart_mood", "chart_palette", "chart_ticker", "chart_label", "money_kind", "money_count", "money_wind", "money_weight", "snow_kind", "snow_count", "snow_wind", "lightning_color", "lightning_strikes", "lightning_forks", "lightning_flash", "tron_color", "tron_cycles", "tron_tail", "tron_grid", "shape_kind", "shape_count", "shape_color"}}`), timestamps |
-| `profile_links` | `id` UUID PK, `profile_id` FK (cascade), `label`, `url`, `position` |
-| `projects` | `id` UUID PK, `profile_id` FK (cascade), `title`, `description`, `project_url`, JSON `technologies`, `position`, timestamps |
-| `swipes` | `id` UUID PK, `swiper_id` / `target_id` FK→profiles (cascade), `action` `like`\|`pass`, timestamps. Unique (`swiper_id`, `target_id`): swiping again overwrites |
-| `invites` | `id` UUID PK, `sender_id` / `recipient_id` FK→profiles (cascade), `message` (≤280, nullable), `status` `pending`\|`accepted`\|`declined`, timestamps. Unique (`sender_id`, `recipient_id`); the service also blocks the reverse direction |
+## Decisions
 
-Deleting a profile removes its swipes and invites in both directions (ORM cascades on `Profile`, since SQLite doesn't enforce `ON DELETE CASCADE` by default).
+**1. One domain in production (Vercel Services).** The SPA and the API are served from the same origin: `/api/*` and `/socket.io/*` go to Flask, everything else to the static build. That makes the login cookie first-party (no third-party-cookie or CORS problems) and lets the frontend call relative `/api`. Locally they run as two processes, with CORS on, credentials allowed, on a fixed origin list.
 
-The original hand-drawn schema (`id, users_id, loc, langs, fav_ide, fav_agents`) maps to `profiles.id`, `profiles.user_id`, `location`, `skills` (languages are skills), `favorite_ide`, `favorite_ai_agents`.
+**2. Thin routes, logic in services.** Routes only parse the request, call a service and return JSON. Validation, permissions and serialization live in `app/services/`, so they're testable without HTTP and reused by both the REST API and the Socket.IO handlers. Errors always look like `{"error": {"message", "fields?"}}` with real status codes (400 / 401 / 404 / 409).
 
-**Portability:** `db.Uuid` → native `uuid` on Postgres, `CHAR(32)` on SQLite. `db.JSON` → `json` on Postgres. `LargeBinary` → `bytea`. `DateTime(timezone=True)` → `timestamptz`. No SQLite-only SQL anywhere. Verified: the full test suite, every migration (upgrade, `db check`, downgrade to base) and the seeds run on Postgres 17. Postgres enforces `String(n)` lengths, so validation limits match the columns.
+**3. "Me" comes only from a signed session cookie.** Login stores the user id in Flask's signed, `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production). Every "me" route calls `current_profile_or_401()`; the client never sends its own user id, and someone else's row is answered with a 404, not a 403, so ids can't be probed. Passwords are salted `werkzeug` hashes. The app refuses to start in production with the default `SECRET_KEY`.
 
-### Planned tables (later milestones)
-```
-messages (id, invite_id → invites (accepted only), sender_id → profiles, body, created_at)   chat
-```
-An accepted invite is the "connection" two people chat in; the Intersect Engine's project ideas can hang off it too.
+**4. One portable data layer: SQLite for dev, Postgres for production.** Same SQLAlchemy models and Alembic migrations for both: `db.Uuid` keys, `db.JSON` lists, timezone-aware timestamps, ORM only (no raw SQL). Nobody needs a database server to develop. The catch: Postgres rejects strings longer than `String(n)`, so validation limits must stay at or under column sizes (a test checks this). The test suite runs on either database (`TEST_DATABASE_URL`).
 
-## Request flow examples
+**5. The database sets itself up on deploy.** Each Vercel build runs `backend/vercel_build.py`: migrations, then an idempotent seed that only adds what's missing and never overwrites edits. So migrations must be additive (add first, remove in a later release). Demo accounts with public passwords are opt-in (`SEED_DEMO_USERS=1`), and preview deployments get their own Neon branch so a PR can't touch production data.
 
-**Discover:** `DiscoverPage` → debounced `listProfiles({q, skills})` → `GET /api/profiles?q=..&skills=..` → `profile_service.list_profiles` (filters in Python, excludes demo profile) → `{profiles, count}`. Like/Pass → `POST /api/swipes` (saved in `swipes`); swiped profiles are left out of the list. Everyone liked shows on the Match page (`GET /api/profiles/me/matches`).
+**6. One kind of like.** A like is a row in `swipes`; liking from Discover or from a profile page is the same action. Matches are one-sided ("everyone I liked", ranked by similarity) so the demo works without waiting for the other person. Mutual intent happens one step later, through **invites**: one per pair, only the recipient can answer, and an *accepted* invite becomes the connection that chat, the AI studio, unmatch/rematch and the Team Mog Score hang off. Blocking hides both people from each other's Discover, likes and invites.
 
-**Log in:** `LoginPage` → `POST /api/auth/login {username, password}` → `auth_service.log_in` (case-insensitive username, `check_password_hash`) → `session["user_id"] = ...` → signed `HttpOnly; SameSite=Lax` cookie → `{"user": {...}}`. On load `AuthProvider` calls `GET /api/auth/session`; `RequireAuth` sends logged-out visitors to `/login`.
+**7. Scores are pure functions, computed on read.** `mog_score.py`, `mog_match.py` and `team_mog.py` take plain dicts and return numbers plus their explanation, with no database or HTTP. They're cheap at our scale, always match the current profile, and are easy to unit-test and tune. The one exception is the Team Mog Score, saved on the invite when it's accepted so the reveal doesn't change afterwards. Rules: [MOG_SCORE.md](MOG_SCORE.md), [MOG_MATCH.md](MOG_MATCH.md).
 
-**Sign up:** `SignUpPage` → `POST /api/auth/signup {full_name, username, password}` → `auth_service.sign_up` (name and username validated by `profile_service.validate_update`, case-insensitive uniqueness check → `409`, password stored with `generate_password_hash`) → creates a `User` and an almost empty `Profile` → same session cookie as login → `201 {"user": {...}}`. The page then sends the new user to `/profile/edit` to fill in the rest.
+**8. Real-time with Socket.IO, re-fetching as the safety net.** Chat messages and inbox changes are pushed over Socket.IO, and pages re-fetch when the tab regains focus, so nothing is lost if a socket drops. Sockets are tied to the session and disconnected on logout or account switch. Known limit: serverless functions are short-lived and requests may hit different instances, so live updates are best-effort on Vercel (messages are always saved). Details: [CHAT.md](CHAT.md).
 
-**Invite:** Match card **Invite** → `POST /api/invites {recipient_id, message?}` → `invite_service.send_invite` (must have liked them; one invite per pair either way) → row in `invites`. The recipient's `InboxPage` polls `GET /api/invites/inbox` every 5 s (rows where they're recipient/sender) → Accept/Decline → `PATCH /api/invites/<id> {status}` (recipient only, once). The sender can `DELETE` while pending.
+**9. Cosmetic data is validated strictly, rendered in the browser.** Profile themes are one JSON column (`background`, `effect`, `effect_options`). The server checks every value (strict `#rrggbb`, a darkness limit so text stays readable, number ranges, emoji and slogan rules) because they end up in style attributes and canvases. All ten effects are drawn client-side on a canvas: nothing heavy is stored or served.
 
-**Edit profile:** `EditProfilePage` loads `GET /me` → form state → `PATCH /me` with the full form → `validate_update` cleans/validates → links/projects replaced → commit → returns updated profile.
+**10. Simple storage over extra infrastructure.** Profile photos are bytes on the `users` row (Postgres `bytea`), served by the API: no object storage to set up. Capped at 4 MB because Vercel rejects request bodies over 4.5 MB. Filtering and search run in Python over all profiles, which is fine at hackathon scale; move them into SQL if the user count grows.
 
-## Identity (who is "me")
-Login and sign-up: `POST /api/auth/login` checks the password hash (`werkzeug.security`) and stores the user id in Flask's signed session cookie (`POST /api/auth/signup` creates the account first, then does the same). Every "me" route calls `auth_service.current_profile_or_401()`, so "me" always comes from the server-signed cookie; the frontend never sends a user id for "me". Frontend: `AuthProvider` (`hooks/useAuth.tsx`) asks `GET /api/auth/session` on load, `RequireAuth` sends logged-out visitors to `/login`, and any `401` from the API logs the app out.
+**11. AI is a server-side, optional add-on.** The project studio and idea generator call OpenAI from the backend with a server-held key, so the key never reaches the browser. Without `OPENAI_API_KEY`, those features return a clear 503 and everything else works.
 
-## Frontend structure
-- `pages/` — route-level components (Login, Discover, Match, Inbox, Profile, EditProfile, Settings, NotFound)
-- `hooks/useAuth.tsx` — `AuthProvider` + `useAuth()`: the logged-in user, `logIn`, `logOut`. Re-checks the session when the tab gets focus (all tabs share one cookie)
-- `components/layout/` — `RequireAuth` (redirects to `/login`; remounts pages when the user changes), `AppLayout` (outlet + `BottomNav` with the inbox badge), `Navbar` (logo + slot + `PingIndicator` + `@username` / log out)
-- `components/match/` — `MatchCard`; `components/invites/` — `InviteControl` (the Invite button / status on a match card)
-- `components/profiles/` — `ProfileCard`, `ProfileHeader`, `SkillBadge`, `ProjectCard`, `Avatar`, `ThemeScope` (applies a profile's theme to everything inside it), `ThemePicker` (background color and effect picker on Edit Profile; each effect's presets and tuning sit in a collapsible menu under it), `EmojiPicker` and `SloganPicker` (the list editors inside it), `MatrixRain`, `BouncingDvd`, `FloatingEmoji`, `ScrollingSlogans`, `VolatileMarket`, `FallingMoney`, `FallingSnow`, `LightningStorm`, `LightCycles` and `SpinningShapes` (the `matrix`, `dvd`, `emoji`, `slogans`, `market`, `money`, `snow`, `lightning`, `tron` and `shapes` effects: canvas animations; the logo's bounce rules live in `utils/dvdMotion.ts`, the emoji's movement in `utils/emojiMotion.ts`, the slogan rows' layout in `utils/sloganMarquee.ts` the made-up price simulation in `utils/marketSim.ts` the falling cash's wind, flutter and tumble in `utils/moneyMotion.ts` the snowflakes' fall, sway and wind in `utils/snowMotion.ts` the bolts' shape, forks and timing in `utils/lightningBolt.ts` the light cycles' riding, turning and trail length in `utils/lightCycles.ts` and the wireframes' points, lines, rotation and perspective in `utils/wireShapes.ts`)
-- `components/discover/` — `SearchBar`, `FilterBar`
-- `components/forms/` — `TagInput`
-- `components/common/` — loading / error / empty states
-- `services/api.ts` — the only place that calls `fetch`; sends the login cookie; throws `ApiError` with `status` and `fields`; a `401` fires `LOGGED_OUT_EVENT` so the app shows the login page
-- `types/` — `profile.ts`, `invite.ts`, `auth.ts`: mirror the API's JSON
+**12. Frontend: one API client, one auth source.** Every HTTP call goes through `services/api.ts` (sends the cookie, normalizes errors, turns any 401 into a logout). `AuthProvider` owns "who is logged in", re-checks it when a tab regains focus (tabs share one cookie), and `RequireAuth` guards every page except login and sign-up. Pages handle their own loading / error / empty states.
+
+## Trade-offs we accepted (for a 24-hour hackathon)
+
+- Usernames and passwords only: no email verification, password reset or rate limiting.
+- One-sided matches instead of mutual swipes, for a demo that works with one real user.
+- Best-effort real-time on serverless instead of a dedicated socket server.
+- In-memory filtering and score computation instead of SQL indexes or caches.

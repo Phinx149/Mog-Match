@@ -6,12 +6,12 @@ Three devs, 24 hours. Split work by **vertical feature** so each person ships en
 - [x] Flask app factory, models, migrations, seed command
 - [x] Profile API (list/filter, get, get/patch `me`) + pytest suite
 - [x] React app: Discover (search, filters, like/pass), Profile, Edit Profile, Settings placeholder
-- [x] README with setup + API docs
+- [x] Setup + API docs (now in `docs/DEVELOPMENT.md`; the README is a feature showcase)
 
 ## Milestone 2 — Swipes & matches (next)
 | Task | Notes |
 |---|---|
-| `swipes` + `matches` models & migration | see planned tables in `ARCHITECTURE.md` |
+| `swipes` + `matches` models & migration | done: see the data model in `docs/DEVELOPMENT.md` |
 | `POST /api/swipes` | record like/pass for the demo user; create match on mutual like |
 | `GET /api/matches` | list my matches |
 | Discover excludes already-swiped profiles | server-side |

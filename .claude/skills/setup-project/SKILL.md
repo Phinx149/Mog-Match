@@ -5,7 +5,7 @@ description: Get a developer's local MogMatch environment running (Flask backend
 
 # Setup Project
 
-Full instructions live in `README.md` (Backend setup / Frontend setup). Walk the developer through them **one step at a time**, checking each command's output before moving on. Detect their OS first (Windows PowerShell vs macOS/Linux/WSL) and give the matching commands.
+Full instructions live in `docs/DEVELOPMENT.md` (Prerequisites / Backend setup / Frontend setup; the README is only a feature showcase). Walk the developer through them **one step at a time**, checking each command's output before moving on. Detect their OS first (Windows PowerShell vs macOS/Linux/WSL) and give the matching commands.
 
 ## Checklist
 1. Versions: `python --version` (Windows: `py --version`) ≥ 3.12, `node -v` ≥ 20.19, `git --version`.
