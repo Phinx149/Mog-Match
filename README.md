@@ -171,7 +171,7 @@ Every page except `/login` needs a login. There is no sign-up yet; use a seeded 
 | `jordan-dev` | `SEED_PASSWORD` from `backend/.env.example` | The demo user. Three seeded invites are waiting in their inbox |
 | `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | |
 | `user1`, `user2` | see `TEST_USERS` in `backend/app/seed.py` | Only after `flask seed-test-users`. They already like each other |
-| 25 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Five per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5). Full list: `backend/app/demo_users.py` |
+| 25 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Five per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5), each with its own profile theme (background + effect). Full list: `backend/app/demo_users.py` |
 
 **Testing two people at once** (e.g. invites): log in as one user in a normal window and the other in an **incognito/private window**. Normal tabs share one login cookie, so logging in in a second tab switches *every* tab to that user (tabs notice and reload when you click back into them). Check the `@username` at the top right.
 
