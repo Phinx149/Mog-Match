@@ -1,7 +1,7 @@
 import { Compass, Inbox, Settings, Sparkles, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { getInbox, INVITES_CHANGED_EVENT } from "../../services/api";
+import { getConversations, getInbox, INVITES_CHANGED_EVENT } from "../../services/api";
 
 const ITEMS = [
   { to: "/discover", label: "Discover", icon: Compass },
@@ -19,8 +19,8 @@ function usePendingInvites(): number {
   useEffect(() => {
     const controller = new AbortController();
     const recount = () =>
-      getInbox(controller.signal)
-        .then((inbox) => setCount(inbox.pending_count))
+      Promise.all([getInbox(controller.signal), getConversations(controller.signal)])
+        .then(([inbox, threads]) => setCount(inbox.pending_count + threads.conversations.reduce((total, thread) => total + thread.unread_count, 0)))
         .catch(() => {}); // the badge is a nice-to-have; pages show their own errors
     recount();
     window.addEventListener(INVITES_CHANGED_EVENT, recount);
@@ -37,11 +37,11 @@ function usePendingInvites(): number {
   return count;
 }
 
-export default function BottomNav() {
+export default function BottomNav({ embedded = false }: { embedded?: boolean }) {
   const pending = usePendingInvites();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur">
+    <nav className={`${embedded ? "relative shrink-0" : "fixed inset-x-0 bottom-0"} z-20 border-t border-line bg-surface/90 backdrop-blur`}>
       <ul className="mx-auto flex max-w-md justify-around px-2 py-2">
         {ITEMS.map(({ to, label, icon: Icon }) => (
           <li key={to}>
@@ -59,7 +59,7 @@ export default function BottomNav() {
               {label}
               {to === "/inbox" && pending > 0 && (
                 <span
-                  aria-label={`${pending} new invite${pending === 1 ? "" : "s"}`}
+                  aria-label={`${pending} unread inbox item${pending === 1 ? "" : "s"}`}
                   className="absolute top-0 right-1 min-w-4 rounded-full bg-rose-500 px-1 text-center font-mono text-[10px] leading-4 text-white"
                 >
                   {pending}

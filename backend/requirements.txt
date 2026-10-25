@@ -7,3 +7,7 @@ psycopg[binary]>=3.2,<4   # Postgres driver (production on Vercel; optional loca
 python-dotenv>=1.0,<2
 pytest>=8.0,<10
 Pillow>=12,<14
+Flask-SocketIO>=5.5,<6
+simple-websocket>=1.1,<2
+openai>=2,<3
+pydantic>=2,<3

@@ -20,7 +20,7 @@ export default function Navbar({ children }: NavbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur">
+    <header className="sticky top-0 z-20 shrink-0 border-b border-line bg-canvas/85 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
         <Link to="/discover" className="shrink-0 font-mono text-lg font-bold tracking-tight">
           <span className="text-violet-400">mog</span>

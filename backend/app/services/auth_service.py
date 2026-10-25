@@ -47,12 +47,20 @@ def log_in(data: Any) -> Profile:
     # Same message for "no such user" and "wrong password", so usernames can't be probed.
     if user is None or not user.password_hash or not check_password_hash(user.password_hash, password):
         raise LoginError("Wrong username or password.")
+    previous = current_profile()
+    if previous:
+        from .chat_service import disconnect_profile
+        disconnect_profile(previous.id)
     session.clear()
     session[SESSION_KEY] = str(user.id)
     return profile
 
 
 def log_out() -> None:
+    previous = current_profile()
+    if previous:
+        from .chat_service import disconnect_profile
+        disconnect_profile(previous.id)
     session.clear()
 
 

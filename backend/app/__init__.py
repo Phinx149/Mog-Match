@@ -6,7 +6,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import DEFAULT_SECRET_KEY, Config
-from .extensions import db, migrate
+from .extensions import db, migrate, socketio
 
 
 def create_app(test_config: dict | None = None) -> Flask:
@@ -30,6 +30,8 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
+    socketio.init_app(app, cors_allowed_origins=None if app.config["ON_VERCEL"] else app.config["CORS_ORIGINS"],
+                     max_http_buffer_size=16384)
     # supports_credentials lets the frontend send the login cookie with its requests.
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}}, supports_credentials=True)
 
@@ -39,6 +41,8 @@ def create_app(test_config: dict | None = None) -> Flask:
     from .routes.invites import bp as invites_bp
     from .routes.profiles import bp as profiles_bp
     from .routes.swipes import bp as swipes_bp
+    from .routes.chat import bp as chat_bp
+    from .chat_events import register_events
     from .seed import register_commands
 
     app.register_blueprint(auth_bp)
@@ -46,6 +50,8 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.register_blueprint(profiles_bp)
     app.register_blueprint(swipes_bp)
     app.register_blueprint(invites_bp)
+    app.register_blueprint(chat_bp)
+    register_events()
     register_commands(app)
     _register_error_handlers(app)
 
