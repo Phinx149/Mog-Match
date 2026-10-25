@@ -80,7 +80,7 @@ Upload a photo, show off your projects, and give your profile its own **theme**:
 Every effect is tunable: colors, speed, size, glow, emoji, slogans, wind, how unhinged the market is…
 
 ### 🔐 Your account
-Sign up in seconds with a username and password, then build out your profile. Change your display name or password any time in Settings.
+Sign up in seconds with a username and password, then build out your profile. Change your display name or password any time in Settings, and switch the whole site to the green-on-black **Hacker** color scheme.
 
 ---
 

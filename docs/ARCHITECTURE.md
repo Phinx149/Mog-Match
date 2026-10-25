@@ -42,7 +42,7 @@ users 1─1 profiles ─┬─< profile_links, projects
 
 **8. Real-time with Socket.IO, re-fetching as the safety net.** Chat messages and inbox changes are pushed over Socket.IO, and pages re-fetch when the tab regains focus, so nothing is lost if a socket drops. Sockets are tied to the session and disconnected on logout or account switch. Known limit: serverless functions are short-lived and requests may hit different instances, so live updates are best-effort on Vercel (messages are always saved). Details: [CHAT.md](CHAT.md).
 
-**9. Cosmetic data is validated strictly, rendered in the browser.** Profile themes are one JSON column (`background`, `effect`, `effect_options`). The server checks every value (strict `#rrggbb`, a darkness limit so text stays readable, number ranges, emoji and slogan rules) because they end up in style attributes and canvases. All seven effects are drawn client-side on a canvas: nothing heavy is stored or served.
+**9. Cosmetic data is validated strictly, rendered in the browser.** Profile themes are one JSON column (`background`, `effect`, `effect_options`). The server checks every value (strict `#rrggbb`, a darkness limit so text stays readable, number ranges, emoji and slogan rules) because they end up in style attributes and canvases. All ten effects are drawn client-side on a canvas: nothing heavy is stored or served.
 
 **10. Simple storage over extra infrastructure.** Profile photos are bytes on the `users` row (Postgres `bytea`), served by the API: no object storage to set up. Capped at 4 MB because Vercel rejects request bodies over 4.5 MB. Filtering and search run in Python over all profiles, which is fine at hackathon scale; move them into SQL if the user count grows.
 

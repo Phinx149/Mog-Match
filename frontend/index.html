@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💜</text></svg>" />
     <title>MogMatch</title>
+    <script>
+      // Apply the saved color scheme before the first paint, or a reload would flash the default look.
+      // The key and the choices match src/utils/appearance.ts. Unknown values just match no CSS.
+      try {
+        document.documentElement.dataset.appearance = localStorage.getItem("mogmatch-appearance") || "default";
+      } catch (error) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
