@@ -100,9 +100,9 @@ def test_each_user_has_their_own_profile_and_matches(app, log_in):
 # ---------- quick-login test users ----------
 
 def test_seed_test_users_can_log_in_and_already_like_each_other(app, anon_client):
-    from app.seed import TEST_USERS, seed_test_users
+    from app.seed import TEST_USERS, seed_test_users, test_accounts
 
-    assert seed_test_users() == 2
+    assert seed_test_users() == len(test_accounts())
     assert seed_test_users() == 0  # idempotent
     first, second = TEST_USERS
     login = {"username": first["username"], "password": first["password"]}
@@ -113,7 +113,7 @@ def test_seed_test_users_can_log_in_and_already_like_each_other(app, anon_client
 
 def test_seed_test_users_reset_clears_their_invites(app):
     from app.models import Invite
-    from app.seed import TEST_USERS, seed_test_users
+    from app.seed import TEST_USERS, seed_test_users, test_accounts
 
     seed_test_users()
     first, second = TEST_USERS
@@ -122,6 +122,6 @@ def test_seed_test_users_reset_clears_their_invites(app):
     other_id = str(Profile.query.filter_by(username=second["username"]).one().id)
     assert client.post("/api/invites", json={"recipient_id": other_id}).status_code == 201
 
-    assert seed_test_users(reset=True) == 2
+    assert seed_test_users(reset=True) == len(test_accounts())
     sender = Profile.query.filter_by(username=first["username"]).one()
     assert Invite.query.filter_by(sender_id=sender.id).count() == 0

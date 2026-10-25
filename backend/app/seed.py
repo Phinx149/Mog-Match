@@ -4,6 +4,7 @@ import click
 from flask import Flask, current_app
 
 from .extensions import db
+from .demo_users import DEMO_PASSWORD, DEMO_THEMES, DEMO_USERS
 from .models import Invite, Profile, ProfileLink, Project, Swipe, User
 from .services.auth_service import hash_password
 
@@ -398,17 +399,28 @@ def seed_database(reset: bool = False) -> dict[str, int]:
     return counts
 
 
+def test_accounts() -> list[dict]:
+    """user1/user2 plus the 50 demo users (one Mog tier each, see demo_users.py), with passwords
+    and each one's own profile theme (DEMO_THEMES)."""
+    demo = [
+        {**{key: value for key, value in data.items() if key != "tier"}, "password": DEMO_PASSWORD}
+        for data in DEMO_USERS
+    ]
+    return [{**data, "theme": DEMO_THEMES.get(data["username"])} for data in TEST_USERS + demo]
+
+
 def seed_test_users(reset: bool = False) -> int:
-    """Create user1/user2 if missing and make them like each other. Returns how many were created.
-    `reset` deletes them first (with their likes and invites) for a clean start."""
+    """Create user1/user2 and the demo users if missing; user1 and user2 like each other.
+    Returns how many were created. `reset` deletes them first (with their likes and invites)."""
     created = 0
+    accounts = test_accounts()
     if reset:
-        for data in TEST_USERS:
+        for data in accounts:
             existing = Profile.query.filter_by(username=data["username"]).one_or_none()
             if existing is not None:
                 db.session.delete(existing.user)  # cascades to profile, swipes and invites
         db.session.flush()
-    for data in TEST_USERS:
+    for data in accounts:
         if Profile.query.filter_by(username=data["username"]).one_or_none() is not None:
             continue  # already there (and maybe edited): leave it alone
         fields = {key: value for key, value in data.items() if key != "password"}
@@ -444,7 +456,9 @@ def register_commands(app: Flask) -> None:
     @app.cli.command("seed-test-users")
     @click.option("--reset", is_flag=True, help="Delete and recreate them (clears their likes and invites).")
     def seed_test_users_command(reset: bool) -> None:
-        """Add quick-login test accounts user1 and user2 (local testing only)."""
+        """Add quick-login test accounts: user1, user2 and 50 demo users across every Mog tier (local only)."""
         created = seed_test_users(reset=reset)
-        names = ", ".join(d["username"] for d in TEST_USERS)
-        click.echo(f"Test users ready ({created} created): {names}. Passwords are in TEST_USERS in app/seed.py.")
+        click.echo(
+            f"Test users ready ({created} created): user1, user2 (passwords in TEST_USERS, app/seed.py) "
+            f"and {len(DEMO_USERS)} demo users, password '{DEMO_PASSWORD}' (list in app/demo_users.py)."
+        )
