@@ -23,7 +23,7 @@ Frontend and API share one domain, so the login cookie is first-party and CORS i
    | `SECRET_KEY` | A long random string, e.g. the output of `python -c "import secrets; print(secrets.token_hex(32))"`. **Required**: the app won't start on Vercel with the dev default. |
    | `SEED_PASSWORD` | The password you'll give the seeded demo accounts. Use something other than the value in `.env.example`, because that file is public. |
    | `DATABASE_URL` | Set by the Neon integration. Leave it. |
-   | `SEED_DEMO_USERS` | Optional. `1` also creates `user1`/`user2` and the 50 demo users (password `123`) on every deploy. Their passwords are public in this repo, so only use it for a demo. |
+   | `SEED_DEMO_USERS` | Optional. `1` also creates `user1`/`user2` and the 60 demo users (password `123`) on every deploy. Their passwords are public in this repo, so only use it for a demo. |
    | `OPENAI_API_KEY` | Needed for the AI project studio and project ideas in chat. Without it those features return "needs an OpenAI API key"; everything else works. `OPENAI_MODEL` is optional. |
 
    Don't set `VITE_API_URL` (production uses same-origin `/api`) or `CORS_ORIGINS` (not needed on one domain).

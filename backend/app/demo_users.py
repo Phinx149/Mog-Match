@@ -740,3 +740,136 @@ SEED_THEMES: dict[str, dict] = {
     "liv-devops": _theme("#041b30", "shapes", shape_count=3, shape_color="#38bdf8", size=14, speed=4, brightness=60, glow=True),  # containers
     "noah-learns": _theme("#17112f", "emoji", emojis=["🐣", "🎧", "🦀"], emoji_path="wave", emoji_count=10),
 }
+
+
+# ---------------------------------------------------------------------------------------------
+# Third batch: 10 accounts that show off the lightning, tron and shapes effects (existing accounts keep their looks).
+# ---------------------------------------------------------------------------------------------
+DEMO_USERS += [
+    # ---------- 🔥 Senior Mogger
+    {
+        "tier": "Senior Mogger", "username": "stormsophie", "full_name": "Sophie Storm",
+        "avatar_url": _avatar("stormsophie"), "location": "Wellington, NZ", "education": "B.Sc. Computer Science, Victoria University",
+        "bio": "Reliability engineer who breaks things on purpose so customers never find out how. I run game days where a thunderstorm of "
+               "failures hits staging all at once, and I only relax when the pager stays silent.",
+        "favorite_ide": "GoLand", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Go", "Rust", "Backend", "DevOps", "Cloud", "Kafka", "PostgreSQL"],
+        "interests": ["Chaos Engineering", "Weather"], "experience_level": "Senior",
+        "looking_for": ["Side project"], "links": _links("stormsophie", 2),
+        "projects": [
+            _p("Thunderclap", ["Go", "Rust"], "A chaos tool that strikes random services with realistic failures, slow disks, dropped packets and clock jumps, then writes a plain report of what survived."),
+            _p("Lightning Rod", ["Go"], "Catches the first error in a cascade and points at it, so on-call engineers read one line instead of four hundred."),
+        ],
+    },
+    {
+        "tier": "Senior Mogger", "username": "gridgrace", "full_name": "Grace Grid",
+        "avatar_url": _avatar("gridgrace"), "location": "Montréal, CA", "education": "B.Sc. Computer Science, McGill University",
+        "bio": "Graphics engineer at a game studio. I make the neon look cheap and the frame time cheaper. After hours I write tiny "
+               "light-cycle games and argue that every good arcade cabinet is a grid with opinions.",
+        "favorite_ide": "CLion", "favorite_ai_agents": ["Cursor"],
+        "skills": ["Rust", "C++", "GLSL", "WebGL", "Three.js", "Systems Programming", "C"],
+        "interests": ["Game Engines", "Arcade Games"], "experience_level": "Senior",
+        "looking_for": ["Hackathon team"], "links": _links("gridgrace", 2),
+        "projects": [
+            _p("Light Cycle Arena", ["Rust", "GLSL"], "A two-player light-cycle game that runs in the browser. Netcode, glowing trails and a replay mode that draws the whole match as one picture."),
+            _p("Grid Shader Pack", ["GLSL"], "A pack of neon grid shaders that other studios drop into their own engines, with a live preview and presets named after eighties movies."),
+        ],
+    },
+    # ---------- 🧑‍💻 Mid Mogger
+    {
+        "tier": "Mid Mogger", "username": "cubecarla", "full_name": "Carla Cube",
+        "avatar_url": _avatar("cubecarla"), "location": "Barcelona, ES", "education": "B.Sc. Multimedia Engineering, UPF",
+        "bio": "Frontend dev at a furniture company. I make 3D product viewers that spin smoothly on a six-year-old phone.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Copilot"],
+        "skills": ["TypeScript", "Three.js", "React", "Frontend", "WebGL", "Go"],
+        "interests": ["3D", "Furniture"], "experience_level": "Mid-level",
+        "looking_for": ["Side project"], "links": _links("cubecarla", 1),
+        "projects": [_p("Cube Configurator", ["TypeScript", "Go"], "Lets shoppers rotate a bookshelf, swap its wood and see it in their room before they buy.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "torustom", "full_name": "Tom Torus",
+        "avatar_url": _avatar("torustom"), "location": "Portland, OR", "education": "B.S. Information Systems, Portland State",
+        "bio": "Backend dev for a donut chain with forty shops. I keep the till, the fryer timers and the glaze inventory in sync.",
+        "favorite_ide": "PyCharm", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["Python", "SQL", "Backend", "PostgreSQL", "Go"],
+        "interests": ["Donuts", "Inventory"], "experience_level": "Mid-level",
+        "looking_for": ["Mentor", "Side project"], "links": _links("torustom", 1),
+        "projects": [_p("Glaze Ledger", ["Python", "Go"], "Counts every donut sold per shop and predicts tomorrow's dough, so nobody sells out of the maple bar by nine.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "tronteo", "full_name": "Teo Trace",
+        "avatar_url": _avatar("tronteo"), "location": "Buenos Aires, AR", "education": "B.Sc. Systems Engineering, UTN",
+        "bio": "Network engineer who thinks in packets and wishes every cable trace glowed. I automate the boring parts of running a data center.",
+        "favorite_ide": "Vim", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Go", "Bash", "Linux", "DevOps", "Docker", "Ruby"],
+        "interests": ["Networks", "Retro Sci-Fi"], "experience_level": "Mid-level",
+        "looking_for": ["Open source"], "links": _links("tronteo", 1),
+        "projects": [_p("Packet Trails", ["Go", "Ruby"], "Draws the route a packet takes through our racks as a glowing trail, so a failing link is easy to spot.")],
+    },
+    # ---------- 🐣 Junior Mogger
+    {
+        "tier": "Junior Mogger", "username": "flashfin", "full_name": "Fin Flash",
+        "avatar_url": _avatar("flashfin"), "location": "Reykjavík, IS", "education": "Web development diploma",
+        "bio": "Junior web dev. Rare thunderstorms in Iceland, so I made my own.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["HTML", "CSS", "JavaScript"],
+        "interests": ["Web Dev", "Weather"], "experience_level": "Junior",
+        "looking_for": ["Mentor"], "links": [],
+        "projects": [_p("Storm Page", ["HTML", "CSS"], "A weather page where the sky flashes when lightning is forecast.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "cyclecallie", "full_name": "Callie Cycle",
+        "avatar_url": _avatar("cyclecallie"), "location": "Copenhagen, DK", "education": "B.Sc. Computer Science (1st year), DTU",
+        "bio": "CS student who commutes by bike and codes the rest. Learning Python with a route planner.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": ["Python", "C", "Java"],
+        "interests": ["Cycling", "Maps"], "experience_level": "Student",
+        "looking_for": ["Mentor", "Hackathon team"], "links": _links("cyclecallie", 1),
+        "projects": [_p("Bike Lane Finder", ["Python"], "Finds the route with the most bike lanes between two addresses.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "orbitorla", "full_name": "Orla Orbit",
+        "avatar_url": _avatar("orbitorla"), "location": "Galway, IE", "education": "B.Sc. Physics (final year), University of Galway",
+        "bio": "Physics student learning to code planets. Everything I write ends up orbiting something.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["Python", "Data Science", "R"],
+        "interests": ["Space", "Physics"], "experience_level": "Student",
+        "looking_for": ["Mentor"], "links": _links("orbitorla", 1),
+        "projects": [_p("Tiny Solar System", ["Python"], "Simulates six planets orbiting a star.", url=False)],
+    },
+    # ---------- 🥚 Hello World
+    {
+        "tier": "Hello World", "username": "sparkysid", "full_name": "Sid Spark",
+        "avatar_url": _avatar("sparkysid"), "location": "Mumbai, IN", "education": None,
+        "bio": "First week of learning to code.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": ["HTML"], "interests": ["Learning"], "experience_level": "Student",
+        "looking_for": ["Mentor"], "links": [], "projects": [],
+    },
+    {
+        "tier": "Hello World", "username": "wireframewes", "full_name": "Wes Wireframe",
+        "avatar_url": _avatar("wireframewes"), "location": "Denver, CO", "education": "Self-taught",
+        "bio": "Drawing boxes. Soon, coding them.", "favorite_ide": "Notepad", "favorite_ai_agents": [],
+        "skills": ["CSS"], "interests": ["Design"], "experience_level": "Student",
+        "looking_for": [], "links": [], "projects": [],
+    },
+]
+
+DEMO_THEMES.update({
+    # 🔥 Senior Mogger
+    "stormsophie": _theme("#0a1228", "lightning", lightning_color="#9ec5ff", lightning_strikes=10, lightning_forks=10, size=16,
+                          brightness=70, glow=True),  # a storm overhead
+    "gridgrace": _theme("#05121f", "tron", tron_color="#22d3ee", tron_cycles=6, tron_tail=7, tron_grid=True, size=14, speed=6,
+                        brightness=55, glow=True),
+    # 🧑‍💻 Mid Mogger
+    "cubecarla": _theme("#0e1022", "shapes", shape_kind="cube", shape_count=1, shape_color="#38bdf8", size=36, speed=3, brightness=60, glow=True),
+    "torustom": _theme("#1a0f0a", "shapes", shape_kind="torus", shape_count=3, shape_color="#fb923c", size=20, speed=5, brightness=60),  # donuts
+    "tronteo": _theme("#071a0f", "tron", tron_color="#ff7a3d", tron_cycles=1, tron_tail=10, tron_grid=False, size=18, speed=4, brightness=60),
+    # 🐣 Junior Mogger
+    "flashfin": _theme("#120a1e", "lightning", lightning_color="#ffd84a", lightning_strikes=1, lightning_forks=0, lightning_flash=False,
+                       size=12, speed=3, brightness=50),  # one clean bolt now and then
+    "cyclecallie": _theme("#0c1a1a", "tron", tron_color="#a3ff12", tron_cycles=3, tron_tail=2, size=22, speed=7, brightness=50),
+    "orbitorla": _theme("#0d0d1a", "shapes", shape_kind="sphere", shape_count=6, shape_color="#a78bfa", size=12, speed=2, brightness=55),  # six planets
+    # 🥚 Hello World
+    "sparkysid": _theme("#1a1a08", "lightning", lightning_color="#fff2a8", lightning_strikes=3, lightning_forks=3, size=10, brightness=40),
+    "wireframewes": _theme("#101820", "shapes", shape_kind="cube", shape_count=6, shape_color="#e2e8f0", size=10, speed=6, brightness=35),
+})
