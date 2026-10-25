@@ -83,6 +83,13 @@ export function logOut() {
   return request<SessionResponse>("/api/auth/logout", { method: "POST" });
 }
 
+export function changePassword(currentPassword: string, newPassword: string) {
+  return request<{ ok: boolean }>("/api/auth/password", {
+    method: "PATCH",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/health");
 }
@@ -180,6 +187,10 @@ export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
 
 export function getConversations(signal?: AbortSignal) {
   return request<{ conversations: Conversation[] }>("/api/conversations", { signal });
+}
+
+export function endConnection(id: string, action: "unmatch" | "block") {
+  return request<{ ok: boolean }>(`/api/conversations/${encodeURIComponent(id)}/${action}`, { method: "POST" });
 }
 
 export function getMessages(id: string, signal?: AbortSignal, before?: number) {

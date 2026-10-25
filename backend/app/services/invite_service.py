@@ -9,6 +9,7 @@ from ..models import Invite, Profile, Swipe
 from . import profile_service
 from .profile_service import ValidationError
 from .swipe_service import NotFoundError
+from .connection_service import blocked_ids, is_blocked, pair_filter
 
 MAX_MESSAGE_LENGTH = 280
 RESPONSES = ("accepted", "declined")
@@ -87,6 +88,20 @@ def send_invite(me: Profile, data: Any) -> dict[str, Any]:
     recipient = profile_service.get_profile(recipient_id)
     if recipient is None:
         raise NotFoundError("Profile not found.")
+    existing = Invite.query.filter(pair_filter(Invite, me.id, recipient.id)).populate_existing().with_for_update().first()
+    if is_blocked(me.id, recipient.id):
+        raise NotFoundError("Profile not found.")
+    if existing is not None and existing.unmatched_at is not None and existing.status in ("unmatched", "declined"):
+        # Reuse the conversation so its messages/plans survive. Only a new acceptance
+        # enables writing; sending a rematch request alone cannot restore access.
+        if existing.sender_id != me.id:
+            existing.sender_read_id, existing.recipient_read_id = existing.recipient_read_id, existing.sender_read_id
+        existing.sender_id, existing.recipient_id = me.id, recipient.id
+        existing.message, existing.status = message, "pending"
+        db.session.commit()
+        from .chat_service import notify
+        notify(existing)
+        return to_dict(existing)
 
     liked = Swipe.query.filter_by(swiper_id=me.id, target_id=recipient.id, action="like").first()
     if liked is None:
@@ -111,6 +126,9 @@ def get_inbox(me: Profile) -> dict[str, Any]:
     newest_first = Invite.created_at.desc()
     received = Invite.query.filter_by(recipient_id=me.id).order_by(newest_first).all()
     sent = Invite.query.filter_by(sender_id=me.id).order_by(newest_first).all()
+    hidden = blocked_ids(me.id)
+    received = [invite for invite in received if invite.sender_id not in hidden]
+    sent = [invite for invite in sent if invite.recipient_id not in hidden]
     return {
         "received": [to_dict(invite) for invite in received],
         "sent": [to_dict(invite) for invite in sent],
@@ -121,14 +139,17 @@ def get_inbox(me: Profile) -> dict[str, Any]:
 def respond_to_invite(me: Profile, invite_id: uuid.UUID, data: Any) -> dict[str, Any]:
     """Accept or decline an invite. Only its recipient can, and only once."""
     status = validate_response(data)
-    invite = db.session.get(Invite, invite_id)
+    invite = Invite.query.filter_by(id=invite_id).populate_existing().with_for_update().first()
     # Someone else's invite looks the same as a missing one, so ids can't be probed.
     if invite is None or invite.recipient_id != me.id:
+        raise NotFoundError("Invite not found.")
+    if is_blocked(invite.sender_id, invite.recipient_id):
         raise NotFoundError("Invite not found.")
     if invite.status != "pending":
         raise ConflictError(f"You already {invite.status} this invite.")
     invite.status = status
     if status == "accepted":
+        invite.unmatched_at = None
         from .team_mog import compute_team_mog
         invite.team_mog = compute_team_mog(profile_service.to_dict(invite.sender), profile_service.to_dict(invite.recipient))
     db.session.commit()
@@ -148,6 +169,9 @@ def cancel_invite(me: Profile, invite_id: uuid.UUID) -> None:
     if invite.status != "pending":
         raise ConflictError(f"They already {invite.status} it, so it can't be cancelled.")
     from .chat_service import notify
-    db.session.delete(invite)
+    if invite.unmatched_at is not None:
+        invite.status = "unmatched"
+    else:
+        db.session.delete(invite)
     db.session.commit()
     notify(invite)

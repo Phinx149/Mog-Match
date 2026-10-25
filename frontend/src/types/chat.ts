@@ -11,6 +11,9 @@ export interface ChatMessage {
 
 export interface Conversation {
   id: string;
+  status: "accepted" | "unmatched" | "pending" | "declined";
+  can_message: boolean;
+  rematch_requested_by: string | null;
   person: InvitePerson;
   opening_message: string | null;
   last_message: ChatMessage | null;

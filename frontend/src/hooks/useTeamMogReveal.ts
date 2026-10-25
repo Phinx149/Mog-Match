@@ -19,5 +19,6 @@ export function useTeamMogReveal(userId?: string) {
   }, [userId]);
 
   const dismiss = useCallback(() => setQueue((current) => current.slice(1)), []);
-  return { match: queue[0] ?? null, celebrate, dismiss };
+  const forget = useCallback((id: string) => setQueue((current) => current.filter((invite) => invite.id !== id)), []);
+  return { match: queue[0] ?? null, celebrate, dismiss, forget };
 }

@@ -22,8 +22,8 @@ class StudioReply(BaseModel):
     proposal: idea_service.DesignDocument | None
 
 
-def selected_idea(me, invite_id, idea_id):
-    invite = conversation(me, invite_id)
+def selected_idea(me, invite_id, idea_id, *, writable=False):
+    invite = conversation(me, invite_id, writable=writable)
     try:
         idea_id = uuid.UUID(str(idea_id))
     except (ValueError, TypeError):
@@ -85,7 +85,7 @@ def request_reply(context):
 
 
 def ask(me, invite_id, idea_id, data):
-    invite, idea = selected_idea(me, invite_id, idea_id)
+    invite, idea = selected_idea(me, invite_id, idea_id, writable=True)
     if not isinstance(data, dict) or set(data) - {"prompt", "mode", "client_token"}:
         raise ValidationError({}, "Send a question or revision request.")
     prompt, mode = data.get("prompt"), data.get("mode")
@@ -124,8 +124,10 @@ def ask(me, invite_id, idea_id, data):
                            "question": turn.prompt, "answer": turn.answer})
         context.update(selected_document=idea.content, studio_history=list(reversed(recent)),
                        mode=mode, prompt=prompt.strip(), asked_by=me.username)
+        db.session.commit()
         with idea_service.provider_errors():
             reply = request_reply(context)
+        invite, idea = selected_idea(me, invite_id, idea_id, writable=True)
         if mode == "revise" and reply.proposal is None:
             abort(502, description="The AI didn't provide a revision preview. Please try again.")
         # Asking questions can never produce an applicable revision, even if the model drifts.
@@ -149,7 +151,7 @@ def ask(me, invite_id, idea_id, data):
 
 
 def apply(me, invite_id, idea_id, turn_id):
-    invite, idea = selected_idea(me, invite_id, idea_id)
+    invite, idea = selected_idea(me, invite_id, idea_id, writable=True)
     turn = db.session.get(StudioTurn, turn_id)
     if turn is None or turn.idea_id != idea.id:
         abort(404, description="Revision preview not found.")

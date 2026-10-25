@@ -17,11 +17,13 @@ class Invite(TimestampMixin, db.Model):
         db.Uuid, db.ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True
     )
     message = db.Column(db.String(280), nullable=True)
-    # "pending" | "accepted" | "declined", validated in invite_service
+    # "pending" | "accepted" | "declined" | "unmatched", validated in invite_service
     status = db.Column(db.String(10), nullable=False, default="pending")
     sender_read_id = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     recipient_read_id = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     team_mog = db.Column(db.JSON, nullable=True)
+    # Retained through a rematch request so the old conversation stays readable.
+    unmatched_at = db.Column(db.DateTime(timezone=True), nullable=True)
     messages = db.relationship("ChatMessage", back_populates="invite", cascade="all, delete-orphan")
     ideas = db.relationship("ProjectIdea", back_populates="invite", cascade="all, delete-orphan")
 

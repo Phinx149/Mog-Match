@@ -61,6 +61,8 @@ class Profile(TimestampMixin, db.Model):
     messages_sent = db.relationship("ChatMessage", back_populates="sender", cascade="all, delete-orphan")
     ideas_generated = db.relationship("ProjectIdea", back_populates="author", cascade="all, delete-orphan")
     studio_turns = db.relationship("StudioTurn", back_populates="author", cascade="all, delete-orphan")
+    blocks_made = db.relationship("UserBlock", foreign_keys="UserBlock.blocker_id", cascade="all, delete-orphan")
+    blocks_received = db.relationship("UserBlock", foreign_keys="UserBlock.blocked_id", cascade="all, delete-orphan")
 
 
 class ProfileLink(db.Model):

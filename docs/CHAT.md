@@ -5,6 +5,32 @@ Send a **Match request** from Match. The recipient opens Inbox → Requests and 
 Inbox → Messages or the **Open chat** button on their match card. Declining or cancelling
 a pending request does not open a conversation. Existing accepted requests work immediately.
 
+## Unmatch, rematch, and block
+
+Each active conversation has a three-dot **Match options** control in the inbox list and
+chat header. These actions are available only to participants in an accepted match.
+
+- **Unmatch** keeps both users' message history visible, but disables new messages and
+  Project studio writes. Both users' likes are cleared. Either person can choose
+  **Request rematch** in the old chat; only the other participant can accept it. A request
+  alone does not restore messaging. Declining or cancelling a rematch preserves history.
+- **Block user** hides the conversation and requests from both users without deleting
+  messages, plans, or AI discussions. Both users are excluded from each other's discovery
+  and likes, and cannot send new invites or access the old conversation by URL. There is
+  no unblock interface in this iteration.
+
+Changes update both participants over Socket.IO and persist across reconnects. The backend
+checks the connection on every send, including existing sockets, and on all studio writes.
+An AI response that finishes after an unmatch or block is discarded rather than shared.
+
+Apply migration `8d2e4f6a901b` with `flask --app run db upgrade` before running this version
+against an existing database. It adds `invites.unmatched_at` and the `user_blocks` table.
+
+API: `POST /api/conversations/<id>/unmatch` and `POST /api/conversations/<id>/block`.
+Rematches reuse `POST /api/invites` followed by the recipient's normal accept/decline action,
+preserving the original conversation id and read cursors. Conversation JSON includes
+`status`, `can_message`, and `rematch_requested_by`.
+
 ## Run locally
 
 After pulling the feature, from `backend/`:
