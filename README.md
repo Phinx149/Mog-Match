@@ -6,7 +6,9 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 ## Current milestone
 
-✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile with photo upload · ✅ Discover page with search + filters · ✅ Like/Pass (saved) · ✅ Mog Score · ✅ Mog Match (everyone you liked, ranked by similarity) · ✅ Invites + Inbox · ✅ Username + password login
+✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile with photo upload · ✅ Discover page with search + filters · ✅ Like/Pass (saved) · ✅ Mog Score · ✅ Mog Match (everyone you liked, ranked by similarity) · ✅ Match requests + Inbox · ✅ Username + password login · ✅ WebSocket chat · ✅ Shared AI project plans
+
+Chat and Project studio setup, API/events, and browser-test instructions: [docs/CHAT.md](docs/CHAT.md).
 
 ⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, sign-up, voice, GitHub login.
 

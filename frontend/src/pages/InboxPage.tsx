@@ -1,230 +1,108 @@
-import { Check, RefreshCw, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
+import { Inbox, MessageCircle, RefreshCw, Search, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { io, type Socket } from "socket.io-client";
+import ChatWorkspace from "../components/inbox/ChatWorkspace";
+import MatchRequests from "../components/inbox/MatchRequests";
 import Navbar from "../components/layout/Navbar";
 import Avatar from "../components/profiles/Avatar";
-import { cancelInvite, getInbox, respondToInvite } from "../services/api";
-import type { InboxResponse, Invite, InviteStatus } from "../types/invite";
+import { useAuth } from "../hooks/useAuth";
+import { API_URL, getConversations, getInbox, INVITES_CHANGED_EVENT } from "../services/api";
+import type { Conversation } from "../types/chat";
+import type { InboxResponse } from "../types/invite";
 
-type Tab = "received" | "sent";
-
-const POLL_MS = 5000;
-
-const STATUS_STYLES: Record<InviteStatus, string> = {
-  pending: "border-amber-400/40 bg-amber-400/10 text-amber-200",
-  accepted: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-  declined: "border-line bg-surface-raised text-muted",
-};
-
-/** Invites people sent me (accept/decline) and invites I sent (cancel while pending). */
 export default function InboxPage() {
+  const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const activeId = params.get("chat");
+  const [tab, setTab] = useState<"messages" | "requests">("messages");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [inbox, setInbox] = useState<InboxResponse | null>(null);
-  const [tab, setTab] = useState<Tab>("received");
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const requestVersion = useRef(0);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    getInbox(controller.signal)
-      .then(setInbox)
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "Failed to load your inbox.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [reloadKey]);
-
-  const refresh = () => setReloadKey((key) => key + 1);
-
-  // New invites can arrive while this page is open: re-check quietly every few seconds and when
-  // you come back to the tab. (No spinner, so the list doesn't flicker.)
-  useEffect(() => {
-    const quietReload = () => {
-      if (document.visibilityState === "visible") getInbox().then(setInbox).catch(() => {});
-    };
-    const timer = window.setInterval(quietReload, POLL_MS);
-    window.addEventListener("focus", quietReload);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", quietReload);
-    };
+  const refresh = useCallback(async () => {
+    const version = ++requestVersion.current;
+    try {
+      const [threads, requests] = await Promise.all([getConversations(), getInbox()]);
+      if (version !== requestVersion.current) return;
+      setConversations(threads.conversations); setInbox(requests); setError("");
+      window.dispatchEvent(new Event(INVITES_CHANGED_EVENT));
+    } catch (err) {
+      if (version === requestVersion.current) setError(err instanceof Error ? err.message : "Couldn't load your inbox.");
+    } finally { if (version === requestVersion.current) setLoading(false); }
   }, []);
 
-  const respond = (invite: Invite, status: "accepted" | "declined") => {
-    setBusyId(invite.id);
-    setNotice(null);
-    respondToInvite(invite.id, status)
-      .then((updated) => {
-        setInbox((current) =>
-          current && {
-            ...current,
-            received: current.received.map((i) => (i.id === updated.id ? updated : i)),
-            pending_count: current.pending_count - 1,
-          },
-        );
-        setNotice(
-          status === "accepted"
-            ? `You and ${invite.sender.full_name} are connected.`
-            : `Declined ${invite.sender.full_name}'s invite.`,
-        );
-      })
-      .catch((err: unknown) => setNotice(err instanceof Error ? err.message : "Couldn't save, try again."))
-      .finally(() => setBusyId(null));
-  };
+  useEffect(() => {
+    if (!user) return;
+    const client = io(API_URL, { withCredentials: true, transports: ["websocket", "polling"] });
+    setSocket(client);
+    const onConnect = () => { setConnected(true); void refresh(); };
+    const offline = () => setConnected(false);
+    const changed = () => { void refresh(); };
+    client.on("connect", onConnect);
+    client.on("disconnect", offline);
+    client.on("connect_error", offline);
+    client.on("inbox:updated", changed);
+    client.on("chat:message", changed);
+    client.on("chat:read", changed);
+    window.addEventListener("focus", changed);
+    void refresh();
+    return () => {
+      ++requestVersion.current; client.disconnect(); window.removeEventListener("focus", changed);
+    };
+  }, [user?.id, refresh]);
 
-  const cancel = (invite: Invite) => {
-    setBusyId(invite.id);
-    setNotice(null);
-    cancelInvite(invite.id)
-      .then(() => {
-        setInbox((current) => current && { ...current, sent: current.sent.filter((i) => i.id !== invite.id) });
-        setNotice(`Cancelled your invite to ${invite.recipient.full_name}.`);
-      })
-      .catch((err: unknown) => setNotice(err instanceof Error ? err.message : "Couldn't cancel, try again."))
-      .finally(() => setBusyId(null));
-  };
+  const open = (id: string) => { setTab("messages"); setParams({ chat: id }); void refresh(); };
+  const active = conversations.find((item) => item.id === activeId);
+  const filtered = conversations.filter((item) => `${item.person.full_name} ${item.person.username}`.toLowerCase().includes(query.toLowerCase()));
+  const unread = conversations.reduce((total, item) => total + item.unread_count, 0);
+  const read = (id: string) => setConversations((old) => old.map((item) => item.id === id ? { ...item, unread_count: 0 } : item));
 
-  const list = inbox ? inbox[tab] : [];
-
-  return (
-    <>
-      <Navbar>
-        <h1 className="truncate text-sm font-semibold text-slate-200">Inbox</h1>
-        <button
-          type="button"
-          onClick={refresh}
-          title="Check for new invites"
-          aria-label="Refresh"
-          className="ml-auto shrink-0 rounded-full border border-line bg-surface p-2 text-muted transition-colors hover:border-cyan-500/50 hover:text-cyan-200"
-        >
-          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
-        </button>
-      </Navbar>
-
-      <main className="mx-auto max-w-3xl px-4 py-6">
-        <div role="tablist" className="mb-5 inline-flex rounded-xl border border-line bg-surface p-1">
-          {(["received", "sent"] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                tab === key ? "bg-violet-600 text-white" : "text-muted hover:text-slate-200"
-              }`}
-            >
-              {key === "received" ? "Received" : "Sent"}
-              {key === "received" && inbox && inbox.pending_count > 0 && (
-                <span className="ml-2 rounded-full bg-rose-500 px-1.5 font-mono text-xs text-white">
-                  {inbox.pending_count}
-                </span>
-              )}
-            </button>
-          ))}
+  return <>
+    <Navbar><h1 className="truncate text-sm font-semibold">Inbox</h1>
+      <button onClick={() => void refresh()} aria-label="Refresh inbox" className="ml-auto rounded-lg p-1.5 text-muted hover:text-cyan-300"><RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} /></button>
+    </Navbar>
+    <main className="flex min-h-0 w-full flex-1 flex-col p-2">
+      {error && <p role="alert" className="mb-2 shrink-0 rounded-xl border border-rose-500/30 bg-rose-500/5 p-2 text-sm text-rose-300">{error} <button onClick={() => void refresh()} className="underline">Retry</button></p>}
+      <div className={`grid min-h-0 flex-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl shadow-black/20 lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-1 ${tab === "requests" ? "grid-rows-[auto_minmax(0,1fr)]" : "grid-rows-1"}`}>
+        <aside aria-label="Inbox navigation" className={`min-h-0 flex-col border-line lg:flex lg:border-r ${activeId && tab === "messages" ? "hidden" : "flex"}`}>
+          <div className="border-b border-line p-4">
+            <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Inbox</h2><span title={connected ? "Live connection" : "Connecting"} className={`size-2 rounded-full ${connected ? "bg-emerald-400 shadow-[0_0_8px_#34d39960]" : "bg-amber-400"}`} /></div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-canvas p-1">
+              <button onClick={() => setTab("messages")} aria-pressed={tab === "messages"} className={`rounded-lg px-2 py-2 text-xs font-medium ${tab === "messages" ? "bg-violet-600 text-white" : "text-muted"}`}>Messages {unread > 0 && <span className="ml-1">({unread})</span>}</button>
+              <button onClick={() => setTab("requests")} aria-pressed={tab === "requests"} className={`rounded-lg px-2 py-2 text-xs font-medium ${tab === "requests" ? "bg-violet-600 text-white" : "text-muted"}`}>Requests {inbox && inbox.pending_count > 0 && <span className="ml-1 rounded-full bg-fuchsia-500 px-1.5">{inbox.pending_count}</span>}</button>
+            </div>
+          </div>
+          {tab === "messages" ? <>
+            <div className="p-3"><label className="flex items-center gap-2 rounded-xl border border-line bg-canvas px-3 py-2"><Search className="size-4 text-muted" /><input aria-label="Search conversations" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a conversation" className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted" /></label></div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+              {loading && <p className="p-4 text-sm text-muted">Loading conversations…</p>}
+              {!loading && !filtered.length && <div className="p-5 text-center text-sm text-muted"><MessageCircle className="mx-auto mb-3 size-7 text-violet-400" />{query ? "No conversations found." : "Accept a match request to start a conversation."}<button onClick={() => setTab("requests")} className="mt-3 block w-full text-violet-300">View requests</button></div>}
+              {filtered.map((item) => <button key={item.id} onClick={() => open(item.id)} aria-pressed={activeId === item.id}
+                className={`mb-1 flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors ${activeId === item.id ? "bg-violet-500/15 ring-1 ring-inset ring-violet-400/20" : "hover:bg-surface-raised"}`}>
+                <Avatar name={item.person.full_name} url={item.person.avatar_url} />
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.person.full_name}</p><p className={`mt-1 truncate text-xs ${item.unread_count ? "text-slate-200" : "text-muted"}`}>{item.last_message?.body ?? "You matched! Say hello."}</p></div>
+                {item.unread_count > 0 && <span className="rounded-full bg-fuchsia-500 px-1.5 text-xs text-white">{item.unread_count}</span>}
+              </button>)}
+            </div>
+          </> : <div className="hidden space-y-3 p-5 text-sm text-muted lg:block"><Inbox className="size-8 text-violet-300" /><p>A little hello could be the start of your next big build.</p><Link to="/match" className="inline-block text-cyan-300 hover:underline">Find more collaborators →</Link></div>}
+        </aside>
+        <div className={`min-h-0 min-w-0 ${tab === "messages" && !activeId ? "hidden lg:block" : "block"} ${tab === "requests" ? "overflow-y-auto" : ""}`}>
+          {tab === "requests" && inbox ? <MatchRequests inbox={inbox} onChange={() => void refresh()} onOpen={open} /> :
+            active && user ? <ChatWorkspace key={`${user.id}:${active.id}`} conversation={active} userId={user.id} socket={socket} connected={connected} onBack={() => setParams({})} onRead={read} /> :
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+                <div className="mb-2 rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-600/20 to-cyan-500/10 p-6"><Sparkles className="size-10 text-violet-300" /></div>
+                <h2 className="text-xl font-semibold">A match is just the beginning.</h2><p className="max-w-sm text-sm leading-relaxed text-muted">Pick a conversation, trade a few ideas, and turn your shared skills into your next project.</p>
+                <button onClick={() => { setParams({}); setTab("requests"); }} className="mt-3 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold hover:bg-violet-500">View match requests</button>
+                {activeId && !loading && <p className="text-xs text-muted">If this conversation is new, refresh to load it. Only accepted requests can open a chat.</p>}
+              </div>}
         </div>
-
-        {notice && <p className="mb-4 text-sm text-violet-200">{notice}</p>}
-
-        {error ? (
-          <ErrorState message={error} onRetry={refresh} />
-        ) : loading && !inbox ? (
-          <LoadingState label="Checking your inbox…" />
-        ) : list.length === 0 ? (
-          <EmptyState title={tab === "received" ? "No invites yet" : "You haven't invited anyone"}>
-            {tab === "received" ? (
-              "When someone invites you to connect, it shows up here."
-            ) : (
-              <>
-                Open{" "}
-                <Link to="/match" className="text-cyan-300 hover:underline">
-                  Match
-                </Link>{" "}
-                and press Invite on someone you liked.
-              </>
-            )}
-          </EmptyState>
-        ) : (
-          <ul className={`flex flex-col gap-3 transition-opacity ${loading ? "opacity-60" : ""}`}>
-            {list.map((invite) => {
-              const person = tab === "received" ? invite.sender : invite.recipient;
-              const busy = busyId === invite.id;
-              return (
-                <li key={invite.id} className="rounded-2xl border border-line bg-surface p-4">
-                  <div className="flex items-center gap-4">
-                    <Link to={`/profile/${person.id}`} className="group flex min-w-0 flex-1 items-center gap-4">
-                      <Avatar name={person.full_name} url={person.avatar_url} />
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold group-hover:text-violet-300">{person.full_name}</p>
-                        <p className="truncate font-mono text-xs text-cyan-300">@{person.username}</p>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {new Date(invite.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </Link>
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs capitalize ${STATUS_STYLES[invite.status]}`}
-                    >
-                      {invite.status}
-                    </span>
-                  </div>
-
-                  {invite.message && (
-                    <p className="mt-3 rounded-xl bg-surface-raised px-4 py-3 text-sm text-slate-200">
-                      “{invite.message}”
-                    </p>
-                  )}
-
-                  {invite.status === "pending" && (
-                    <div className="mt-3 flex justify-end gap-2">
-                      {tab === "received" ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => respond(invite, "declined")}
-                            className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm text-muted transition-colors hover:text-slate-200 disabled:opacity-60"
-                          >
-                            <X className="size-4" aria-hidden />
-                            Decline
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => respond(invite, "accepted")}
-                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
-                          >
-                            <Check className="size-4" aria-hidden />
-                            Accept
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => cancel(invite)}
-                          className="rounded-lg border border-line px-4 py-2 text-sm text-muted transition-colors hover:text-slate-200 disabled:opacity-60"
-                        >
-                          Cancel invite
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </main>
-    </>
-  );
+      </div>
+    </main>
+  </>;
 }

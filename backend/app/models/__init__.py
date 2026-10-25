@@ -1,7 +1,8 @@
 from .invite import Invite
+from .chat import ChatMessage, ProjectIdea, StudioTurn
 from .profile import Profile, ProfileLink
 from .project import Project
 from .swipe import Swipe
 from .user import User
 
-__all__ = ["User", "Profile", "ProfileLink", "Project", "Swipe", "Invite"]
+__all__ = ["User", "Profile", "ProfileLink", "Project", "Swipe", "Invite", "ChatMessage", "ProjectIdea", "StudioTurn"]

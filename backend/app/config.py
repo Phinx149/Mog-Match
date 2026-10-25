@@ -36,3 +36,5 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True  # page JavaScript can't read the cookie
     # Every seeded user gets this password (local demo data only).
     SEED_PASSWORD = os.getenv("SEED_PASSWORD", "mogmatch-demo")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")

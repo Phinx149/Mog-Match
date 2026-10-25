@@ -11,8 +11,9 @@ import type {
 } from "../types/profile";
 import type { SessionResponse } from "../types/auth";
 import type { InboxResponse, Invite } from "../types/invite";
+import type { Conversation, ChatMessage, ProjectIdea, StudioTurn } from "../types/chat";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
@@ -157,4 +158,48 @@ export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
     method: "PATCH",
     body: photo ? body : JSON.stringify(update),
   });
+}
+
+export function getConversations(signal?: AbortSignal) {
+  return request<{ conversations: Conversation[] }>("/api/conversations", { signal });
+}
+
+export function getMessages(id: string, signal?: AbortSignal, before?: number) {
+  return request<{ messages: ChatMessage[]; has_more: boolean }>(
+    `/api/conversations/${encodeURIComponent(id)}/messages${before ? `?before=${before}` : ""}`, { signal });
+}
+
+export function markConversationRead(id: string, messageId: number) {
+  return request<{ ok: boolean }>(`/api/conversations/${encodeURIComponent(id)}/read`, {
+    method: "POST", body: JSON.stringify({ message_id: messageId }),
+  });
+}
+
+export function getProjectIdeas(id: string, signal?: AbortSignal) {
+  return request<{ ideas: ProjectIdea[] }>(`/api/conversations/${encodeURIComponent(id)}/ideas`, { signal });
+}
+
+export function generateProjectIdea(id: string, brief: string, signal?: AbortSignal) {
+  return request<ProjectIdea>(`/api/conversations/${encodeURIComponent(id)}/ideas`, {
+    method: "POST", body: JSON.stringify({ brief }), signal,
+  });
+}
+
+function studioPath(conversationId: string, ideaId: string) {
+  return `/api/conversations/${encodeURIComponent(conversationId)}/ideas/${encodeURIComponent(ideaId)}/assistant`;
+}
+
+export function getStudioHistory(conversationId: string, ideaId: string, signal?: AbortSignal, before?: number) {
+  return request<{ turns: StudioTurn[]; has_more: boolean }>(
+    `${studioPath(conversationId, ideaId)}${before ? `?before=${before}` : ""}`, { signal });
+}
+
+export function askStudio(conversationId: string, ideaId: string, prompt: string, mode: "ask" | "revise", clientToken: string) {
+  return request<StudioTurn>(studioPath(conversationId, ideaId), {
+    method: "POST", body: JSON.stringify({ prompt, mode, client_token: clientToken }),
+  });
+}
+
+export function applyStudioRevision(conversationId: string, ideaId: string, turnId: number) {
+  return request<{ idea: ProjectIdea; turn: StudioTurn }>(`${studioPath(conversationId, ideaId)}/${turnId}/apply`, { method: "POST" });
 }

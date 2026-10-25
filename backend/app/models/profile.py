@@ -53,6 +53,9 @@ class Profile(TimestampMixin, db.Model):
     invites_received = db.relationship(
         "Invite", foreign_keys="Invite.recipient_id", back_populates="recipient", cascade="all, delete-orphan"
     )
+    messages_sent = db.relationship("ChatMessage", back_populates="sender", cascade="all, delete-orphan")
+    ideas_generated = db.relationship("ProjectIdea", back_populates="author", cascade="all, delete-orphan")
+    studio_turns = db.relationship("StudioTurn", back_populates="author", cascade="all, delete-orphan")
 
 
 class ProfileLink(db.Model):
