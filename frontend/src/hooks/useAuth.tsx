@@ -9,6 +9,7 @@ interface AuthState {
   checking: boolean;
   logIn: (username: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
+  updateUser: (user: SessionUser) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -28,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // must notice, or it would show one name while the API answers as another. Re-check on focus.
     const recheck = () => {
       getSession()
-        .then((session) => setUser((current) => (current?.id === session.user?.id ? current : session.user)))
+        .then((session) => setUser(session.user))
         .catch(() => {});
     };
     // Any API call that comes back 401 means the session ended (e.g. after `flask seed --reset`).
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, checking, logIn, logOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, checking, logIn, logOut, updateUser: setUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

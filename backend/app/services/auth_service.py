@@ -64,6 +64,26 @@ def log_out() -> None:
     session.clear()
 
 
+def change_password(profile: Profile, data: Any) -> None:
+    if not isinstance(data, dict):
+        raise ValidationError({}, "Request body must be a JSON object.")
+    errors = {key: "Unknown field." for key in data if key not in ("current_password", "new_password")}
+    current, new = data.get("current_password"), data.get("new_password")
+    if not isinstance(current, str) or not current:
+        errors["current_password"] = "Enter your current password."
+    elif not profile.user.password_hash or not check_password_hash(profile.user.password_hash, current):
+        errors["current_password"] = "Current password is incorrect."
+    if not isinstance(new, str) or not 8 <= len(new) <= 128 or not new.strip():
+        errors["new_password"] = "Use 8–128 characters."
+    elif new == current:
+        errors["new_password"] = "Choose a different password."
+    if errors:
+        raise ValidationError(errors, "Couldn't change your password.")
+    # Use a fresh salted hash; do not cache real account passwords.
+    profile.user.password_hash = generate_password_hash(new)
+    db.session.commit()
+
+
 def current_profile() -> Profile | None:
     """The logged-in user's profile, or None when nobody is logged in."""
     raw_id = session.get(SESSION_KEY)

@@ -75,6 +75,13 @@ export function logOut() {
   return request<SessionResponse>("/api/auth/logout", { method: "POST" });
 }
 
+export function changePassword(currentPassword: string, newPassword: string) {
+  return request<{ ok: boolean }>("/api/auth/password", {
+    method: "PATCH",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/health");
 }

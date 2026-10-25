@@ -28,3 +28,13 @@ def log_out():
 def get_session():
     """Who am I? `{"user": null}` when logged out (not an error: the frontend shows the login page)."""
     return jsonify(auth_service.session_dict(auth_service.current_profile()))
+
+
+@bp.patch("/password")
+def change_password():
+    profile = auth_service.current_profile_or_401()
+    try:
+        auth_service.change_password(profile, request.get_json(silent=True))
+    except ValidationError as error:
+        return jsonify({"error": {"message": error.message, "fields": error.fields}}), 400
+    return jsonify({"ok": True})
