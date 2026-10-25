@@ -294,7 +294,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 Production is Vercel + Postgres; the full step-by-step guide, including how to run migrations against production, is in [`docs/DEPLOY.md`](docs/DEPLOY.md). In short:
 1. Import the repo into Vercel with the repo root as the root directory (`vercel.json` defines both services).
 2. Connect a Neon Postgres database (sets `DATABASE_URL`) and set `SECRET_KEY` and `SEED_PASSWORD`.
-3. From your laptop: `DATABASE_URL="<production url>" flask db upgrade`, then the same with `flask seed`.
+3. Nothing to run by hand: every deploy runs `backend/vercel_build.py` (migrations + `flask seed`, plus the demo users if `SEED_DEMO_USERS=1`).
 4. Deploy, then open `/api/health`.
 
 Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL` in `backend/.env`.
