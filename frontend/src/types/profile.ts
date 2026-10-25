@@ -39,6 +39,116 @@ export interface MogScore {
 export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior Mogger", "Gigamogger"] as const;
 export type MogTier = (typeof MOG_TIERS)[number];
 
+/** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow"] as const;
+export type ThemeEffect = (typeof THEME_EFFECTS)[number];
+
+/** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
+export const RAIN_SYMBOL_SETS = ["katakana", "binary", "code", "chaos"] as const;
+export type RainSymbols = (typeof RAIN_SYMBOL_SETS)[number];
+
+/** How the floating emoji travel. Keep in sync with EMOJI_PATHS in the backend. */
+export const EMOJI_PATHS = ["straight", "wave", "bounce"] as const;
+export type EmojiPath = (typeof EMOJI_PATHS)[number];
+
+/** How the scrolling slogans are drawn: filled letters, outlined letters, or rows taking turns. Keep in sync with SLOGAN_STYLES in the backend. */
+export const SLOGAN_STYLES = ["solid", "outline", "mixed"] as const;
+export type SloganStyle = (typeof SLOGAN_STYLES)[number];
+
+/** Which way the market tends to go. Keep in sync with CHART_MOODS in the backend. */
+export const CHART_MOODS = ["bull", "bear", "choppy"] as const;
+export type ChartMood = (typeof CHART_MOODS)[number];
+
+/** Candle colors. Keep in sync with CHART_PALETTES in the backend. */
+export const CHART_PALETTES = ["classic", "swapped", "neon", "mono"] as const;
+export type ChartPalette = (typeof CHART_PALETTES)[number];
+
+/** What falls in the money rain: green bills, gold and silver coins, or both. Keep in sync with MONEY_KINDS in the backend. */
+export const MONEY_KINDS = ["bills", "coins", "mixed"] as const;
+export type MoneyKind = (typeof MONEY_KINDS)[number];
+
+/** What falls in the snowfall: soft round flakes, six-armed crystals, or both. Keep in sync with SNOW_KINDS in the backend. */
+export const SNOW_KINDS = ["dots", "crystals", "mixed"] as const;
+export type SnowKind = (typeof SNOW_KINDS)[number];
+
+/** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
+export interface EffectOptions {
+  /** How opaque the effect is, 10-100 (%). */
+  brightness: number;
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money) or flake size (snow), 10-48. */
+  size: number;
+  /** How fast it moves, 1-10. */
+  speed: number;
+  /** Neon halo (and bold letters for the rain). */
+  glow: boolean;
+  /** How many bouncing logos (DVD only), 1-10. */
+  count: number;
+  /** Whether a logo takes a new color each time it bounces (DVD only). */
+  color_change: boolean;
+  /** The logo's color as `#rrggbb` when it doesn't change color (DVD only). */
+  color: string;
+  /** The rain's color as `#rrggbb` (matrix only). */
+  rain_color: string;
+  /** Every column of the rain gets its own hue, drifting over time, instead of `rain_color` (matrix only). */
+  rain_rainbow: boolean;
+  /** Which characters fall (matrix only). */
+  rain_symbols: RainSymbols;
+  /** The emoji that float around, 1-12 (emoji only). */
+  emojis: string[];
+  /** How many emoji float around at once, 3-60 (emoji only). */
+  emoji_count: number;
+  /** Direction of travel in degrees, 0-359: 0 is right and 90 is down (emoji only). */
+  emoji_angle: number;
+  /** Straight line, a wobbling wave, or bouncing off the edges (emoji only). */
+  emoji_path: EmojiPath;
+  /** How fast each emoji turns, -10 to 10: negative is counter-clockwise, 0 is no spin (emoji only). */
+  emoji_spin: number;
+  /** The slogans that scroll by, 1-8 of up to 40 characters (slogans only). */
+  slogans: string[];
+  /** The letters' color as `#rrggbb` (slogans only). */
+  slogan_color: string;
+  /** Filled letters, outlined letters, or rows taking turns (slogans only). */
+  slogan_style: SloganStyle;
+  /** How far the rows lean, -45 to 45 degrees: negative leans up to the right (slogans only). */
+  slogan_tilt: number;
+  /** Every other row scrolls the opposite way (slogans only). */
+  slogan_alternate: boolean;
+  /** How wildly the price swings, 1-10 (market only). */
+  chart_volatility: number;
+  /** Which way the market tends to go (market only). */
+  chart_mood: ChartMood;
+  /** Which colors the candles are (market only). */
+  chart_palette: ChartPalette;
+  /** The made-up stock's symbol, 1-8 letters or numbers, uppercase (market only). */
+  chart_ticker: string;
+  /** Whether the ticker, price and price tag are drawn (market only). */
+  chart_label: boolean;
+  /** Bills, coins or both (money only). */
+  money_kind: MoneyKind;
+  /** How many bills or coins are in the air at once, 5-80 (money only). */
+  money_count: number;
+  /** How hard the wind blows them around, 0-10: 0 is still air, so they just fall (money only). */
+  money_wind: number;
+  /** How heavy the coins are, 1-10: heavier ones fall faster, turn over slower and are blown about less (money only, and only coins). */
+  money_weight: number;
+  /** Soft flakes, crystals or both (snow only). */
+  snow_kind: SnowKind;
+  /** How many flakes are in the air at once, 20-200 (snow only). */
+  snow_count: number;
+  /** Which way the wind blows the flakes, -10 to 10: negative is left, positive is right, 0 is calm (snow only). */
+  snow_wind: number;
+}
+
+/** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */
+export interface ProfileTheme {
+  /** Card background as `#rrggbb`. */
+  background: string | null;
+  /** Animation drawn behind the card's content. */
+  effect: ThemeEffect | null;
+  /** Tuning for `effect`; kept even while the effect is off. */
+  effect_options: EffectOptions;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -54,6 +164,7 @@ export interface Profile {
   interests: string[];
   experience_level: string | null;
   looking_for: string[];
+  theme: ProfileTheme;
   links: ProfileLink[];
   projects: Project[];
   created_at: string;
@@ -116,6 +227,8 @@ export interface ProfileUpdate {
   interests?: string[];
   experience_level?: string | null;
   looking_for?: string[];
+  /** Replaces the whole theme; send `DEFAULT_THEME` (utils/theme.ts) to go back to the default. */
+  theme?: ProfileTheme;
   links?: Omit<ProfileLink, "id">[];
   projects?: Omit<Project, "id">[];
 }

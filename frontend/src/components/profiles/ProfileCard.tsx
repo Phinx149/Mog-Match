@@ -4,6 +4,7 @@ import type { Profile, SwipeDecision } from "../../types/profile";
 import MogBadge from "../mog/MogBadge";
 import Avatar from "./Avatar";
 import SkillBadge from "./SkillBadge";
+import ThemeScope from "./ThemeScope";
 
 const MAX_SKILLS = 6;
 
@@ -23,7 +24,11 @@ export default function ProfileCard({ profile, activeSkills, activeLookingFor, o
     <article className="flex items-stretch gap-3 sm:gap-4">
       <DecisionButton kind="pass" onClick={() => onDecide(profile, "pass")} name={profile.full_name} />
 
-      <div className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-500/40">
+      {/* Only the card body is themed; the Like/Pass buttons on either side keep the app's look. */}
+      <ThemeScope
+        theme={profile.theme}
+        className="min-w-0 flex-1 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-500/40"
+      >
         <Link to={`/profile/${profile.id}`} className="group flex items-center gap-4">
           <Avatar name={profile.full_name} url={profile.avatar_url} size="lg" />
           <div className="min-w-0 flex-1">
@@ -80,7 +85,7 @@ export default function ProfileCard({ profile, activeSkills, activeLookingFor, o
             )}
           </div>
         )}
-      </div>
+      </ThemeScope>
 
       <DecisionButton kind="like" onClick={() => onDecide(profile, "like")} name={profile.full_name} />
     </article>
