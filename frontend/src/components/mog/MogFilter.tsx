@@ -17,16 +17,17 @@ interface MogFilterProps {
   onSortByMogChange: (value: boolean) => void;
 }
 
+/** The Mog score controls. They live inside the Filters menu (see FilterBar), so this has no wrapper of its own. */
 export default function MogFilter({ minTier, sortByMog, onMinTierChange, onSortByMogChange }: MogFilterProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <label className="inline-flex items-center gap-2 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-sm text-slate-200">
-        <Crown className="size-4 text-amber-300" aria-hidden />
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-2 rounded-lg border border-line bg-surface py-1 pr-1 pl-3 text-sm text-slate-200">
+        <Crown className="size-4 shrink-0 text-amber-300" aria-hidden />
         <span className="sr-only">Minimum Mog tier</span>
         <select
           value={minTier}
           onChange={(event) => onMinTierChange(event.target.value as MogTier | "")}
-          className="rounded-full bg-transparent py-0.5 pr-2 text-sm outline-none"
+          className="min-w-0 flex-1 rounded-lg bg-transparent py-0.5 pr-2 text-sm outline-none"
         >
           {OPTIONS.map((option) => (
             <option key={option.label} value={option.value} className="bg-surface-raised">
@@ -39,7 +40,7 @@ export default function MogFilter({ minTier, sortByMog, onMinTierChange, onSortB
         type="button"
         onClick={() => onSortByMogChange(!sortByMog)}
         aria-pressed={sortByMog}
-        className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+        className={`rounded-lg border px-3 py-1.5 text-left text-sm transition-colors ${
           sortByMog
             ? "border-amber-400/50 bg-amber-400/15 text-amber-200"
             : "border-line bg-surface text-slate-200 hover:border-amber-400/50"

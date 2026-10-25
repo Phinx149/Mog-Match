@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import FilterBar from "../components/discover/FilterBar";
 import SearchBar from "../components/discover/SearchBar";
-import MogFilter from "../components/mog/MogFilter";
 import Navbar from "../components/layout/Navbar";
 import ProfileCard from "../components/profiles/ProfileCard";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -122,21 +121,17 @@ export default function DiscoverPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-2">
-            <FilterBar
-              options={filterOptions}
-              skills={selectedSkills}
-              lookingFor={selectedLookingFor}
-              onSkillsChange={setSelectedSkills}
-              onLookingForChange={setSelectedLookingFor}
-            />
-            <MogFilter
-              minTier={minTier}
-              sortByMog={sortByMog}
-              onMinTierChange={setMinTier}
-              onSortByMogChange={setSortByMog}
-            />
-          </div>
+          <FilterBar
+            options={filterOptions}
+            skills={selectedSkills}
+            lookingFor={selectedLookingFor}
+            minTier={minTier}
+            sortByMog={sortByMog}
+            onSkillsChange={setSelectedSkills}
+            onLookingForChange={setSelectedLookingFor}
+            onMinTierChange={setMinTier}
+            onSortByMogChange={setSortByMog}
+          />
           <p className="flex shrink-0 items-center gap-3 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <Heart className="size-3.5 text-violet-300" aria-hidden /> {liked.length} liked

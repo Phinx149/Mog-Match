@@ -65,6 +65,31 @@ body {
   .mog-score-flame { animation: none; }
 }
 
+/* Discover: a swiped card squeezes into the button that was pressed (Like is on the right, Pass on
+   the left), and that button pops. ProfileCard waits for swipe-away to finish before telling the
+   page, and the page is what removes the card. */
+.swipe-to-like,
+.swipe-to-pass {
+  animation: swipe-away 320ms ease-in forwards;
+}
+.swipe-to-like {
+  transform-origin: right center;
+}
+.swipe-to-pass {
+  transform-origin: left center;
+}
+.swipe-pop {
+  animation: swipe-pop 320ms ease-out;
+}
+
+@keyframes swipe-away {
+  to { transform: scaleX(0.04); opacity: 0; }
+}
+
+@keyframes swipe-pop {
+  50% { transform: scale(1.12); }
+}
+
 /* Shared form control look. In the components layer so utility classes can override it. */
 @layer components {
   .field {
