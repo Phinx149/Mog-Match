@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -51,11 +51,15 @@ export type RainSymbols = (typeof RAIN_SYMBOL_SETS)[number];
 export const EMOJI_PATHS = ["straight", "wave", "bounce"] as const;
 export type EmojiPath = (typeof EMOJI_PATHS)[number];
 
+/** How the scrolling slogans are drawn: filled letters, outlined letters, or rows taking turns. Keep in sync with SLOGAN_STYLES in the backend. */
+export const SLOGAN_STYLES = ["solid", "outline", "mixed"] as const;
+export type SloganStyle = (typeof SLOGAN_STYLES)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD) or emoji size, 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size or text size (slogans), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -83,6 +87,16 @@ export interface EffectOptions {
   emoji_path: EmojiPath;
   /** How fast each emoji turns, -10 to 10: negative is counter-clockwise, 0 is no spin (emoji only). */
   emoji_spin: number;
+  /** The slogans that scroll by, 1-8 of up to 40 characters (slogans only). */
+  slogans: string[];
+  /** The letters' color as `#rrggbb` (slogans only). */
+  slogan_color: string;
+  /** Filled letters, outlined letters, or rows taking turns (slogans only). */
+  slogan_style: SloganStyle;
+  /** How far the rows lean, -45 to 45 degrees: negative leans up to the right (slogans only). */
+  slogan_tilt: number;
+  /** Every other row scrolls the opposite way (slogans only). */
+  slogan_alternate: boolean;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

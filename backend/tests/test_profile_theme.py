@@ -7,6 +7,8 @@ DEFAULT_OPTIONS = {
     "rain_color": "#22ff66", "rain_rainbow": False, "rain_symbols": "katakana",
     "emojis": ["🚀", "✨", "🔥", "💻", "🦄", "🍕"], "emoji_count": 14, "emoji_angle": 45,
     "emoji_path": "straight", "emoji_spin": 2,
+    "slogans": ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"],
+    "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -134,6 +136,8 @@ CRANKED = {
     "count": 10, "color_change": False, "color": "#ff00ff",
     "rain_color": "#00ffff", "rain_rainbow": True, "rain_symbols": "chaos",
     "emojis": ["👻", "🎃"], "emoji_count": 60, "emoji_angle": 359, "emoji_path": "bounce", "emoji_spin": -10,
+    "slogans": ["LET'S GOOO", "STAY HARD"], "slogan_color": "#00ffcc", "slogan_style": "outline",
+    "slogan_tilt": 45, "slogan_alternate": False,
 }
 
 
@@ -424,3 +428,149 @@ def test_emoji_options_do_not_change_the_mog_score(client):
     client.patch("/api/profiles/me", json={"theme": {"effect": "emoji", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- scrolling slogans ----------
+
+def test_slogans_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 45, "size": 22, "speed": 6, "glow": True,
+        "slogans": ["GIT PUSH --FORCE", "SQUATS > STANDUPS"], "slogan_color": "#ffd60a",
+        "slogan_style": "solid", "slogan_tilt": 12, "slogan_alternate": False,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#050816", "effect": "slogans", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#050816", "effect": "slogans", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_slogan_defaults_are_gym_bro_speak(client):
+    options = _theme(client)["effect_options"]
+    assert options["slogans"][:2] == ["NEVER SKIP LEG DAY", "ONE MORE REP"]
+    assert (options["slogan_style"], options["slogan_tilt"], options["slogan_alternate"]) == ("mixed", -8, True)
+
+
+@pytest.mark.parametrize(
+    "slogan",
+    ["ONE MORE REP", "git push --force", "💪 PUMP 💪", "ÑANDÚ MOGS", "DO YOU EVEN LIFT?", "x", "A" * 40, "<b>bold</b> & \"quotes\""],
+)
+def test_slogans_of_every_shape_are_accepted(client, slogan):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"slogans": [slogan]}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["slogans"] == [slogan]
+
+
+def test_slogans_are_tidied_and_deduplicated_ignoring_case(client):
+    slogans = ["  ONE   MORE\tREP ", "one more rep", "Light Weight", "LIGHT WEIGHT"]
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"slogans": slogans}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["slogans"] == ["ONE MORE REP", "Light Weight"]
+
+
+@pytest.mark.parametrize(
+    "slogans",
+    [
+        [], "ONE MORE REP", None, 5, {"a": "REP"},                    # not a list, or empty
+        [""], ["   "], ["\n\t"],                                    # blank
+        ["A" * 41],                                                  # too long
+        ["REP\x00"], ["REP\x07"], ["REP\ue000"],                    # control and private-use characters
+        ["REP\u202eSDRAWKCAB"], ["\u2066REP"],                      # text-direction tricks
+        [1], [None], [["REP"]], [{"s": "REP"}], ["REP", 7],          # wrong item types
+        ["FINE", ""],                                                # one bad slogan spoils the list
+        [f"SLOGAN {n}" for n in range(9)],                           # 9 distinct: too many
+    ],
+)
+def test_bad_slogan_lists_are_rejected(client, slogans):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "slogans", "effect_options": {"slogans": slogans}}})
+
+    assert response.status_code == 400
+    assert "theme.effect_options.slogans" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_eight_slogans_is_the_limit(client):
+    eight = [f"SLOGAN {n}" for n in range(8)]
+
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"slogans": eight}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["slogans"] == eight
+
+
+@pytest.mark.parametrize("style", ["solid", "outline", "mixed"])
+def test_every_slogan_style_is_accepted(client, style):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "slogans", "effect_options": {"slogan_style": style}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["slogan_style"] == style
+
+
+def test_slogan_color_is_trimmed_and_lowercased_and_may_be_any_brightness(client):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {"slogan_color": " #FFD60A "}}})
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"]["effect_options"]["slogan_color"] == "#ffd60a"
+
+    assert client.patch("/api/profiles/me", json={"theme": {"effect_options": {"slogan_color": "#ffffff"}}}).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("slogan_tilt", -46), ("slogan_tilt", 46), ("slogan_tilt", 2.5), ("slogan_tilt", "10"), ("slogan_tilt", True), ("slogan_tilt", None),
+        ("slogan_style", "dotted"), ("slogan_style", "Solid"), ("slogan_style", ""), ("slogan_style", 1), ("slogan_style", None),
+        ("slogan_color", "red"), ("slogan_color", "#fff"), ("slogan_color", 0xFFD60A), ("slogan_color", "#ffd60a;x"), ("slogan_color", None),
+        ("slogan_alternate", 1), ("slogan_alternate", "yes"), ("slogan_alternate", None),
+    ],
+)
+def test_slogan_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "slogans", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+@pytest.mark.parametrize("option, value", [("slogan_tilt", -45), ("slogan_tilt", 0), ("slogan_tilt", 45)])
+def test_slogan_tilt_edges_are_accepted(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+def test_slogan_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "slogans", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- themes saved by an older version ----------
+
+def test_a_retired_effect_and_its_options_read_back_as_the_default_look(client, app):
+    # An effect that was later removed (the barbell) and its options are still sitting in the database.
+    from app.extensions import db
+    from app.models import Profile
+
+    with app.app_context():
+        profile = Profile.query.filter_by(username=client.get("/api/profiles/me").get_json()["username"]).one()
+        profile.theme = {
+            "background": "#172554",
+            "effect": "barbell",
+            "effect_options": {"brightness": 70, "gym_plates": 4, "gym_label": True},
+        }
+        db.session.commit()
+
+    theme = _theme(client)
+    assert theme["effect"] is None
+    assert theme["background"] == "#172554"  # what is still valid is kept
+    assert theme["effect_options"] == {**DEFAULT_OPTIONS, "brightness": 70}  # and the retired options are gone
+
+    # So the edit form can send it straight back without a 400.
+    assert client.patch("/api/profiles/me", json={"theme": theme}).status_code == 200

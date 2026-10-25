@@ -1,4 +1,4 @@
-import type { EffectOptions, EmojiPath, ProfileTheme, RainSymbols, ThemeEffect } from "../types/profile";
+import type { EffectOptions, EmojiPath, ProfileTheme, RainSymbols, SloganStyle, ThemeEffect } from "../types/profile";
 
 // Helpers for profile themes. The backend is the authority on what's allowed
 // (backend/app/services/profile_service.py `_clean_theme`); these let the edit form warn
@@ -43,6 +43,11 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   emoji_angle: 45,
   emoji_path: "straight",
   emoji_spin: 2,
+  slogans: ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"],
+  slogan_color: "#ff4d2e",
+  slogan_style: "mixed",
+  slogan_tilt: -8,
+  slogan_alternate: true,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -57,6 +62,7 @@ export const EFFECT_OPTION_RANGES = {
   emoji_count: { label: "How many", min: 3, max: 60, step: 1, unit: "" },
   emoji_angle: { label: "Direction", min: 0, max: 359, step: 15, unit: "°" },
   emoji_spin: { label: "Spin", min: -10, max: 10, step: 1, unit: "" },
+  slogan_tilt: { label: "Tilt", min: -45, max: 45, step: 5, unit: "°" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -74,6 +80,51 @@ export const EMOJI_PACKS: readonly { name: string; emojis: string[] }[] = [
 ];
 
 const packEmojis = (name: string): string[] => EMOJI_PACKS.find((pack) => pack.name === name)?.emojis ?? DEFAULT_EFFECT_OPTIONS.emojis;
+
+/** How many slogans a profile may list, and the longest one. Keep in sync with MAX_SLOGANS and MAX_SLOGAN_LENGTH in the backend. */
+export const MAX_SLOGANS = 8;
+export const MAX_SLOGAN_LENGTH = 40;
+
+/** One-click slogan lists for the edit form. */
+export const SLOGAN_PACKS: readonly { name: string; slogans: string[] }[] = [
+  {
+    name: "Gym Bro",
+    slogans: ["NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "NO PAIN NO GAINS", "HYDRATE OR DIEDRATE"],
+  },
+  {
+    name: "Dev Gym",
+    slogans: ["DEADLIFT THE BACKLOG", "SQUATS > STANDUPS", "GIT PUSH --FORCE", "SHIP IT THEN LIFT IT", "CODE EAT LIFT REPEAT", "PR APPROVED"],
+  },
+  {
+    name: "Mog",
+    slogans: ["MOGGED", "GIGAMOGGER ENERGY", "MOG OR BE MOGGED", "NO ONE MOGS LIKE ME", "SENIOR MOGGER"],
+  },
+  {
+    name: "Hype",
+    slogans: ["LET'S GOOO", "STAY HARD", "BUILT DIFFERENT", "NO DAYS OFF", "WE'RE ALL GONNA MAKE IT"],
+  },
+];
+
+const packSlogans = (name: string): string[] => SLOGAN_PACKS.find((pack) => pack.name === name)?.slogans ?? DEFAULT_EFFECT_OPTIONS.slogans;
+
+/** The ways the slogans can be drawn, as the edit form words them. */
+export const SLOGAN_STYLE_INFO: Record<SloganStyle, { label: string; description: string }> = {
+  solid: { label: "Solid", description: "Every row is filled in" },
+  outline: { label: "Outline", description: "Every row is just an outline, which is lighter behind your text" },
+  mixed: { label: "Mixed", description: "Filled and outlined rows take turns" },
+};
+
+/** Quick picks for the slogan color. */
+export const SLOGAN_COLOR_SWATCHES = [
+  { name: "Hot orange", hex: "#ff4d2e" },
+  { name: "Gold", hex: "#ffd60a" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Cyan", hex: "#22d3ee" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Violet", hex: "#a78bfa" },
+  { name: "Magenta", hex: "#ff2bd6" },
+  { name: "White", hex: "#ffffff" },
+] as const;
 
 /** The ways the emoji can travel, as the edit form words them. */
 export const EMOJI_PATH_INFO: Record<EmojiPath, { label: string; description: string }> = {
@@ -140,6 +191,7 @@ export const EFFECT_INFO: Record<
     hasLogoColor: boolean;
     hasRainStyle: boolean;
     hasEmojiStyle: boolean;
+    hasSloganStyle: boolean;
   }
 > = {
   matrix: {
@@ -150,6 +202,7 @@ export const EFFECT_INFO: Record<
     hasLogoColor: false,
     hasRainStyle: true,
     hasEmojiStyle: false,
+    hasSloganStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -159,6 +212,7 @@ export const EFFECT_INFO: Record<
     hasLogoColor: true,
     hasRainStyle: false,
     hasEmojiStyle: false,
+    hasSloganStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -168,6 +222,17 @@ export const EFFECT_INFO: Record<
     hasLogoColor: false,
     hasRainStyle: false,
     hasEmojiStyle: true,
+    hasSloganStyle: false,
+  },
+  slogans: {
+    label: "Scrolling slogans",
+    tuneTitle: "Tune the slogans",
+    sizeLabel: "Text size",
+    sliders: ["brightness", "size", "speed", "slogan_tilt"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: true,
   },
 };
 
@@ -267,6 +332,51 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         emoji_angle: 35,
         emoji_path: "bounce",
         emoji_spin: -6,
+      },
+    },
+  },
+  {
+    name: "Gym Bro",
+    description: "Gym slogans scrolling past",
+    theme: {
+      background: "#140808",
+      effect: "slogans",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 32, size: 18, speed: 4, slogans: packSlogans("Gym Bro") },
+    },
+  },
+  {
+    name: "Dev Gym",
+    description: "Lifting meets shipping, outlined in gold",
+    theme: {
+      background: "#050816",
+      effect: "slogans",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 40,
+        size: 16,
+        speed: 4,
+        slogans: packSlogans("Dev Gym"),
+        slogan_color: "#ffd60a",
+        slogan_style: "outline",
+        slogan_tilt: 6,
+      },
+    },
+  },
+  {
+    name: "Mogged",
+    description: "Big, glowing, and not sorry",
+    theme: {
+      background: "#0a0a12",
+      effect: "slogans",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 35,
+        size: 22,
+        speed: 5,
+        glow: true,
+        slogans: packSlogans("Mog"),
+        slogan_color: "#a78bfa",
+        slogan_tilt: -14,
       },
     },
   },

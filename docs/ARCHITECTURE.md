@@ -27,7 +27,7 @@ users ──1:1── profiles ──1:N── profile_links
 | Table | Columns |
 |---|---|
 | `users` | `id` UUID PK, `email` unique nullable, `created_at`, `updated_at` |
-| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix" | "dvd" | "emoji", "effect_options": {"brightness", "size", "speed", "glow", "count", "color_change", "color", "rain_color", "rain_rainbow", "rain_symbols", "emojis", "emoji_count", "emoji_angle", "emoji_path", "emoji_spin"}}`), timestamps |
+| `profiles` | `id` UUID PK, `user_id` FK→users (unique, cascade), `full_name`, `username` unique, `avatar_url`, `location`, `education`, `bio`, `favorite_ide`, `experience_level`, JSON lists: `skills`, `interests`, `favorite_ai_agents`, `looking_for`, JSON `theme` (nullable; cosmetic card options, currently `{"background": "#rrggbb", "effect": "matrix" | "dvd" | "emoji" | "slogans", "effect_options": {"brightness", "size", "speed", "glow", "count", "color_change", "color", "rain_color", "rain_rainbow", "rain_symbols", "emojis", "emoji_count", "emoji_angle", "emoji_path", "emoji_spin", "slogans", "slogan_color", "slogan_style", "slogan_tilt", "slogan_alternate"}}`), timestamps |
 | `profile_links` | `id` UUID PK, `profile_id` FK (cascade), `label`, `url`, `position` |
 | `projects` | `id` UUID PK, `profile_id` FK (cascade), `title`, `description`, `project_url`, JSON `technologies`, `position`, timestamps |
 
@@ -54,7 +54,7 @@ No auth. The backend reads `DEMO_USER_EMAIL` from config and treats that user as
 ## Frontend structure
 - `pages/` — route-level components (Discover, Profile, EditProfile, Settings, NotFound)
 - `components/layout/` — `AppLayout` (outlet + `BottomNav`), `Navbar` (logo + slot + `PingIndicator`)
-- `components/profiles/` — `ProfileCard`, `ProfileHeader`, `SkillBadge`, `ProjectCard`, `Avatar`, `ThemeScope` (applies a profile's theme to everything inside it), `ThemePicker` (presets, background color and effect picker on Edit Profile), `EmojiPicker` (the emoji list editor inside it), `MatrixRain`, `BouncingDvd` and `FloatingEmoji` (the `matrix`, `dvd` and `emoji` effects: canvas animations; the logo's bounce rules live in `utils/dvdMotion.ts` and the emoji's movement in `utils/emojiMotion.ts`)
+- `components/profiles/` — `ProfileCard`, `ProfileHeader`, `SkillBadge`, `ProjectCard`, `Avatar`, `ThemeScope` (applies a profile's theme to everything inside it), `ThemePicker` (presets, background color and effect picker on Edit Profile), `EmojiPicker` and `SloganPicker` (the list editors inside it), `MatrixRain`, `BouncingDvd`, `FloatingEmoji` and `ScrollingSlogans` (the `matrix`, `dvd`, `emoji` and `slogans` effects: canvas animations; the logo's bounce rules live in `utils/dvdMotion.ts`, the emoji's movement in `utils/emojiMotion.ts` and the slogan rows' layout in `utils/sloganMarquee.ts`)
 - `components/discover/` — `SearchBar`, `FilterBar`
 - `components/forms/` — `TagInput`
 - `components/common/` — loading / error / empty states

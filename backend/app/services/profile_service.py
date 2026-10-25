@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -57,6 +57,8 @@ EFFECT_OPTION_RANGES = {
     # Floating emoji only. The angle is the direction of travel in degrees (0 = right, 90 = down);
     # the spin is in tenths of a turn per second, negative = counter-clockwise, 0 = none.
     "emoji_count": (3, 60), "emoji_angle": (0, 359), "emoji_spin": (-10, 10),
+    # Scrolling slogans only: the tilt of the rows in degrees (negative leans up to the right).
+    "slogan_tilt": (-45, 45),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -68,17 +70,26 @@ DEFAULT_EFFECT_OPTIONS = {
     # Floating emoji only (a tuple, so no request can end up sharing and changing one list):
     "emojis": ("🚀", "✨", "🔥", "💻", "🦄", "🍕"), "emoji_count": 14, "emoji_angle": 45,
     "emoji_path": "straight", "emoji_spin": 2,
+    # Scrolling slogans only ("slogan_alternate": every other row scrolls the opposite way):
+    "slogans": ("NEVER SKIP LEG DAY", "ONE MORE REP", "LIGHT WEIGHT BABY", "DO YOU EVEN LIFT?", "MOGGED"),
+    "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
 }
-BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow")
-COLOR_EFFECT_OPTIONS = ("color", "rain_color")
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate")
+COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
 # Options that must be one of a fixed set of names. The rain's characters themselves live in the
 # frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
 RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
 EMOJI_PATHS = ("straight", "wave", "bounce")
-CHOICE_EFFECT_OPTIONS = {"rain_symbols": RAIN_SYMBOL_SETS, "emoji_path": EMOJI_PATHS}
+SLOGAN_STYLES = ("solid", "outline", "mixed")  # mixed = solid and outlined rows take turns
+CHOICE_EFFECT_OPTIONS = {"rain_symbols": RAIN_SYMBOL_SETS, "emoji_path": EMOJI_PATHS, "slogan_style": SLOGAN_STYLES}
 # How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).
 MAX_EMOJIS = 12
 MAX_EMOJI_CODEPOINTS = 12
+# How many slogans a profile may list, and how long each may be.
+MAX_SLOGANS = 8
+MAX_SLOGAN_LENGTH = 40
+# Characters that flip the direction text is drawn in; harmless on a canvas, but never what anyone means to type.
+BIDI_CONTROLS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 # The UI's text is light, so the card background has to be dark enough to keep it readable.
 # 0.05 is WCAG relative luminance (0 = black, 1 = white); keep in sync with frontend/src/utils/theme.ts.
@@ -184,6 +195,22 @@ def _iso(value) -> str | None:
     return value.isoformat() if value else None
 
 
+def _read_theme(stored: dict | None) -> dict[str, Any]:
+    """The theme as sent to clients: the stored values laid over the defaults.
+
+    An effect or option saved by an older version that no longer exists is ignored (it reads back as the
+    default look) instead of being passed on, where the edit form would send it back and get a 400.
+    """
+    stored = stored or {}
+    effect = stored.get("effect")
+    options = {key: value for key, value in (stored.get("effect_options") or {}).items() if key in DEFAULT_EFFECT_OPTIONS}
+    return {
+        "background": stored.get("background"),
+        "effect": effect if effect in THEME_EFFECTS else None,
+        "effect_options": {**DEFAULT_EFFECT_OPTIONS, **options},
+    }
+
+
 def to_dict(profile: Profile) -> dict[str, Any]:
     data = {
         "id": str(profile.id),
@@ -202,11 +229,7 @@ def to_dict(profile: Profile) -> dict[str, Any]:
         "experience_level": profile.experience_level,
         "looking_for": list(profile.looking_for),
         # Always an object so the frontend never has to null-check it; null = default look.
-        "theme": {
-            "background": (profile.theme or {}).get("background"),
-            "effect": (profile.theme or {}).get("effect"),
-            "effect_options": {**DEFAULT_EFFECT_OPTIONS, **(profile.theme or {}).get("effect_options", {})},
-        },
+        "theme": _read_theme(profile.theme),
         "links": [
             {"id": str(link.id), "label": link.label, "url": link.url} for link in profile.links
         ],
@@ -386,6 +409,23 @@ def _clean_emojis(value: Any, field: str, errors: dict) -> list[str] | None:
     return cleaned
 
 
+def _clean_slogans(value: Any, field: str, errors: dict) -> list[str] | None:
+    """Each slogan is short plain text: whitespace is tidied, repeats (ignoring case) are dropped."""
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_SLOGANS:
+        errors[field] = f"Must be a list of 1 to {MAX_SLOGANS} slogans."
+        return None
+    cleaned: list[str] = []
+    for item in value:
+        text = " ".join(item.split()) if isinstance(item, str) else ""
+        plain = all(unicodedata.category(char) not in ("Cc", "Cs", "Co") and char not in BIDI_CONTROLS for char in text)
+        if not 1 <= len(text) <= MAX_SLOGAN_LENGTH or not plain:
+            errors[field] = f"Every slogan must be 1 to {MAX_SLOGAN_LENGTH} characters of plain text."
+            return None
+        if text.lower() not in {existing.lower() for existing in cleaned}:
+            cleaned.append(text)
+    return cleaned
+
+
 def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
     """Validate the effect's tuning knobs; returns only the ones that were sent."""
     if not isinstance(value, dict):
@@ -423,6 +463,10 @@ def _clean_effect_options(value: Any, errors: dict) -> dict[str, Any]:
             emojis = _clean_emojis(option, field, errors)
             if emojis is not None:
                 cleaned[key] = emojis
+        elif key == "slogans":
+            slogans = _clean_slogans(option, field, errors)
+            if slogans is not None:
+                cleaned[key] = slogans
         else:
             errors[field] = "Unknown effect option."
     return cleaned

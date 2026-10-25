@@ -4,12 +4,14 @@ import { DEFAULT_BACKGROUND, HEX_COLOR } from "../../utils/theme";
 import BouncingDvd from "./BouncingDvd";
 import FloatingEmoji from "./FloatingEmoji";
 import MatrixRain from "./MatrixRain";
+import ScrollingSlogans from "./ScrollingSlogans";
 
 /** What to draw for each effect name. Adding an effect = a component here + its name in THEME_EFFECTS. */
 const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = {
   matrix: MatrixRain,
   dvd: BouncingDvd,
   emoji: FloatingEmoji,
+  slogans: ScrollingSlogans,
 };
 
 interface ThemeScopeProps {

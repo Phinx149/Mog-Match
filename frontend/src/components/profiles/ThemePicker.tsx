@@ -3,6 +3,7 @@ import { useId, type ReactNode } from "react";
 import {
   EMOJI_PATHS,
   RAIN_SYMBOL_SETS,
+  SLOGAN_STYLES,
   THEME_EFFECTS,
   type EffectOptions,
   type ProfileTheme,
@@ -18,12 +19,15 @@ import {
   RAIN_COLOR_SWATCHES,
   RAIN_SYMBOLS,
   sameTheme,
+  SLOGAN_COLOR_SWATCHES,
+  SLOGAN_STYLE_INFO,
   THEME_PRESETS,
 } from "../../utils/theme";
 import Avatar from "./Avatar";
 import { chipClass } from "./chipClass";
 import EmojiPicker from "./EmojiPicker";
 import SkillBadge from "./SkillBadge";
+import SloganPicker from "./SloganPicker";
 import ThemeScope from "./ThemeScope";
 
 /** Effects the picker offers, in order. `null` = no effect. */
@@ -157,6 +161,11 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                 <EmojiPicker emojis={options.emojis} onChange={(emojis) => setOption({ emojis })} />
               </div>
             )}
+            {EFFECT_INFO[effect].hasSloganStyle && (
+              <div className="sm:col-span-2">
+                <SloganPicker slogans={options.slogans} onChange={(slogans) => setOption({ slogans })} />
+              </div>
+            )}
             {EFFECT_INFO[effect].sliders.map((key) => {
               const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
               return (
@@ -261,6 +270,69 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
               />
               Neon glow <span className="text-xs text-muted">(a bright halo)</span>
             </label>
+            {EFFECT_INFO[effect].hasSloganStyle && (
+              <>
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Letters</span>
+                  <div role="group" aria-label="Slogan style" className="flex flex-wrap gap-2">
+                    {SLOGAN_STYLES.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={options.slogan_style === name}
+                        onClick={() => setOption({ slogan_style: name })}
+                        className={chipClass(options.slogan_style === name)}
+                      >
+                        {SLOGAN_STYLE_INFO[name].label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="mt-1 block text-xs text-muted">{SLOGAN_STYLE_INFO[options.slogan_style].description}.</span>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <span className="mb-1.5 block text-sm text-slate-300">Color</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <div role="group" aria-label="Slogan color quick picks" className="flex flex-wrap gap-2">
+                      {SLOGAN_COLOR_SWATCHES.map(({ name, hex }) => {
+                        const selected = options.slogan_color.toLowerCase() === hex;
+                        return (
+                          <button
+                            key={hex}
+                            type="button"
+                            title={name}
+                            aria-label={name}
+                            aria-pressed={selected}
+                            onClick={() => setOption({ slogan_color: hex })}
+                            style={{ backgroundColor: hex }}
+                            className={`size-7 rounded-full border border-white/20 transition ${
+                              selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <input
+                      type="color"
+                      aria-label="Custom slogan color"
+                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                      value={options.slogan_color}
+                      onChange={(e) => setOption({ slogan_color: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-cyan-400"
+                    checked={options.slogan_alternate}
+                    onChange={(e) => setOption({ slogan_alternate: e.target.checked })}
+                  />
+                  Every other row goes the other way
+                </label>
+              </>
+            )}
             {EFFECT_INFO[effect].hasLogoColor && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
