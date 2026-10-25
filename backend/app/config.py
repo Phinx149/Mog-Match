@@ -27,5 +27,12 @@ class Config:
         ).split(",")
         if origin.strip()
     ]
-    # Until real authentication exists, /api/profiles/me always acts as this user.
+    # The seeded user the app is demoed as. Logging in is what makes "me" = a user.
     DEMO_USER_EMAIL = os.getenv("DEMO_USER_EMAIL", "demo@mogmatch.dev")
+    # Signs the login cookie so the browser can't change who it's logged in as.
+    # Set a long random value in .env anywhere other than your own laptop.
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-not-secret")
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True  # page JavaScript can't read the cookie
+    # Every seeded user gets this password (local demo data only).
+    SEED_PASSWORD = os.getenv("SEED_PASSWORD", "mogmatch-demo")

@@ -137,6 +137,26 @@ export default function EditProfilePage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const errors: Record<string, string> = {};
+    for (const key of ["full_name", "username", "bio", "favorite_ide"] as const) {
+      if (!form[key].trim()) errors[key] = "This field is required.";
+    }
+    if (!form.favorite_ai_agents.some((agent) => agent.trim())) {
+      errors.favorite_ai_agents = "Add at least one coding agent.";
+    }
+    form.projects.forEach((project, index) => {
+      for (const key of ["title", "description"] as const) {
+        if (!project[key].trim()) errors[`projects[${index}].${key}`] = "This field is required.";
+      }
+      if (!project.technologies.some((technology) => technology.trim())) {
+        errors[`projects[${index}].technologies`] = "Add at least one technology.";
+      }
+    });
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setStatus({ kind: "error", message: "Please complete the required fields." });
+      return;
+    }
     setStatus({ kind: "saving" });
     setFieldErrors({});
     try {
@@ -165,6 +185,7 @@ export default function EditProfilePage() {
 
       <form onSubmit={onSubmit} className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6" noValidate>
         <h1 className="text-2xl font-bold">Edit Profile</h1>
+        <p className="text-sm text-muted">Complete the required fields before saving. Projects are optional; each added project needs a title, description, and at least one technology.</p>
 
         <Card title="Basics">
           <Field label="Profile photo" error={err("photo")} hint="JPEG, PNG or WebP, up to 5 MB. Saved when you save your profile.">
@@ -198,8 +219,8 @@ export default function EditProfilePage() {
               </select>
             </Field>
           </div>
-          <Field label="About" error={err("bio")}>
-            <textarea className="field min-h-28" value={form.bio} maxLength={2000} placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} />
+          <Field label="About me" required error={err("bio")}>
+            <textarea className="field min-h-28" value={form.bio} maxLength={2000} required placeholder="What do you build? What are you looking for?" onChange={(e) => update("bio", e.target.value)} />
           </Field>
         </Card>
 
@@ -215,10 +236,10 @@ export default function EditProfilePage() {
         </Card>
 
         <Card title="Setup">
-          <Field label="Favorite IDE" error={err("favorite_ide")}>
-            <input className="field" value={form.favorite_ide} maxLength={80} placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
+          <Field label="Favorite IDE" required error={err("favorite_ide")}>
+            <input className="field" value={form.favorite_ide} maxLength={80} required placeholder="VS Code, Neovim…" onChange={(e) => update("favorite_ide", e.target.value)} />
           </Field>
-          <TagInput label="Favorite AI coding agents" variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
+          <TagInput label="Favorite AI coding agents" required variant="neutral" error={err("favorite_ai_agents")} values={form.favorite_ai_agents} onChange={(v) => update("favorite_ai_agents", v)} placeholder="Claude Code, Codex…" maxTags={10} />
 
         </Card>
 
@@ -260,8 +281,8 @@ export default function EditProfilePage() {
             <div key={index} className="flex flex-col gap-3 rounded-xl border border-line bg-surface-raised p-4">
               <div className="flex items-start gap-2">
                 <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                  <Field label="Title" error={err(`projects[${index}].title`)} compact>
-                    <input className="field" value={project.title} maxLength={120} onChange={(e) => updateProject(index, { title: e.target.value })} />
+                  <Field label="Title" required error={err(`projects[${index}].title`)} compact>
+                    <input className="field" value={project.title} maxLength={120} required onChange={(e) => updateProject(index, { title: e.target.value })} />
                   </Field>
                   <Field label="Project URL" error={err(`projects[${index}].project_url`)} compact>
                     <input className="field" type="url" value={project.project_url} maxLength={500} placeholder="https://…" onChange={(e) => updateProject(index, { project_url: e.target.value })} />
@@ -269,10 +290,10 @@ export default function EditProfilePage() {
                 </div>
                 <RemoveButton label="Remove project" onClick={() => update("projects", form.projects.filter((_, i) => i !== index))} />
               </div>
-              <Field label="Description" error={err(`projects[${index}].description`)} compact>
-                <textarea className="field min-h-20" value={project.description} maxLength={2000} onChange={(e) => updateProject(index, { description: e.target.value })} />
+              <Field label="Description" required error={err(`projects[${index}].description`)} compact>
+                <textarea className="field min-h-20" value={project.description} maxLength={2000} required onChange={(e) => updateProject(index, { description: e.target.value })} />
               </Field>
-              <TagInput label="Technologies" variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
+              <TagInput label="Technologies" required variant="neutral" error={err(`projects[${index}].technologies`)} values={project.technologies} onChange={(v) => updateProject(index, { technologies: v })} placeholder="React, Flask…" maxTags={20} />
 
             </div>
           ))}
@@ -351,11 +372,11 @@ function Card({ title, action, children }: { title: string; action?: ReactNode; 
   );
 }
 
-function Field({ label, error, hint, compact, children }: { label: string; error?: string; hint?: string; compact?: boolean; children: ReactElement<{ id?: string; "aria-invalid"?: boolean; "aria-describedby"?: string }> }) {
+function Field({ label, required, error, hint, compact, children }: { label: string; required?: boolean; error?: string; hint?: string; compact?: boolean; children: ReactElement<{ id?: string; "aria-invalid"?: boolean; "aria-describedby"?: string }> }) {
   const id = useId();
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}</label>
+      <label htmlFor={id} className={`mb-1.5 block font-medium text-slate-300 ${compact ? "text-xs" : "text-sm"}`}>{label}{required && <span className="text-muted"> (required)</span>}</label>
       <div className={error ? "[&_.field]:border-rose-500" : ""}>{cloneElement(children, { id, "aria-invalid": !!error, "aria-describedby": error || hint ? `${id}-help` : undefined })}</div>
       <div id={`${id}-help`}>
       {hint && !error && <span className="mt-1 block text-xs text-muted">{hint}</span>}

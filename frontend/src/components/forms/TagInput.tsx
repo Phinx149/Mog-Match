@@ -9,10 +9,11 @@ interface TagInputProps {
   variant?: "skill" | "interest" | "neutral";
   maxTags?: number;
   error?: string;
+  required?: boolean;
 }
 
 /** Chips plus a text box: Enter or comma adds a tag, Backspace on an empty box removes the last one. */
-export default function TagInput({ label, values, onChange, placeholder, variant = "skill", maxTags, error }: TagInputProps) {
+export default function TagInput({ label, values, onChange, placeholder, variant = "skill", maxTags, error, required }: TagInputProps) {
   const [draft, setDraft] = useState("");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,7 @@ export default function TagInput({ label, values, onChange, placeholder, variant
     <div>
       <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-slate-300">
         {label}
+        {required && <span className="text-muted"> (required)</span>}
       </label>
       <div onClick={(event) => { if (!(event.target as HTMLElement).closest("button")) inputRef.current?.focus(); }} className={`flex cursor-text flex-wrap items-center gap-1.5 rounded-lg border bg-canvas p-2 focus-within:ring-2 ${error ? "border-rose-500 focus-within:ring-rose-500/30" : "border-line focus-within:border-violet-500 focus-within:ring-violet-500/30"}`}>
         {values.map((value) => (
@@ -47,6 +49,7 @@ export default function TagInput({ label, values, onChange, placeholder, variant
           id={inputId}
           ref={inputRef}
           aria-invalid={!!error}
+          aria-required={required}
           aria-describedby={error ? `${inputId}-error` : undefined}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

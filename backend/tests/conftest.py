@@ -19,5 +19,25 @@ def app(tmp_path):
 
 
 @pytest.fixture
-def client(app):
+def log_in(app):
+    """log_in(client, username) logs that test client in as a seeded user."""
+
+    def _log_in(client, username="jordan-dev"):
+        password = app.config["SEED_PASSWORD"]
+        response = client.post("/api/auth/login", json={"username": username, "password": password})
+        assert response.status_code == 200, response.get_json()
+        return client
+
+    return _log_in
+
+
+@pytest.fixture
+def anon_client(app):
+    """Nobody logged in."""
     return app.test_client()
+
+
+@pytest.fixture
+def client(app, log_in):
+    """Logged in as the demo user, Jordan (most tests act as "me")."""
+    return log_in(app.test_client())

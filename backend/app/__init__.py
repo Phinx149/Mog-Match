@@ -22,15 +22,22 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
+    # supports_credentials lets the frontend send the login cookie with its requests.
+    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}}, supports_credentials=True)
 
     from . import models  # noqa: F401  (registers models with SQLAlchemy/Alembic)
+    from .routes.auth import bp as auth_bp
     from .routes.health import bp as health_bp
+    from .routes.invites import bp as invites_bp
     from .routes.profiles import bp as profiles_bp
+    from .routes.swipes import bp as swipes_bp
     from .seed import register_commands
 
+    app.register_blueprint(auth_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(profiles_bp)
+    app.register_blueprint(swipes_bp)
+    app.register_blueprint(invites_bp)
     register_commands(app)
     _register_error_handlers(app)
 
