@@ -1,15 +1,20 @@
 import { Check, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { FilterOptions } from "../../types/profile";
+import type { FilterOptions, MogTier } from "../../types/profile";
 import ToggleChips from "../forms/ToggleChips";
+import MogFilter from "../mog/MogFilter";
 import SkillBadge from "../profiles/SkillBadge";
 
 interface FilterBarProps {
   options: FilterOptions;
   skills: string[];
   lookingFor: string[];
+  minTier: MogTier | "";
+  sortByMog: boolean;
   onSkillsChange: (skills: string[]) => void;
   onLookingForChange: (lookingFor: string[]) => void;
+  onMinTierChange: (tier: MogTier | "") => void;
+  onSortByMogChange: (value: boolean) => void;
 }
 
 /** Ignore case, spaces, dots and hyphens so "nodejs" finds "Node.js" (the same rule the backend catalog uses). */
@@ -19,7 +24,17 @@ const has = (list: string[], value: string) => list.some((item) => item.toLowerC
 const toggleIn = (list: string[], value: string) =>
   has(list, value) ? list.filter((item) => item.toLowerCase() !== value.toLowerCase()) : [...list, value];
 
-export default function FilterBar({ options, skills, lookingFor, onSkillsChange, onLookingForChange }: FilterBarProps) {
+export default function FilterBar({
+  options,
+  skills,
+  lookingFor,
+  minTier,
+  sortByMog,
+  onSkillsChange,
+  onLookingForChange,
+  onMinTierChange,
+  onSortByMogChange,
+}: FilterBarProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +75,7 @@ export default function FilterBar({ options, skills, lookingFor, onSkillsChange,
     setQuery("");
   };
 
-  const activeCount = skills.length + lookingFor.length;
+  const activeCount = skills.length + lookingFor.length + (minTier ? 1 : 0) + (sortByMog ? 1 : 0);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -84,6 +99,16 @@ export default function FilterBar({ options, skills, lookingFor, onSkillsChange,
 
         {open && (
           <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-line bg-surface-raised p-3 shadow-2xl shadow-black/50 sm:w-80">
+            <section className="mb-3">
+              <h3 className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">Mog score</h3>
+              <MogFilter
+                minTier={minTier}
+                sortByMog={sortByMog}
+                onMinTierChange={onMinTierChange}
+                onSortByMogChange={onSortByMogChange}
+              />
+            </section>
+
             {options.looking_for.length > 0 && (
               <section className="mb-3">
                 <h3 className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">Looking for</h3>
@@ -134,6 +159,10 @@ export default function FilterBar({ options, skills, lookingFor, onSkillsChange,
         )}
       </div>
 
+      {minTier && <SkillBadge label={`${minTier}+`} variant="neutral" highlighted onRemove={() => onMinTierChange("")} />}
+      {sortByMog && (
+        <SkillBadge label="Biggest moggers first" variant="neutral" highlighted onRemove={() => onSortByMogChange(false)} />
+      )}
       {lookingFor.map((item) => (
         <SkillBadge key={`looking-${item}`} label={item} variant="neutral" highlighted onRemove={() => toggleLookingFor(item)} />
       ))}
@@ -146,6 +175,8 @@ export default function FilterBar({ options, skills, lookingFor, onSkillsChange,
           onClick={() => {
             onSkillsChange([]);
             onLookingForChange([]);
+            onMinTierChange("");
+            onSortByMogChange(false);
           }}
           className="text-xs text-muted underline-offset-2 hover:text-slate-200 hover:underline"
         >

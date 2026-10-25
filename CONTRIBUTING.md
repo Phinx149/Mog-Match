@@ -14,7 +14,7 @@ Welcome! This guide assumes you're new — skim it once, then keep it open.
 
 ## 2. First-time setup
 
-Follow **Backend setup** and **Frontend setup** in the [README](README.md). Short version:
+Follow **Backend setup** and **Frontend setup** in the [developer guide](docs/DEVELOPMENT.md#backend-setup). Short version:
 
 ```bash
 # terminal 1
@@ -68,6 +68,6 @@ Before pushing: `pytest` (backend) and `npm run build` (frontend).
 
 ## 5. Getting help
 
-1. README and `docs/`.
+1. `docs/DEVELOPMENT.md` (setup, API, data model), `docs/ARCHITECTURE.md` (why it's built this way) and the rest of `docs/`.
 2. Claude Code — skills in `.claude/skills/` know this project's conventions.
 3. Team chat — paste the **full error**, the command you ran, and what you expected.

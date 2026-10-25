@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError, changePassword, updateMyProfile } from "../services/api";
+import { APPEARANCES, getAppearance, setAppearance } from "../utils/appearance";
 
 const buttonClass = "self-start rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60";
 
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [nameSaved, setNameSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [appearance, setCurrentAppearance] = useState(getAppearance);
 
   useEffect(() => { setName(user?.full_name ?? ""); }, [user?.id, user?.full_name]);
 
@@ -72,6 +74,34 @@ export default function SettingsPage() {
       <Navbar />
       <main className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
         <h1 className="text-2xl font-bold">Settings</h1>
+        <section aria-labelledby="appearance-heading" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+          <div>
+            <h2 id="appearance-heading" className="font-semibold">Appearance</h2>
+            <p className="mt-1 text-sm text-muted">Pick a color scheme for the whole site. It applies right away and is remembered on this device.</p>
+          </div>
+          <div role="radiogroup" aria-labelledby="appearance-heading" className="grid gap-3 sm:grid-cols-2">
+            {APPEARANCES.map(({ id, label, description, preview }) => (
+              <label key={id}
+                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-line p-3 transition-colors hover:border-violet-500/60 has-checked:border-violet-400 has-checked:bg-violet-500/10 has-focus-visible:ring-2 has-focus-visible:ring-violet-400">
+                <input type="radio" name="appearance" value={id} className="sr-only" checked={appearance === id}
+                  onChange={() => { setAppearance(id); setCurrentAppearance(id); }} />
+                {/* A tiny mock page in this appearance's own colors, so you can see it before picking. */}
+                <span aria-hidden="true" className="flex h-16 items-center gap-2 rounded-lg border px-3"
+                  style={{ backgroundColor: preview.canvas, borderColor: preview.line }}>
+                  <span className="h-8 w-14 rounded-md border" style={{ backgroundColor: preview.surface, borderColor: preview.line }} />
+                  <span className="flex flex-col gap-1.5">
+                    <span className="h-2 w-16 rounded-full" style={{ backgroundColor: preview.accent }} />
+                    <span className="h-2 w-10 rounded-full" style={{ backgroundColor: preview.accentAlt }} />
+                  </span>
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">{label}{appearance === id && <span aria-hidden="true" className="ml-2 text-xs font-normal text-muted">Current</span>}</span>
+                  <span className="block text-sm text-muted">{description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
         <form onSubmit={saveName} aria-labelledby="display-name-heading" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
           <div>
             <h2 id="display-name-heading" className="font-semibold">Display name</h2>

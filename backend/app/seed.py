@@ -442,7 +442,7 @@ def seed_database(reset: bool = False) -> dict[str, int]:
 
 
 def test_accounts() -> list[dict]:
-    """user1/user2 plus the 50 demo users (one Mog tier each, see demo_users.py), with passwords
+    """user1/user2 plus the 60 demo users (spread across the Mog tiers, see demo_users.py), with passwords
     and each one's own profile theme (DEMO_THEMES)."""
     demo = [
         {**{key: value for key, value in data.items() if key != "tier"}, "password": DEMO_PASSWORD}

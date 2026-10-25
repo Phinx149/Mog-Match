@@ -18,6 +18,70 @@ body {
   @apply bg-canvas text-slate-100 font-sans antialiased;
 }
 
+/* "Hacker" appearance (Settings → Appearance): black with terminal-green accents.
+   Tailwind turns every color class into a CSS variable (bg-violet-600 is var(--color-violet-600)),
+   so re-pointing the variables re-colors the whole site without touching a single component.
+   - violet / cyan / fuchsia are the brand accents, so they become greens.
+   - slate is the neutral text color, so it gets a faint green tint.
+   - rose (errors), emerald (success) and amber (Mog Score) keep their meaning and are left alone.
+   Keep the 500 and 600 shades dark: buttons put white text on them (hover:bg-violet-500 too) and
+   need 4.5:1 contrast. The bright neon shades belong on 300 and 400, which are used for text. */
+html[data-appearance="hacker"] {
+  --color-canvas: #000000;
+  --color-surface: #08100b;
+  --color-surface-raised: #0f1c14;
+  --color-line: #153823;
+  --color-muted: #75a888;
+
+  --color-violet-50: #ecfff3;
+  --color-violet-100: #c8ffdc;
+  --color-violet-200: #8dffb9;
+  --color-violet-300: #4dff94;
+  --color-violet-400: #1fe86f;
+  --color-violet-500: #0a8439;
+  --color-violet-600: #076b2e;
+  --color-violet-700: #065627;
+  --color-violet-800: #064420;
+  --color-violet-900: #05351a;
+  --color-violet-950: #021c0e;
+
+  --color-cyan-50: #effffa;
+  --color-cyan-100: #cffff0;
+  --color-cyan-200: #9bffdf;
+  --color-cyan-300: #5ff5c8;
+  --color-cyan-400: #2ee8b0;
+  --color-cyan-500: #0b8a67;
+  --color-cyan-600: #0a7d5f;
+  --color-cyan-700: #086349;
+  --color-cyan-800: #064d3a;
+  --color-cyan-900: #053a2c;
+  --color-cyan-950: #02201a;
+
+  --color-fuchsia-50: #f7ffe5;
+  --color-fuchsia-100: #ebffbf;
+  --color-fuchsia-200: #d9ff8f;
+  --color-fuchsia-300: #c4ff5c;
+  --color-fuchsia-400: #a3f02a;
+  --color-fuchsia-500: #348212;
+  --color-fuchsia-600: #286b0d;
+  --color-fuchsia-700: #1f560b;
+  --color-fuchsia-800: #184409;
+  --color-fuchsia-900: #123507;
+  --color-fuchsia-950: #091d03;
+
+  --color-slate-50: #f1fff6;
+  --color-slate-100: #e2f7ea;
+  --color-slate-200: #c5e6d1;
+  --color-slate-300: #a3c9b3;
+  --color-slate-400: #7fa591;
+  --color-slate-500: #5f8671;
+  --color-slate-600: #476a56;
+  --color-slate-700: #33503f;
+  --color-slate-800: #1f3528;
+  --color-slate-900: #0f1f16;
+  --color-slate-950: #06110b;
+}
+
 /* A profile's custom look. ThemeScope sets --profile-bg; every bg-surface / bg-surface-raised /
    border-line inside re-skins from it. Scoped to the element (not :root) so a page can show
    many differently themed cards at once. */
@@ -40,8 +104,9 @@ body {
 }
 .profile-theme[data-effect="emoji"],
 .profile-theme[data-effect="money"],
-.profile-theme[data-effect="snow"] {
-  --panel-opacity: 55%;
+.profile-theme[data-effect="snow"],
+.profile-theme[data-effect="lightning"] {
+  --panel-opacity: 55%; /* for lightning: glassy enough that a strike's flash lights up the cards a little */
 }
 .profile-theme[data-effect="slogans"],
 .profile-theme[data-effect="market"] {
@@ -52,7 +117,7 @@ body {
   overflow: visible;
   flex-shrink: 0;
   transform-origin: center bottom;
-  filter: drop-shadow(0 0 10px #8b5cf680);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-violet-500) 50%, transparent));
   animation: mog-flame-pulse var(--mog-flame-duration) ease-in-out infinite alternate;
 }
 
@@ -63,6 +128,31 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .mog-score-flame { animation: none; }
+}
+
+/* Discover: a swiped card squeezes into the button that was pressed (Like is on the right, Pass on
+   the left), and that button pops. ProfileCard waits for swipe-away to finish before telling the
+   page, and the page is what removes the card. */
+.swipe-to-like,
+.swipe-to-pass {
+  animation: swipe-away 320ms ease-in forwards;
+}
+.swipe-to-like {
+  transform-origin: right center;
+}
+.swipe-to-pass {
+  transform-origin: left center;
+}
+.swipe-pop {
+  animation: swipe-pop 320ms ease-out;
+}
+
+@keyframes swipe-away {
+  to { transform: scaleX(0.04); opacity: 0; }
+}
+
+@keyframes swipe-pop {
+  50% { transform: scale(1.12); }
 }
 
 /* Shared form control look. In the components layer so utility classes can override it. */
