@@ -93,7 +93,8 @@ export default function MatchCard({ profile, rank, onUnlike }: MatchCardProps) {
         <SharedRow label="Both want" items={match.shared.looking_for} variant="neutral" />
       </div>
 
-      <details className="mt-4 border-t border-line pt-3">
+      {/* Open by default: the reasons are the point of the card. Users can still collapse it. */}
+      <details open className="mt-4 border-t border-line pt-3">
         <summary className="cursor-pointer text-xs text-muted hover:text-slate-200">
           Why you're {match.score}% similar
         </summary>
@@ -129,9 +130,9 @@ export default function MatchCard({ profile, rank, onUnlike }: MatchCardProps) {
           onClick={() => onUnlike(profile)}
           aria-label={`Unlike ${profile.full_name}`}
           title="Remove from your matches and show them on Discover again"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/50 bg-rose-500/15 px-5 py-2.5 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/30 hover:text-rose-100"
         >
-          <HeartOff className="size-3.5" aria-hidden />
+          <HeartOff className="size-4" aria-hidden />
           Unlike
         </button>
       </div>
