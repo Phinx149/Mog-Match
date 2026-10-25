@@ -3,8 +3,9 @@ import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .config import Config
+from .config import DEFAULT_SECRET_KEY, Config
 from .extensions import db, migrate
 
 
@@ -15,7 +16,14 @@ def create_app(test_config: dict | None = None) -> Flask:
     if test_config:
         app.config.update(test_config)
 
+    if app.config["ON_VERCEL"]:
+        _check_production_config(app)
+        # Vercel's proxy terminates HTTPS; trust its X-Forwarded-* headers so photo URLs
+        # (url_for(..., _external=True)) come out as https://<your-domain>/...
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        # Local dev only: a SQLite file in backend/instance/. (Vercel's disk is read-only.)
         os.makedirs(app.instance_path, exist_ok=True)
         db_path = os.path.join(app.instance_path, "mogmatch.db")
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path.replace("\\", "/")
@@ -42,6 +50,14 @@ def create_app(test_config: dict | None = None) -> Flask:
     _register_error_handlers(app)
 
     return app
+
+
+def _check_production_config(app: Flask) -> None:
+    """Fail the deploy loudly instead of running with a missing database or a guessable SECRET_KEY."""
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        raise RuntimeError("Set DATABASE_URL (Postgres) in the Vercel project's environment variables.")
+    if app.config["SECRET_KEY"] == DEFAULT_SECRET_KEY:
+        raise RuntimeError("Set SECRET_KEY to a long random string in the Vercel project's environment variables.")
 
 
 def _register_error_handlers(app: Flask) -> None:

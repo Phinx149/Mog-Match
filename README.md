@@ -16,7 +16,8 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 |---|---|
 | Frontend | React 19 + Vite + TypeScript, Tailwind CSS v4, React Router, Lucide icons |
 | Backend | Python 3.12+, Flask, Flask-CORS, Flask-SQLAlchemy, Flask-Migrate, python-dotenv |
-| Database | SQLite (dev) via SQLAlchemy ORM — portable UUID/JSON columns, so PostgreSQL is a `DATABASE_URL` change |
+| Database | SQLite in local dev, **PostgreSQL in production** (Neon on Vercel, `psycopg` driver). Same SQLAlchemy models and migrations for both |
+| Hosting | Vercel: one project, `vercel.json` Services (`/api/*` → Flask, everything else → the Vite build). See [`docs/DEPLOY.md`](docs/DEPLOY.md) |
 | Tests | pytest (backend), `tsc` type checking (frontend) |
 
 ## Repository structure
@@ -119,17 +120,18 @@ npm run dev                     # http://localhost:5173
 | Variable | Default | Purpose |
 |---|---|---|
 | `FLASK_APP` | `run.py` | Lets `flask db` / `flask seed` find the app |
-| `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | SQLAlchemy URL, e.g. `postgresql://user:pass@host/db` |
+| `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | Database to use. Empty = local SQLite file. A Postgres URL (`postgresql://user:pass@host/db`, or `postgres://...`) is used with the psycopg driver automatically. `POSTGRES_URL` also works (Vercel/Neon sets both) |
+| `TEST_DATABASE_URL` | *(empty → temporary SQLite)* | Run `pytest` against this Postgres database instead. **It drops every table first**, so only use a throwaway DB |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origins allowed to call `/api/*` |
 | `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded demo user (username `jordan-dev`) |
-| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. Set a long random value anywhere but your laptop |
+| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. **Required on Vercel**: the app refuses to start there with the default |
 | `SEED_PASSWORD` | see `.env.example` | Password `flask seed` gives every seeded user |
 | `PORT` | `5001` | Port for `python run.py` (5000 clashes with AirPlay on macOS) |
 
 **`frontend/.env.local`**
 | Variable | Default | Purpose |
 |---|---|---|
-| `VITE_API_URL` | `http://localhost:5001` | Flask API base URL |
+| `VITE_API_URL` | `http://localhost:5001` in dev, empty in production builds | Flask API base URL. Leave unset on Vercel: production calls `/api` on the same domain |
 
 Never commit `.env`, `.env.local` or `*.db` files — they're git-ignored.
 
@@ -268,9 +270,19 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 - `skills` must come from the tech catalog and `looking_for` from `Hackathon team | Side project | Open source | Cofounder | Mentor | Mentee | Just vibes` (case-insensitive; stored with the canonical spelling). `GET /api/profiles/filter-options` returns both lists.
 - `400` on invalid data or unknown fields, `409` if the username is taken.
 
+## Deploying
+
+Production is Vercel + Postgres; the full step-by-step guide, including how to run migrations against production, is in [`docs/DEPLOY.md`](docs/DEPLOY.md). In short:
+1. Import the repo into Vercel with the repo root as the root directory (`vercel.json` defines both services).
+2. Connect a Neon Postgres database (sets `DATABASE_URL`) and set `SECRET_KEY` and `SEED_PASSWORD`.
+3. From your laptop: `DATABASE_URL="<production url>" flask db upgrade`, then the same with `flask seed`.
+4. Deploy, then open `/api/health`.
+
+Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL` in `backend/.env`.
+
 ## Known limitations (this milestone)
 
 - Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
 - The inbox updates by polling (every 5 s), not push.
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
-- Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.
+- Edit Profile accepts JPEG, PNG and WebP photos up to 4 MB (Vercel rejects request bodies over 4.5 MB). Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.
