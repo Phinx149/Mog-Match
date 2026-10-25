@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import {
   CHART_MOODS,
@@ -52,10 +52,13 @@ interface ThemePickerProps {
   preview: { name: string; username: string; avatarUrl: string | null; skills: string[] };
 }
 
-/** Controlled picker for a profile's look: presets, a background color, an animated effect, and a live preview. */
+/** Controlled picker for a profile's look: a background color, an animated effect (with its presets and tuning), and a live preview. */
 export default function ThemePicker({ theme, onChange, error, effectError, preview }: ThemePickerProps) {
   const inputId = useId();
+  const [tuneOpen, setTuneOpen] = useState(false);
   const { background, effect, effect_options: options } = theme;
+  // Presets live with the effect they use, so only that effect's are offered.
+  const presets = effect ? THEME_PRESETS.filter((preset) => preset.theme.effect === effect) : [];
   const setOption = (patch: Partial<EffectOptions>) => onChange({ ...theme, effect_options: { ...options, ...patch } });
   // Warn right away; the server re-checks on save and is the one that actually enforces it.
   const message =
@@ -65,32 +68,6 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
 
   return (
     <>
-      <div>
-        <span className="mb-1.5 block text-sm font-medium text-slate-300">Presets</span>
-        <div role="group" aria-label="Theme presets" className="flex flex-wrap gap-2">
-          {THEME_PRESETS.map((preset) => {
-            const selected = sameTheme(theme, preset.theme);
-            return (
-              <button
-                key={preset.name}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onChange(preset.theme)}
-                className={chipClass(selected)}
-              >
-                <span
-                  aria-hidden
-                  style={{ backgroundColor: preset.theme.background ?? DEFAULT_BACKGROUND }}
-                  className="size-3 rounded-full border border-white/20"
-                />
-                {preset.name}
-                <span className="text-xs font-normal text-muted">{preset.description}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <div>
         <span className="mb-1.5 block text-sm font-medium text-slate-300">Card background</span>
         <div role="group" aria-label="Card background quick picks" className="flex flex-wrap gap-2">
@@ -158,306 +135,347 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
         )}
 
         {effect && (
-          <fieldset className="mt-3 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
-            <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
+          <div className="mt-3 rounded-lg border border-line">
+            <button
+              type="button"
+              aria-expanded={tuneOpen}
+              onClick={() => setTuneOpen((open) => !open)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-200 transition-colors hover:text-cyan-200"
+            >
+              <SlidersHorizontal className="size-4 text-cyan-300" aria-hidden />
               {EFFECT_INFO[effect].tuneTitle}
-            </legend>
-            {EFFECT_INFO[effect].hasEmojiStyle && (
-              <div className="sm:col-span-2">
-                <EmojiPicker emojis={options.emojis} onChange={(emojis) => setOption({ emojis })} />
-              </div>
-            )}
-            {EFFECT_INFO[effect].hasSloganStyle && (
-              <div className="sm:col-span-2">
-                <SloganPicker slogans={options.slogans} onChange={(slogans) => setOption({ slogans })} />
-              </div>
-            )}
-            {EFFECT_INFO[effect].sliders
-              // Weight is only about coins, so it has no use while bills are all that falls.
-              .filter((key) => key !== "money_weight" || options.money_kind !== "bills")
-              .map((key) => {
-                const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
-                return (
-                  <RangeField
-                    key={key}
-                    label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
-                    value={options[key]}
-                    display={describeOption(key, options[key], unit)}
-                    {...{ min, max, step }}
-                    onChange={(value) => setOption({ [key]: value })}
-                  />
-                );
-              })}
-            {EFFECT_INFO[effect].hasEmojiStyle && (
-              <div className="sm:col-span-2">
-                <span className="mb-1.5 block text-sm text-slate-300">Path</span>
-                <div role="group" aria-label="Emoji path" className="flex flex-wrap gap-2">
-                  {EMOJI_PATHS.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      aria-pressed={options.emoji_path === name}
-                      onClick={() => setOption({ emoji_path: name })}
-                      className={chipClass(options.emoji_path === name)}
-                    >
-                      {EMOJI_PATH_INFO[name].label}
-                    </button>
-                  ))}
-                </div>
-                <span className="mt-1 block text-xs text-muted">{EMOJI_PATH_INFO[options.emoji_path].description}.</span>
-              </div>
-            )}
-            {EFFECT_INFO[effect].hasMoneyStyle && (
-              <div className="sm:col-span-2">
-                <span className="mb-1.5 block text-sm text-slate-300">Cash</span>
-                <div role="group" aria-label="Kind of cash" className="flex flex-wrap gap-2">
-                  {MONEY_KINDS.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      aria-pressed={options.money_kind === name}
-                      onClick={() => setOption({ money_kind: name })}
-                      className={chipClass(options.money_kind === name)}
-                    >
-                      {MONEY_KIND_INFO[name].label}
-                    </button>
-                  ))}
-                </div>
-                <span className="mt-1 block text-xs text-muted">{MONEY_KIND_INFO[options.money_kind].description}.</span>
-              </div>
-            )}
-            {EFFECT_INFO[effect].hasRainStyle && (
-              <>
+              <span className="text-xs font-normal text-muted">
+                {presets.length} {presets.length === 1 ? "preset" : "presets"} and settings
+              </span>
+              <ChevronDown className={`ml-auto size-4 text-muted transition-transform ${tuneOpen ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+
+            {tuneOpen && (
+              <fieldset className="grid gap-3 border-t border-line p-3 sm:grid-cols-2">
+                <legend className="sr-only">{EFFECT_INFO[effect].tuneTitle}</legend>
                 <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Symbols</span>
-                  <div role="group" aria-label="Rain symbols" className="flex flex-wrap gap-2">
-                    {RAIN_SYMBOL_SETS.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={options.rain_symbols === name}
-                        onClick={() => setOption({ rain_symbols: name })}
-                        className={chipClass(options.rain_symbols === name)}
-                      >
-                        {RAIN_SYMBOLS[name].label}
-                        <span className="font-mono text-xs font-normal text-muted">{RAIN_SYMBOLS[name].sample}</span>
-                      </button>
-                    ))}
+                  <span className="mb-1.5 block text-sm text-slate-300">Presets</span>
+                  <div role="group" aria-label={`${EFFECT_INFO[effect].label} presets`} className="flex flex-wrap gap-2">
+                    {presets.map((preset) => {
+                      const selected = sameTheme(theme, preset.theme);
+                      return (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => onChange(preset.theme)}
+                          className={chipClass(selected)}
+                        >
+                          <span
+                            aria-hidden
+                            style={{ backgroundColor: preset.theme.background ?? DEFAULT_BACKGROUND }}
+                            className="size-3 rounded-full border border-white/20"
+                          />
+                          {preset.name}
+                          <span className="text-xs font-normal text-muted">{preset.description}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-
-                <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Rain color</span>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    {/* Picking any color leaves rainbow mode, since that's clearly what was meant. */}
-                    <div role="group" aria-label="Rain color quick picks" className="flex flex-wrap gap-2">
-                      {RAIN_COLOR_SWATCHES.map(({ name, hex }) => {
-                        const selected = !options.rain_rainbow && options.rain_color.toLowerCase() === hex;
-                        return (
-                          <button
-                            key={hex}
-                            type="button"
-                            title={name}
-                            aria-label={name}
-                            aria-pressed={selected}
-                            onClick={() => setOption({ rain_color: hex, rain_rainbow: false })}
-                            style={{ backgroundColor: hex }}
-                            className={`size-7 rounded-full border border-white/20 transition ${
-                              selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
-                            }`}
-                          />
-                        );
-                      })}
+                {EFFECT_INFO[effect].hasEmojiStyle && (
+                  <div className="sm:col-span-2">
+                    <EmojiPicker emojis={options.emojis} onChange={(emojis) => setOption({ emojis })} />
+                  </div>
+                )}
+                {EFFECT_INFO[effect].hasSloganStyle && (
+                  <div className="sm:col-span-2">
+                    <SloganPicker slogans={options.slogans} onChange={(slogans) => setOption({ slogans })} />
+                  </div>
+                )}
+                {EFFECT_INFO[effect].sliders
+                  // Weight is only about coins, so it has no use while bills are all that falls.
+                  .filter((key) => key !== "money_weight" || options.money_kind !== "bills")
+                  .map((key) => {
+                    const { label, min, max, step, unit } = EFFECT_OPTION_RANGES[key];
+                    return (
+                      <RangeField
+                        key={key}
+                        label={key === "size" ? EFFECT_INFO[effect].sizeLabel : label}
+                        value={options[key]}
+                        display={describeOption(key, options[key], unit)}
+                        {...{ min, max, step }}
+                        onChange={(value) => setOption({ [key]: value })}
+                      />
+                    );
+                  })}
+                {EFFECT_INFO[effect].hasEmojiStyle && (
+                  <div className="sm:col-span-2">
+                    <span className="mb-1.5 block text-sm text-slate-300">Path</span>
+                    <div role="group" aria-label="Emoji path" className="flex flex-wrap gap-2">
+                      {EMOJI_PATHS.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={options.emoji_path === name}
+                          onClick={() => setOption({ emoji_path: name })}
+                          className={chipClass(options.emoji_path === name)}
+                        >
+                          {EMOJI_PATH_INFO[name].label}
+                        </button>
+                      ))}
                     </div>
-                    <input
-                      type="color"
-                      aria-label="Custom rain color"
-                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
-                      value={options.rain_color}
-                      onChange={(e) => setOption({ rain_color: e.target.value, rain_rainbow: false })}
-                    />
+                    <span className="mt-1 block text-xs text-muted">{EMOJI_PATH_INFO[options.emoji_path].description}.</span>
+                  </div>
+                )}
+                {EFFECT_INFO[effect].hasMoneyStyle && (
+                  <div className="sm:col-span-2">
+                    <span className="mb-1.5 block text-sm text-slate-300">Cash</span>
+                    <div role="group" aria-label="Kind of cash" className="flex flex-wrap gap-2">
+                      {MONEY_KINDS.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={options.money_kind === name}
+                          onClick={() => setOption({ money_kind: name })}
+                          className={chipClass(options.money_kind === name)}
+                        >
+                          {MONEY_KIND_INFO[name].label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="mt-1 block text-xs text-muted">{MONEY_KIND_INFO[options.money_kind].description}.</span>
+                  </div>
+                )}
+                {EFFECT_INFO[effect].hasRainStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Symbols</span>
+                      <div role="group" aria-label="Rain symbols" className="flex flex-wrap gap-2">
+                        {RAIN_SYMBOL_SETS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.rain_symbols === name}
+                            onClick={() => setOption({ rain_symbols: name })}
+                            className={chipClass(options.rain_symbols === name)}
+                          >
+                            {RAIN_SYMBOLS[name].label}
+                            <span className="font-mono text-xs font-normal text-muted">{RAIN_SYMBOLS[name].sample}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Rain color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {/* Picking any color leaves rainbow mode, since that's clearly what was meant. */}
+                        <div role="group" aria-label="Rain color quick picks" className="flex flex-wrap gap-2">
+                          {RAIN_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = !options.rain_rainbow && options.rain_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ rain_color: hex, rain_rainbow: false })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom rain color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.rain_color}
+                          onChange={(e) => setOption({ rain_color: e.target.value, rain_rainbow: false })}
+                        />
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-cyan-400"
+                            checked={options.rain_rainbow}
+                            onChange={(e) => setOption({ rain_rainbow: e.target.checked })}
+                          />
+                          Rainbow
+                        </label>
+                      </div>
+                    </div>
+                  </>
+                )}
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-cyan-400"
+                    checked={options.glow}
+                    onChange={(e) => setOption({ glow: e.target.checked })}
+                  />
+                  Neon glow <span className="text-xs text-muted">(a bright halo)</span>
+                </label>
+                {EFFECT_INFO[effect].hasSloganStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Letters</span>
+                      <div role="group" aria-label="Slogan style" className="flex flex-wrap gap-2">
+                        {SLOGAN_STYLES.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.slogan_style === name}
+                            onClick={() => setOption({ slogan_style: name })}
+                            className={chipClass(options.slogan_style === name)}
+                          >
+                            {SLOGAN_STYLE_INFO[name].label}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">{SLOGAN_STYLE_INFO[options.slogan_style].description}.</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div role="group" aria-label="Slogan color quick picks" className="flex flex-wrap gap-2">
+                          {SLOGAN_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = options.slogan_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ slogan_color: hex })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom slogan color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.slogan_color}
+                          onChange={(e) => setOption({ slogan_color: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-cyan-400"
+                        checked={options.slogan_alternate}
+                        onChange={(e) => setOption({ slogan_alternate: e.target.checked })}
+                      />
+                      Every other row goes the other way
+                    </label>
+                  </>
+                )}
+                {EFFECT_INFO[effect].hasMarketStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Market mood</span>
+                      <div role="group" aria-label="Market mood" className="flex flex-wrap gap-2">
+                        {CHART_MOODS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.chart_mood === name}
+                            onClick={() => setOption({ chart_mood: name })}
+                            className={chipClass(options.chart_mood === name)}
+                          >
+                            {CHART_MOOD_INFO[name].label}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">{CHART_MOOD_INFO[options.chart_mood].description}.</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Candle colors</span>
+                      <div role="group" aria-label="Candle colors" className="flex flex-wrap gap-2">
+                        {CHART_PALETTES.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.chart_palette === name}
+                            onClick={() => setOption({ chart_palette: name })}
+                            className={chipClass(options.chart_palette === name)}
+                          >
+                            <span aria-hidden className="flex gap-0.5">
+                              <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].up }} />
+                              <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].down }} />
+                            </span>
+                            {CHART_PALETTE_INFO[name].label}
+                          </button>
+                        ))}
+                      </div>
+                      {options.chart_palette === "swapped" && (
+                        <span className="mt-1 block text-xs text-muted">Red up and green down, the way East Asian markets show it.</span>
+                      )}
+                    </div>
+
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-cyan-400"
+                        checked={options.chart_label}
+                        onChange={(e) => setOption({ chart_label: e.target.checked })}
+                      />
+                      Show the ticker and price <span className="text-xs text-muted">(and the price tag on the right)</span>
+                    </label>
+                    {options.chart_label && (
+                      <TickerField value={options.chart_ticker} onChange={(chart_ticker) => setOption({ chart_ticker })} />
+                    )}
+                    <p className="text-xs text-muted sm:col-span-2">
+                      Everything on the chart is made up, and it is not financial advice. Pumps and crashes throw up popups now and then.
+                    </p>
+                  </>
+                )}
+                {EFFECT_INFO[effect].hasLogoColor && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
                     <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
                       <input
                         type="checkbox"
                         className="size-4 accent-cyan-400"
-                        checked={options.rain_rainbow}
-                        onChange={(e) => setOption({ rain_rainbow: e.target.checked })}
+                        checked={options.color_change}
+                        onChange={(e) => setOption({ color_change: e.target.checked })}
                       />
-                      Rainbow
+                      Change color on every bounce
                     </label>
+                    {/* A fixed color only matters while the color isn't changing. */}
+                    {!options.color_change && (
+                      <label className="flex items-center gap-2 text-sm text-slate-300">
+                        Logo color
+                        <input
+                          type="color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.color}
+                          onChange={(e) => setOption({ color: e.target.value })}
+                        />
+                      </label>
+                    )}
                   </div>
-                </div>
-              </>
-            )}
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
-              <input
-                type="checkbox"
-                className="size-4 accent-cyan-400"
-                checked={options.glow}
-                onChange={(e) => setOption({ glow: e.target.checked })}
-              />
-              Neon glow <span className="text-xs text-muted">(a bright halo)</span>
-            </label>
-            {EFFECT_INFO[effect].hasSloganStyle && (
-              <>
-                <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Letters</span>
-                  <div role="group" aria-label="Slogan style" className="flex flex-wrap gap-2">
-                    {SLOGAN_STYLES.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={options.slogan_style === name}
-                        onClick={() => setOption({ slogan_style: name })}
-                        className={chipClass(options.slogan_style === name)}
-                      >
-                        {SLOGAN_STYLE_INFO[name].label}
-                      </button>
-                    ))}
-                  </div>
-                  <span className="mt-1 block text-xs text-muted">{SLOGAN_STYLE_INFO[options.slogan_style].description}.</span>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Color</span>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div role="group" aria-label="Slogan color quick picks" className="flex flex-wrap gap-2">
-                      {SLOGAN_COLOR_SWATCHES.map(({ name, hex }) => {
-                        const selected = options.slogan_color.toLowerCase() === hex;
-                        return (
-                          <button
-                            key={hex}
-                            type="button"
-                            title={name}
-                            aria-label={name}
-                            aria-pressed={selected}
-                            onClick={() => setOption({ slogan_color: hex })}
-                            style={{ backgroundColor: hex }}
-                            className={`size-7 rounded-full border border-white/20 transition ${
-                              selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
-                            }`}
-                          />
-                        );
-                      })}
-                    </div>
-                    <input
-                      type="color"
-                      aria-label="Custom slogan color"
-                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
-                      value={options.slogan_color}
-                      onChange={(e) => setOption({ slogan_color: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-cyan-400"
-                    checked={options.slogan_alternate}
-                    onChange={(e) => setOption({ slogan_alternate: e.target.checked })}
-                  />
-                  Every other row goes the other way
-                </label>
-              </>
-            )}
-            {EFFECT_INFO[effect].hasMarketStyle && (
-              <>
-                <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Market mood</span>
-                  <div role="group" aria-label="Market mood" className="flex flex-wrap gap-2">
-                    {CHART_MOODS.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={options.chart_mood === name}
-                        onClick={() => setOption({ chart_mood: name })}
-                        className={chipClass(options.chart_mood === name)}
-                      >
-                        {CHART_MOOD_INFO[name].label}
-                      </button>
-                    ))}
-                  </div>
-                  <span className="mt-1 block text-xs text-muted">{CHART_MOOD_INFO[options.chart_mood].description}.</span>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <span className="mb-1.5 block text-sm text-slate-300">Candle colors</span>
-                  <div role="group" aria-label="Candle colors" className="flex flex-wrap gap-2">
-                    {CHART_PALETTES.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        aria-pressed={options.chart_palette === name}
-                        onClick={() => setOption({ chart_palette: name })}
-                        className={chipClass(options.chart_palette === name)}
-                      >
-                        <span aria-hidden className="flex gap-0.5">
-                          <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].up }} />
-                          <span className="size-3 rounded-sm" style={{ backgroundColor: CHART_PALETTE_INFO[name].down }} />
-                        </span>
-                        {CHART_PALETTE_INFO[name].label}
-                      </button>
-                    ))}
-                  </div>
-                  {options.chart_palette === "swapped" && (
-                    <span className="mt-1 block text-xs text-muted">Red up and green down, the way East Asian markets show it.</span>
-                  )}
-                </div>
-
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-cyan-400"
-                    checked={options.chart_label}
-                    onChange={(e) => setOption({ chart_label: e.target.checked })}
-                  />
-                  Show the ticker and price <span className="text-xs text-muted">(and the price tag on the right)</span>
-                </label>
-                {options.chart_label && (
-                  <TickerField value={options.chart_ticker} onChange={(chart_ticker) => setOption({ chart_ticker })} />
                 )}
-                <p className="text-xs text-muted sm:col-span-2">
-                  Everything on the chart is made up, and it is not financial advice. Pumps and crashes throw up popups now and then.
-                </p>
-              </>
-            )}
-            {EFFECT_INFO[effect].hasLogoColor && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-2">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-cyan-400"
-                    checked={options.color_change}
-                    onChange={(e) => setOption({ color_change: e.target.checked })}
-                  />
-                  Change color on every bounce
-                </label>
-                {/* A fixed color only matters while the color isn't changing. */}
-                {!options.color_change && (
-                  <label className="flex items-center gap-2 text-sm text-slate-300">
-                    Logo color
-                    <input
-                      type="color"
-                      className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
-                      value={options.color}
-                      onChange={(e) => setOption({ color: e.target.value })}
-                    />
-                  </label>
+                {EFFECT_INFO[effect].hasLogoColor && (
+                  <p className="text-xs text-muted sm:col-span-2">
+                    Land a logo in a corner for a sparkle burst. Near misses count if they are close enough.
+                  </p>
                 )}
-              </div>
+                {options.brightness > 60 && (
+                  <p className="text-xs text-amber-300/90 sm:col-span-2">
+                    A bright effect behind text can make a card harder to read. Check the preview.
+                  </p>
+                )}
+              </fieldset>
             )}
-            {EFFECT_INFO[effect].hasLogoColor && (
-              <p className="text-xs text-muted sm:col-span-2">
-                Land a logo in a corner for a sparkle burst. Near misses count if they are close enough.
-              </p>
-            )}
-            {options.brightness > 60 && (
-              <p className="text-xs text-amber-300/90 sm:col-span-2">
-                A bright effect behind text can make a card harder to read. Check the preview.
-              </p>
-            )}
-          </fieldset>
+          </div>
         )}
       </div>
 
