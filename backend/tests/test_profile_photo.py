@@ -47,7 +47,7 @@ def test_invalid_photo_and_all_fields_reported_without_saving(client):
     assert response.status_code == 409
     assert set(response.get_json()["error"]["fields"]) == {
         "username", "full_name", "skills", "links[0].label", "links[0].url",
-        "projects[0].title", "projects[0].technologies", "photo",
+        "projects[0].title", "projects[0].description", "projects[0].technologies", "photo",
     }
     assert client.get("/api/profiles/me").get_json() == original
 

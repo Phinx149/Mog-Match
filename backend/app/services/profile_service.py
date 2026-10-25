@@ -27,8 +27,8 @@ STRING_FIELDS: dict[str, tuple[int, bool]] = {
     "avatar_url": (500, False),
     "location": (120, False),
     "education": (200, False),
-    "bio": (2000, False),
-    "favorite_ide": (80, False),
+    "bio": (2000, True),
+    "favorite_ide": (80, True),
     "experience_level": (40, False),
 }
 # field -> max number of items
@@ -309,13 +309,15 @@ def _clean_projects(value: Any, errors: dict) -> list[dict] | None:
             errors[prefix] = "Must be an object."
             continue
         title = _clean_string(item.get("title"), f"{prefix}.title", 120, True, errors)
-        description = _clean_string(item.get("description", ""), f"{prefix}.description", 2000, False, errors)
+        description = _clean_string(item.get("description"), f"{prefix}.description", 2000, True, errors)
         project_url = _clean_string(item.get("project_url"), f"{prefix}.project_url", 500, False, errors)
         if project_url and not _is_http_url(project_url):
             errors[f"{prefix}.project_url"] = "Must be a valid http(s) URL."
         technologies = _clean_tags(item.get("technologies", []), f"{prefix}.technologies", 20, errors)
         if technologies:
             technologies = _clean_technologies(technologies, f"{prefix}.technologies", errors)
+        if not technologies and f"{prefix}.technologies" not in errors:
+            errors[f"{prefix}.technologies"] = "Add at least one technology."
         cleaned.append(
             {
                 "title": title,
@@ -345,6 +347,8 @@ def validate_update(data: Any) -> dict[str, Any]:
     for field, max_items in LIST_FIELDS.items():
         if field in data:
             cleaned[field] = _clean_tags(data[field], field, max_items, errors)
+    if "favorite_ai_agents" in cleaned and not cleaned["favorite_ai_agents"] and "favorite_ai_agents" not in errors:
+        errors["favorite_ai_agents"] = "Add at least one coding agent."
     if cleaned.get("skills"):
         cleaned["skills"] = _clean_technologies(cleaned["skills"], "skills", errors, noun="skill")
     if cleaned.get("looking_for"):
@@ -397,10 +401,7 @@ def update_profile(profile: Profile, data: Any, photo=None, extra_errors=None) -
 
     for field in STRING_FIELDS:
         if field in cleaned:
-            value = cleaned[field]
-            if field == "bio" and value is None:
-                value = ""  # bio is NOT NULL; an emptied bio is stored as ""
-            setattr(profile, field, value)
+            setattr(profile, field, cleaned[field])
     for field in LIST_FIELDS:
         if field in cleaned:
             setattr(profile, field, cleaned[field])  # assign a new list so SQLAlchemy sees the change

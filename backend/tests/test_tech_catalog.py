@@ -47,7 +47,7 @@ def test_all_seed_looking_for_values_are_allowed():
 def test_patch_normalizes_project_technologies(client):
     response = client.patch(
         "/api/profiles/me",
-        json={"projects": [{"title": "App", "technologies": ["react", "ts", "TypeScript", "k8s"]}]},
+        json={"projects": [{"title": "App", "description": "A web app.", "technologies": ["react", "ts", "TypeScript", "k8s"]}]},
     )
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["projects"][0]["technologies"] == ["React", "TypeScript", "Kubernetes"]
@@ -56,7 +56,7 @@ def test_patch_normalizes_project_technologies(client):
 def test_patch_rejects_unknown_project_technology(client):
     response = client.patch(
         "/api/profiles/me",
-        json={"projects": [{"title": "App", "technologies": ["React", "Blorptastic"]}]},
+        json={"projects": [{"title": "App", "description": "A web app.", "technologies": ["React", "Blorptastic"]}]},
     )
     assert response.status_code == 400
     message = response.get_json()["error"]["fields"]["projects[0].technologies"]
