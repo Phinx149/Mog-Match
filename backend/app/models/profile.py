@@ -26,6 +26,11 @@ class Profile(TimestampMixin, db.Model):
     favorite_ai_agents = db.Column(db.JSON, nullable=False, default=list)
     looking_for = db.Column(db.JSON, nullable=False, default=list)
 
+    # Cosmetic preferences for how this profile's card/page looks, e.g. {"background": "#172554"}.
+    # NULL = default look. A JSON object (not one column per option) so new options don't need
+    # a migration each. Assign a new dict when updating, like the list columns above.
+    theme = db.Column(db.JSON, nullable=True)
+
     user = db.relationship("User", back_populates="profile")
     links = db.relationship(
         "ProfileLink",
@@ -39,7 +44,7 @@ class Profile(TimestampMixin, db.Model):
         cascade="all, delete-orphan",
         order_by="Project.position",
     )
-    # Deleting a profile removes its swipes in both directions (SQLite doesn't enforce
+    # Deleting a profile removes its swipes and invites in both directions (SQLite doesn't enforce
     # ON DELETE CASCADE by default, so the ORM does it).
     swipes_made = db.relationship(
         "Swipe", foreign_keys="Swipe.swiper_id", back_populates="swiper", cascade="all, delete-orphan"
@@ -47,6 +52,15 @@ class Profile(TimestampMixin, db.Model):
     swipes_received = db.relationship(
         "Swipe", foreign_keys="Swipe.target_id", back_populates="target", cascade="all, delete-orphan"
     )
+    invites_sent = db.relationship(
+        "Invite", foreign_keys="Invite.sender_id", back_populates="sender", cascade="all, delete-orphan"
+    )
+    invites_received = db.relationship(
+        "Invite", foreign_keys="Invite.recipient_id", back_populates="recipient", cascade="all, delete-orphan"
+    )
+    messages_sent = db.relationship("ChatMessage", back_populates="sender", cascade="all, delete-orphan")
+    ideas_generated = db.relationship("ProjectIdea", back_populates="author", cascade="all, delete-orphan")
+    studio_turns = db.relationship("StudioTurn", back_populates="author", cascade="all, delete-orphan")
 
 
 class ProfileLink(db.Model):

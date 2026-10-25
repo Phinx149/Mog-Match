@@ -1,11 +1,12 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import BottomNav from "./BottomNav";
 
 export default function AppLayout() {
+  const inbox = useLocation().pathname === "/inbox";
   return (
-    <div className="min-h-screen pb-24">
+    <div className={inbox ? "flex h-dvh flex-col overflow-hidden" : "min-h-screen pb-24"}>
       <Outlet />
-      <BottomNav />
+      <BottomNav embedded={inbox} />
     </div>
   );
 }

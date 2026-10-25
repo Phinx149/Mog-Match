@@ -18,6 +18,36 @@ body {
   @apply bg-canvas text-slate-100 font-sans antialiased;
 }
 
+/* A profile's custom look. ThemeScope sets --profile-bg; every bg-surface / bg-surface-raised /
+   border-line inside re-skins from it. Scoped to the element (not :root) so a page can show
+   many differently themed cards at once. */
+.profile-theme {
+  --color-surface: var(--profile-bg);
+  --color-surface-raised: color-mix(in oklab, var(--profile-bg), white 7%);
+  --color-line: color-mix(in oklab, var(--profile-bg), white 16%);
+}
+
+/* With an animated effect, panels nested inside the scope (the cards on a profile page) turn
+   slightly see-through so the effect shows around and faintly behind them. The scope itself
+   (e.g. a Discover card) stays solid, and so do raised surfaces (chips, project cards) for legibility.
+   --panel-opacity is how solid those panels stay; a lone bouncing logo needs them much glassier than
+   the dense rain does, or it would be hidden behind the cards almost all the time; a scatter of emoji sits in between. */
+.profile-theme[data-effect] > * {
+  --color-surface: color-mix(in oklab, var(--profile-bg) var(--panel-opacity, 80%), transparent);
+}
+.profile-theme[data-effect="dvd"] {
+  --panel-opacity: 35%;
+}
+.profile-theme[data-effect="emoji"],
+.profile-theme[data-effect="money"],
+.profile-theme[data-effect="snow"] {
+  --panel-opacity: 55%;
+}
+.profile-theme[data-effect="slogans"],
+.profile-theme[data-effect="market"] {
+  --panel-opacity: 70%; /* big letters (or a busy chart) behind small text: keep the panels more solid */
+}
+
 .mog-score-flame {
   overflow: visible;
   flex-shrink: 0;

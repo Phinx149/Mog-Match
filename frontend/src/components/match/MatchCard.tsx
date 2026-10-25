@@ -1,6 +1,8 @@
 import { HeartOff, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { Invite } from "../../types/invite";
 import type { MatchComponent, MatchedProfile } from "../../types/profile";
+import InviteControl from "../invites/InviteControl";
 import MogBadge from "../mog/MogBadge";
 import Avatar from "../profiles/Avatar";
 import SkillBadge from "../profiles/SkillBadge";
@@ -46,9 +48,11 @@ interface MatchCardProps {
   profile: MatchedProfile;
   rank: number;
   onUnlike: (profile: MatchedProfile) => void;
+  invite: Invite | null;
+  onInvite: (profile: MatchedProfile, message: string) => Promise<void>;
 }
 
-export default function MatchCard({ profile, rank, onUnlike }: MatchCardProps) {
+export default function MatchCard({ profile, rank, onUnlike, invite, onInvite }: MatchCardProps) {
   const { match } = profile;
   const components = Object.keys(LABELS) as MatchComponent[];
   const reasons = components
@@ -124,7 +128,15 @@ export default function MatchCard({ profile, rank, onUnlike }: MatchCardProps) {
         )}
       </details>
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+        <div className="mr-auto flex min-w-0 flex-1">
+          <InviteControl
+            name={profile.full_name}
+            invite={invite}
+            fromThem={invite?.sender.id === profile.id}
+            onSend={(message) => onInvite(profile, message)}
+          />
+        </div>
         <button
           type="button"
           onClick={() => onUnlike(profile)}

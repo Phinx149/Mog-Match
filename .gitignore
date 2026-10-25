@@ -20,6 +20,8 @@ backend/instance/
 node_modules/
 dist/
 *.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 
 # Editors / OS
 .vscode/*
@@ -27,3 +29,6 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Vercel CLI
+.vercel/

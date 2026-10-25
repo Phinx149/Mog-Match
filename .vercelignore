@@ -1,0 +1,13 @@
+# Keep local-only files out of Vercel deployments made with the CLI (Git deploys only see committed files).
+.env
+.env.*
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+backend/instance
+backend/tests
+*.db
+*.sqlite
+*.sqlite3
+frontend/dist
