@@ -34,7 +34,8 @@ Chat and Project studio setup, API/events, and browser-test instructions: [docs/
 │   │   ├── models/              # User, Profile, ProfileLink, Project, Swipe, Invite
 │   │   ├── routes/              # health, auth, profiles, swipes, invites (thin: parse → service → JSON)
 │   │   ├── services/            # the logic: auth, profile, swipe, invite, mog_score, mog_match, tech_catalog
-│   │   └── seed.py              # `flask seed` / `flask seed-test-users` commands + sample data
+│   │   ├── seed.py              # `flask seed` / `flask seed-test-users` commands + sample data
+│   │   └── seed_avatars/        # cartoon profile pictures for seeded accounts (drawn by scripts/make_seed_avatars.py)
 │   ├── migrations/              # Alembic migrations (Flask-Migrate)
 │   ├── tests/                   # pytest
 │   ├── requirements.txt
@@ -171,13 +172,15 @@ Every page except `/login` needs a login. There is no sign-up yet; use a seeded 
 | Username | Password | Notes |
 |---|---|---|
 | `jordan-dev` | `SEED_PASSWORD` from `backend/.env.example` | The demo user. Three seeded invites are waiting in their inbox |
-| `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | |
+| `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | Each has a cartoon profile picture and its own profile theme |
 | `user1`, `user2` | see `TEST_USERS` in `backend/app/seed.py` | Only after `flask seed-test-users`. They already like each other |
-| 50 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Ten per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5), each with its own profile theme (background + effect). Full list: `backend/app/demo_users.py` |
+| 50 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Ten per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5), each with its own profile theme (background + effect) and a profile picture (a DiceBear avatar, or a cartoon animal, flower or object from `backend/app/seed_avatars/`). Full list: `backend/app/demo_users.py` |
 
 **Testing two people at once** (e.g. invites): log in as one user in a normal window and the other in an **incognito/private window**. Normal tabs share one login cookie, so logging in in a second tab switches *every* tab to that user (tabs notice and reload when you click back into them). Check the `@username` at the top right.
 
 **Clean start for a demo or a test:** `flask seed --reset && flask seed-test-users --reset` — restores every seeded account and deletes their likes and invites. Everyone gets logged out (the users are recreated).
+
+**Accounts you already have:** plain `flask seed` / `flask seed-test-users` still never overwrite anything, but they do add a missing profile picture or theme to the seeded accounts (never replacing one someone chose). Newer profile text (bios, links…) only arrives with `--reset`.
 
 **Login trouble?**
 | Symptom | Fix |

@@ -19,7 +19,7 @@ Backend (from `backend/`, venv active — Windows: `.venv\Scripts\...`):
 - `pytest`
 - `flask db migrate -m "msg"` / `flask db upgrade`
 - `flask seed` / `flask seed --reset`
-- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other, plus 50 demo users (password `123`, `app/demo_users.py`), 10 per Mog tier. `tests/test_demo_users.py` checks each lands in its tier: rescore them if you change Mog Score weights
+- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other, plus 50 demo users (password `123`, `app/demo_users.py`), 10 per Mog tier. `tests/test_demo_users.py` checks each lands in its tier: rescore them if you change Mog Score weights. Every seeded account gets a profile picture (`app/seed_avatars/<username>.png`, redrawn by `scripts/make_seed_avatars.py`) and a theme; tests that need a plain default profile use the `blank_looks` fixture
 - `flask db check` — fails if models and migrations disagree
 - `TEST_DATABASE_URL=postgresql://... pytest` — same suite on Postgres (drops all tables in that DB; throwaway DBs only)
 - After pulling: `pip install -r requirements.txt`, `flask db upgrade`, `flask seed`
