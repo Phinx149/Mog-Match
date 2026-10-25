@@ -7,6 +7,7 @@ import {
   MONEY_KINDS,
   RAIN_SYMBOL_SETS,
   SLOGAN_STYLES,
+  SNOW_KINDS,
   THEME_EFFECTS,
   type EffectOptions,
   type ProfileTheme,
@@ -27,6 +28,7 @@ import {
   sameTheme,
   SLOGAN_COLOR_SWATCHES,
   SLOGAN_STYLE_INFO,
+  SNOW_KIND_INFO,
   THEME_PRESETS,
 } from "../../utils/theme";
 import Avatar from "./Avatar";
@@ -240,6 +242,25 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                       ))}
                     </div>
                     <span className="mt-1 block text-xs text-muted">{MONEY_KIND_INFO[options.money_kind].description}.</span>
+                  </div>
+                )}
+                {EFFECT_INFO[effect].hasSnowStyle && (
+                  <div className="sm:col-span-2">
+                    <span className="mb-1.5 block text-sm text-slate-300">Flakes</span>
+                    <div role="group" aria-label="Kind of snowflake" className="flex flex-wrap gap-2">
+                      {SNOW_KINDS.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          aria-pressed={options.snow_kind === name}
+                          onClick={() => setOption({ snow_kind: name })}
+                          className={chipClass(options.snow_kind === name)}
+                        >
+                          {SNOW_KIND_INFO[name].label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="mt-1 block text-xs text-muted">{SNOW_KIND_INFO[options.snow_kind].description}.</span>
                   </div>
                 )}
                 {EFFECT_INFO[effect].hasRainStyle && (
@@ -534,7 +555,7 @@ function TickerField({ value, onChange }: { value: string; onChange: (ticker: st
   );
 }
 
-/** What a slider's current value reads as: the direction gets an arrow, and the spin gets its turning direction. */
+/** What a slider's current value reads as: the direction gets an arrow, and the spin and snow wind get their turning or blowing direction. */
 function describeOption(key: keyof typeof EFFECT_OPTION_RANGES, value: number, unit: string): ReactNode {
   if (key === "emoji_angle") {
     return (
@@ -547,6 +568,7 @@ function describeOption(key: keyof typeof EFFECT_OPTION_RANGES, value: number, u
   }
   if (key === "emoji_spin") return value === 0 ? "none" : `${value > 0 ? "↻" : "↺"} ${Math.abs(value)}`;
   if (key === "money_wind") return value === 0 ? "calm" : value;
+  if (key === "snow_wind") return value === 0 ? "calm" : `${value < 0 ? "←" : "→"} ${Math.abs(value)}`;
   return `${value}${unit}`;
 }
 

@@ -3,6 +3,7 @@ import type { EffectOptions, ProfileTheme, ThemeEffect } from "../../types/profi
 import { DEFAULT_BACKGROUND, HEX_COLOR } from "../../utils/theme";
 import BouncingDvd from "./BouncingDvd";
 import FallingMoney from "./FallingMoney";
+import FallingSnow from "./FallingSnow";
 import FloatingEmoji from "./FloatingEmoji";
 import MatrixRain from "./MatrixRain";
 import ScrollingSlogans from "./ScrollingSlogans";
@@ -16,6 +17,7 @@ const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = 
   slogans: ScrollingSlogans,
   market: VolatileMarket,
   money: FallingMoney,
+  snow: FallingSnow,
 };
 
 interface ThemeScopeProps {

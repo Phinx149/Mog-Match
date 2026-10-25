@@ -11,6 +11,7 @@ DEFAULT_OPTIONS = {
     "slogan_color": "#ff4d2e", "slogan_style": "mixed", "slogan_tilt": -8, "slogan_alternate": True,
     "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
     "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
+    "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -142,6 +143,7 @@ CRANKED = {
     "slogan_tilt": 45, "slogan_alternate": False,
     "chart_volatility": 10, "chart_mood": "bull", "chart_palette": "neon", "chart_ticker": "GIGA42", "chart_label": False,
     "money_kind": "mixed", "money_count": 80, "money_wind": 10, "money_weight": 10,
+    "snow_kind": "crystals", "snow_count": 200, "snow_wind": -10,
 }
 
 
@@ -675,6 +677,60 @@ def test_money_options_out_of_range_or_wrong_type_are_rejected(client, option, v
 def test_money_options_do_not_change_the_mog_score(client):
     before = client.get("/api/profiles/me").get_json()["mog"]
     client.patch("/api/profiles/me", json={"theme": {"effect": "money", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- snowfall ----------
+
+def test_snow_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 70, "size": 20, "speed": 6, "glow": True,
+        "snow_kind": "crystals", "snow_count": 150, "snow_wind": -7,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#0a1428", "effect": "snow", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#0a1428", "effect": "snow", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_snow_defaults_are_a_gentle_mixed_flurry_drifting_a_little_to_the_right(client):
+    options = _theme(client)["effect_options"]
+    assert (options["snow_kind"], options["snow_count"], options["snow_wind"]) == ("mixed", 80, 2)
+
+
+@pytest.mark.parametrize("option, value", [("snow_kind", "dots"), ("snow_kind", "crystals"), ("snow_kind", "mixed"),
+                                           ("snow_count", 20), ("snow_count", 200), ("snow_wind", -10), ("snow_wind", 0), ("snow_wind", 10)])
+def test_snow_option_values_are_accepted_and_persist(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "snow", "effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("snow_kind", "hail"), ("snow_kind", "Dots"), ("snow_kind", ""), ("snow_kind", 1), ("snow_kind", ["dots"]), ("snow_kind", None),
+        ("snow_count", 19), ("snow_count", 201), ("snow_count", 80.5), ("snow_count", "80"), ("snow_count", True), ("snow_count", None),
+        ("snow_wind", -11), ("snow_wind", 11), ("snow_wind", 2.5), ("snow_wind", "2"), ("snow_wind", False), ("snow_wind", None),
+    ],
+)
+def test_snow_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "snow", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_snow_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "snow", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
 

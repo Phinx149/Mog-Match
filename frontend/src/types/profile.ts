@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -67,11 +67,15 @@ export type ChartPalette = (typeof CHART_PALETTES)[number];
 export const MONEY_KINDS = ["bills", "coins", "mixed"] as const;
 export type MoneyKind = (typeof MONEY_KINDS)[number];
 
+/** What falls in the snowfall: soft round flakes, six-armed crystals, or both. Keep in sync with SNOW_KINDS in the backend. */
+export const SNOW_KINDS = ["dots", "crystals", "mixed"] as const;
+export type SnowKind = (typeof SNOW_KINDS)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market) or bill size (money), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money) or flake size (snow), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -127,6 +131,12 @@ export interface EffectOptions {
   money_wind: number;
   /** How heavy the coins are, 1-10: heavier ones fall faster, turn over slower and are blown about less (money only, and only coins). */
   money_weight: number;
+  /** Soft flakes, crystals or both (snow only). */
+  snow_kind: SnowKind;
+  /** How many flakes are in the air at once, 20-200 (snow only). */
+  snow_count: number;
+  /** Which way the wind blows the flakes, -10 to 10: negative is left, positive is right, 0 is calm (snow only). */
+  snow_wind: number;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

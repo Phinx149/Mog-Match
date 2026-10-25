@@ -39,7 +39,8 @@ body {
   --panel-opacity: 35%;
 }
 .profile-theme[data-effect="emoji"],
-.profile-theme[data-effect="money"] {
+.profile-theme[data-effect="money"],
+.profile-theme[data-effect="snow"] {
   --panel-opacity: 55%;
 }
 .profile-theme[data-effect="slogans"],

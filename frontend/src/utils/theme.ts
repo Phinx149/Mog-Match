@@ -7,6 +7,7 @@ import type {
   ProfileTheme,
   RainSymbols,
   SloganStyle,
+  SnowKind,
   ThemeEffect,
 } from "../types/profile";
 
@@ -67,6 +68,9 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   money_count: 30,
   money_wind: 5,
   money_weight: 5,
+  snow_kind: "mixed",
+  snow_count: 80,
+  snow_wind: 2,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -86,6 +90,8 @@ export const EFFECT_OPTION_RANGES = {
   money_count: { label: "How much", min: 5, max: 80, step: 5, unit: "" },
   money_wind: { label: "Wind", min: 0, max: 10, step: 1, unit: "" },
   money_weight: { label: "Coin weight", min: 1, max: 10, step: 1, unit: "" },
+  snow_count: { label: "How many", min: 20, max: 200, step: 10, unit: "" },
+  snow_wind: { label: "Wind", min: -10, max: 10, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -171,6 +177,13 @@ export const MONEY_KIND_INFO: Record<MoneyKind, { label: string; description: st
   mixed: { label: "Both", description: "Bills and coins together" },
 };
 
+/** What can fall as snow, as the edit form words it. */
+export const SNOW_KIND_INFO: Record<SnowKind, { label: string; description: string }> = {
+  dots: { label: "Soft flakes", description: "Round, fluffy flakes" },
+  crystals: { label: "Crystals", description: "Six-armed snowflakes, slowly turning as they fall" },
+  mixed: { label: "Both", description: "Fluffy flakes and crystals together" },
+};
+
 /** The ways the emoji can travel, as the edit form words them. */
 export const EMOJI_PATH_INFO: Record<EmojiPath, { label: string; description: string }> = {
   straight: { label: "Straight", description: "Drift one way and come back around the other side" },
@@ -239,6 +252,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: boolean;
     hasMarketStyle: boolean;
     hasMoneyStyle: boolean;
+    hasSnowStyle: boolean;
   }
 > = {
   matrix: {
@@ -252,6 +266,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: false,
     hasMarketStyle: false,
     hasMoneyStyle: false,
+    hasSnowStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -264,6 +279,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: false,
     hasMarketStyle: false,
     hasMoneyStyle: false,
+    hasSnowStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -276,6 +292,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: false,
     hasMarketStyle: false,
     hasMoneyStyle: false,
+    hasSnowStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -288,6 +305,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: true,
     hasMarketStyle: false,
     hasMoneyStyle: false,
+    hasSnowStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -300,6 +318,7 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: false,
     hasMarketStyle: true,
     hasMoneyStyle: false,
+    hasSnowStyle: false,
   },
   money: {
     label: "Money rain",
@@ -312,6 +331,20 @@ export const EFFECT_INFO: Record<
     hasSloganStyle: false,
     hasMarketStyle: false,
     hasMoneyStyle: true,
+    hasSnowStyle: false,
+  },
+  snow: {
+    label: "Snowfall",
+    tuneTitle: "Tune the snow",
+    sizeLabel: "Flake size",
+    sliders: ["brightness", "size", "snow_count", "speed", "snow_wind"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: true,
   },
 };
 
@@ -545,6 +578,50 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         money_kind: "mixed",
         money_count: 50,
         money_wind: 10,
+      },
+    },
+  },
+  {
+    name: "Winter Night",
+    description: "Soft snow drifting down a deep blue night",
+    theme: {
+      background: "#0a1424",
+      effect: "snow",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 16, speed: 3, snow_count: 90, snow_wind: 2 },
+    },
+  },
+  {
+    name: "Blizzard",
+    description: "Heavy snow whipped sideways by a gale",
+    theme: {
+      background: "#0b1118",
+      effect: "snow",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 26,
+        speed: 8,
+        snow_kind: "dots",
+        snow_count: 200,
+        snow_wind: -9,
+      },
+    },
+  },
+  {
+    name: "Frost",
+    description: "Big glowing crystals, turning slowly",
+    theme: {
+      background: "#061a24",
+      effect: "snow",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 65,
+        size: 30,
+        speed: 2,
+        glow: true,
+        snow_kind: "crystals",
+        snow_count: 40,
+        snow_wind: 1,
       },
     },
   },

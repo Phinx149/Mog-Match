@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -64,6 +64,8 @@ EFFECT_OPTION_RANGES = {
     # Money rain only: how many bills or coins are in the air, how hard the wind blows them around (0 = still air),
     # and how heavy the coins are (heavier = falls faster, turns over slower, blown about less).
     "money_count": (5, 80), "money_wind": (0, 10), "money_weight": (1, 10),
+    # Snowfall only: how many flakes are in the air, and which way the wind blows them (negative = left, positive = right, 0 = calm).
+    "snow_count": (20, 200), "snow_wind": (-10, 10),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -82,6 +84,8 @@ DEFAULT_EFFECT_OPTIONS = {
     "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
     # Money rain only:
     "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
+    # Snowfall only:
+    "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
 }
 BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label")
 COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
@@ -93,6 +97,7 @@ SLOGAN_STYLES = ("solid", "outline", "mixed")  # mixed = solid and outlined rows
 CHART_MOODS = ("bull", "bear", "choppy")  # which way the market tends to go; the candles themselves are made in the browser
 CHART_PALETTES = ("classic", "swapped", "neon", "mono")  # candle colors; the frontend holds the actual colors (CHART_PALETTES in utils/theme.ts)
 MONEY_KINDS = ("bills", "coins", "mixed")  # what falls; the sprites are drawn in the browser (FallingMoney.tsx)
+SNOW_KINDS = ("dots", "crystals", "mixed")  # soft round flakes, six-armed crystals, or both; drawn in the browser (FallingSnow.tsx)
 CHOICE_EFFECT_OPTIONS = {
     "rain_symbols": RAIN_SYMBOL_SETS,
     "emoji_path": EMOJI_PATHS,
@@ -100,6 +105,7 @@ CHOICE_EFFECT_OPTIONS = {
     "chart_mood": CHART_MOODS,
     "chart_palette": CHART_PALETTES,
     "money_kind": MONEY_KINDS,
+    "snow_kind": SNOW_KINDS,
 }
 TICKER_PATTERN = re.compile(r"[A-Za-z0-9]{1,8}")
 # How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).
