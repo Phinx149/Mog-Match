@@ -331,12 +331,16 @@ def _theme(background: str, effect: str | None = None, **options) -> dict:
 DEMO_THEMES: dict[str, dict] = {
     # 👑 Gigamogger
     "gigachad": _theme("#1a0b2e", "matrix", rain_color="#b388ff", rain_symbols="katakana", glow=True, brightness=60),
-    "verilogvic": _theme("#001a0f", "matrix", rain_color="#22ff66", rain_symbols="binary", speed=7),
-    "lispwizard": _theme("#0f1a2e", "emoji", emojis=["🧙", "🔮", "✨", "📜"], emoji_path="wave", emoji_count=18),
-    "rustacean": _theme("#2a0f05", "emoji", emojis=["🦀", "⚙️", "🔧"], emoji_path="bounce", emoji_spin=-3),
+    "verilogvic": _theme("#001a0f", "tron", tron_color="#22d3ee", tron_cycles=6, tron_tail=4, tron_grid=True,  # tiny cells: FPGA traces
+                         size=10, speed=7, brightness=55, glow=True),
+    "lispwizard": _theme("#0f1a2e", "shapes", shape_kind="sphere", shape_color="#a78bfa", size=26, speed=3, brightness=60,  # a crystal ball
+                         glow=True),
+    "rustacean": _theme("#2a0f05", "lightning", lightning_color="#ff7a3d", lightning_strikes=4, lightning_forks=8, size=18,
+                        brightness=70, glow=True),
     "fsharpfiona": _theme("#04201c", "market", chart_mood="bull", chart_palette="neon", chart_ticker="FSHARP", chart_volatility=4),
     # 🔥 Senior Mogger
-    "elixirella": _theme("#1e0526", "emoji", emojis=["🧪", "💜", "⚗️"], emoji_path="wave", emoji_angle=270),
+    "elixirella": _theme("#1e0526", "lightning", lightning_color="#b794ff", lightning_strikes=9, lightning_forks=10, lightning_flash=False,
+                         size=12, brightness=75, glow=True),
     "kotlinkai": _theme("#0b1530", "dvd", count=3, color_change=True, speed=5),
     "seniorsam": _theme("#101418", "slogans", slogans=["SHIP IT", "NO FRIDAY DEPLOYS", "IT WORKS ON PROD"],
                         slogan_color="#38bdf8", slogan_style="outline", slogan_tilt=-12),
@@ -348,7 +352,7 @@ DEMO_THEMES: dict[str, dict] = {
     "javajade": _theme("#1f0f00", "slogans", slogans=["WRITE ONCE", "RUN ANYWHERE", "SPRING BOOT GANG"],
                        slogan_color="#f89820", slogan_style="solid", slogan_tilt=6),
     "phpphil": _theme("#120a24", "dvd", count=2, color_change=False, color="#8892bf"),
-    "csharpchris": _theme("#0a2010", "emoji", emojis=["🌱", "🪴", "🌿"], emoji_path="wave", emoji_spin=0),
+    "csharpchris": _theme("#0a2010", "shapes", shape_count=4, shape_color="#86efac", size=12, speed=3, brightness=55),  # cozy, no glow
     # 🐣 Junior Mogger
     "juniorjo": _theme("#11111f", "snow", snow_kind="dots", snow_count=120, snow_wind=3),
     "studentstu": _theme("#1a1410", "emoji", emojis=["📚", "♟️", "☕"], emoji_count=8, speed=2),
@@ -684,29 +688,33 @@ DEMO_THEMES.update({
     "assemblyamy": _theme("#030b1a", "snow", snow_kind="dots", snow_count=200, snow_wind=0, brightness=70),  # a starfield
     "prologpete": _theme("#1a1405", "matrix", rain_color="#e6c86e", rain_symbols="code", speed=3, glow=True),
     "soliditysara": _theme("#0c0a24", "market", chart_mood="choppy", chart_palette="neon", chart_ticker="AUDIT", chart_volatility=9),
-    "shadershiro": _theme("#14001f", "matrix", rain_rainbow=True, rain_symbols="katakana", glow=True, speed=6),
+    "shadershiro": _theme("#14001f", "shapes", shape_kind="torus", shape_count=3, shape_color="#ff2bd6", size=16, speed=7,  # demoscene classic
+                          brightness=60, glow=True),
     "cobolcarl": _theme("#00140a", "matrix", rain_color="#33ff99", rain_symbols="binary", brightness=30, speed=1),
     # 🔥 Senior Mogger
-    "gophergwen": _theme("#07202a", "emoji", emojis=["🚲", "🌧️", "🐹"], emoji_path="straight", emoji_angle=0, emoji_count=10),
+    "gophergwen": _theme("#07202a", "tron", tron_color="#00add8", tron_cycles=4, tron_tail=6, size=14, speed=5,  # Go blue; light cycles for a bike-share
+                         brightness=55, glow=True),
     "dartdana": _theme("#0a1f33", "emoji", emojis=["🎯", "💙", "📱"], emoji_path="bounce", emoji_count=12),
-    "scalasteve": _theme("#1f0a14", "emoji", emojis=["🎵", "🎧", "🔀"], emoji_path="wave", emoji_count=16),
-    "lualuna": _theme("#0e0b26", "emoji", emojis=["🌙", "🎮", "🧩"], emoji_path="wave", emoji_spin=4),
+    "scalasteve": _theme("#1f0a14", "tron", tron_color="#f472b6", tron_cycles=7, tron_tail=3, tron_grid=False, size=12, speed=6,
+                         brightness=60, glow=True),
+    "lualuna": _theme("#0e0b26", "shapes", shape_kind="sphere", shape_color="#fde68a", size=28, speed=2, brightness=60, glow=True),  # lua = moon
     "rubyruth": _theme("#2a0508", "slogans", slogans=["READ MORE BOOKS", "RAILS IS FINE", "NEVER TOO LATE"],
                        slogan_color="#e11d48", slogan_style="solid", slogan_tilt=-6),
     # 🧑‍💻 Mid Mogger
     "reactrita": _theme("#04161f", "dvd", count=2, color_change=True, color="#61dafb"),
     "nodenate": _theme("#0f1a05", "emoji", emojis=["🍟", "🛵", "🍔"], emoji_path="straight", emoji_angle=180, emoji_count=10),
     "djangodeb": _theme("#062012", "emoji", emojis=["🌽", "🌾", "🥭"], emoji_path="straight", emoji_angle=90, speed=2),
-    "angularal": _theme("#240a0a", "emoji", emojis=["✈️", "☁️"], emoji_path="straight", emoji_angle=0, emoji_count=8),
+    "angularal": _theme("#240a0a", "lightning", lightning_color="#ffd84a", lightning_strikes=3, lightning_forks=4, size=14,
+                        brightness=60),  # a quiet storm over the airport
     "vuevera": _theme("#041a14", "slogans", slogans=["MAKE IT PRETTY", "DATA IS ART"], slogan_color="#42b883",
                       slogan_style="outline", slogan_tilt=10),
     # 🐣 Junior Mogger
-    "hackhannah": _theme("#0a1424", "emoji", emojis=["🧫", "🔬", "🧬"], emoji_path="wave", emoji_count=9),
+    "hackhannah": _theme("#0a1424", "shapes", shape_kind="sphere", shape_color="#34d399", size=20, speed=2, brightness=55),  # a cell
     "datadan": _theme("#101a0a", "money", money_kind="coins", money_count=20, money_wind=1, money_weight=3),
     "designdina": _theme("#1f0d1a", "slogans", slogans=["KERNING MATTERS", "CSS GRID FOREVER"], slogan_color="#f472b6",
                          slogan_style="mixed", slogan_tilt=-30),
-    "ittomas": _theme("#0a0e14", "matrix", rain_color="#5391fe", rain_symbols="code", brightness=20, speed=3),
-    "gamergus": _theme("#16082a", "emoji", emojis=["🕹️", "👾", "⭐"], emoji_path="bounce", emoji_count=14),
+    "ittomas": _theme("#0a0e14", "tron", tron_color="#a3ff12", tron_cycles=2, tron_tail=9, size=16, speed=4, brightness=45),
+    "gamergus": _theme("#16082a", "shapes", shape_count=2, shape_color="#a3ff12", size=18, speed=7, brightness=60, glow=True),
     # 🥚 Hello World
     "justjoined": _theme("#0f0f14", "dvd", count=1, color_change=True, speed=1),
     "codecurious": _theme("#0a141a", "emoji", emojis=["❓", "🤔"], emoji_count=5, speed=1),
@@ -726,10 +734,9 @@ SEED_THEMES: dict[str, dict] = {
     "priya-ml": _theme("#140f2e", "matrix", rain_color="#c4b5fd", rain_symbols="binary", brightness=45, speed=3),
     "samfullstack": _theme("#1c1a06", "market", chart_mood="bull", chart_palette="classic", chart_ticker="MVP", chart_volatility=5),
     "lena-gamedev": _theme("#08201a", "emoji", emojis=["🍄", "🎮", "👾"], emoji_path="bounce", emoji_count=14),
-    "m-sec": _theme("#0a0f16", "slogans", slogans=["TRY HARDER", "ROOT OR BUST", "PATCH YOUR STUFF"],
-                    slogan_color="#39ff88", slogan_style="outline", slogan_tilt=-12),
+    "m-sec": _theme("#0a0f16", "tron", tron_color="#ff2a2a", tron_cycles=4, tron_tail=8, size=16, speed=6, brightness=55, glow=True),
     "aisha-data": _theme("#06232b", "snow", snow_kind="dots", snow_count=90, snow_wind=-2),
     "kenji-mobile": _theme("#1f0c18", "emoji", emojis=["🗻", "🚄", "📱"], emoji_path="straight", emoji_angle=0, emoji_count=10),
-    "liv-devops": _theme("#041b30", "emoji", emojis=["🐳", "☁️", "📦"], emoji_path="straight", emoji_angle=90, emoji_count=12),
+    "liv-devops": _theme("#041b30", "shapes", shape_count=3, shape_color="#38bdf8", size=14, speed=4, brightness=60, glow=True),  # containers
     "noah-learns": _theme("#17112f", "emoji", emojis=["🐣", "🎧", "🦀"], emoji_path="wave", emoji_count=10),
 }

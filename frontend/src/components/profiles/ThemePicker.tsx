@@ -6,6 +6,7 @@ import {
   EMOJI_PATHS,
   MONEY_KINDS,
   RAIN_SYMBOL_SETS,
+  SHAPE_KINDS,
   SLOGAN_STYLES,
   SNOW_KINDS,
   THEME_EFFECTS,
@@ -22,14 +23,18 @@ import {
   EMOJI_PATH_INFO,
   EFFECT_OPTION_RANGES,
   isDarkEnough,
+  LIGHTNING_COLOR_SWATCHES,
   MONEY_KIND_INFO,
   RAIN_COLOR_SWATCHES,
   RAIN_SYMBOLS,
   sameTheme,
+  SHAPE_COLOR_SWATCHES,
+  SHAPE_KIND_INFO,
   SLOGAN_COLOR_SWATCHES,
   SLOGAN_STYLE_INFO,
   SNOW_KIND_INFO,
   THEME_PRESETS,
+  TRON_COLOR_SWATCHES,
 } from "../../utils/theme";
 import Avatar from "./Avatar";
 import { chipClass } from "./chipClass";
@@ -262,6 +267,156 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                     </div>
                     <span className="mt-1 block text-xs text-muted">{SNOW_KIND_INFO[options.snow_kind].description}.</span>
                   </div>
+                )}
+                {EFFECT_INFO[effect].hasLightningStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Bolt color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div role="group" aria-label="Bolt color quick picks" className="flex flex-wrap gap-2">
+                          {LIGHTNING_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = options.lightning_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ lightning_color: hex })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom bolt color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.lightning_color}
+                          onChange={(e) => setOption({ lightning_color: e.target.value })}
+                        />
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">The glow around each bolt. The bolt itself is always white-hot.</span>
+                    </div>
+
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-cyan-400"
+                        checked={options.lightning_flash}
+                        onChange={(e) => setOption({ lightning_flash: e.target.checked })}
+                      />
+                      Light up the sky <span className="text-xs text-muted">(a soft flash of color with each strike)</span>
+                    </label>
+                    <p className="text-xs text-muted sm:col-span-2">
+                      Strikes are always at least a second apart and flash at most twice, so the storm never strobes.
+                    </p>
+                  </>
+                )}
+                {EFFECT_INFO[effect].hasShapeStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Shape</span>
+                      <div role="group" aria-label="Kind of shape" className="flex flex-wrap gap-2">
+                        {SHAPE_KINDS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.shape_kind === name}
+                            onClick={() => setOption({ shape_kind: name })}
+                            className={chipClass(options.shape_kind === name)}
+                          >
+                            {SHAPE_KIND_INFO[name].label}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">{SHAPE_KIND_INFO[options.shape_kind].description}.</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Line color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div role="group" aria-label="Line color quick picks" className="flex flex-wrap gap-2">
+                          {SHAPE_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = options.shape_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ shape_color: hex })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom line color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.shape_color}
+                          onChange={(e) => setOption({ shape_color: e.target.value })}
+                        />
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">Lines nearer to you are drawn brighter and thicker, which is what makes it look 3D.</span>
+                    </div>
+                  </>
+                )}
+                {EFFECT_INFO[effect].hasTronStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Cycle color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div role="group" aria-label="Cycle color quick picks" className="flex flex-wrap gap-2">
+                          {TRON_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = options.tron_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ tron_color: hex })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom cycle color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.tron_color}
+                          onChange={(e) => setOption({ tron_color: e.target.value })}
+                        />
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">The trails and the grid. The head of each cycle is always white-hot.</span>
+                    </div>
+
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-cyan-400"
+                        checked={options.tron_grid}
+                        onChange={(e) => setOption({ tron_grid: e.target.checked })}
+                      />
+                      Show the grid <span className="text-xs text-muted">(faint lines for the cycles to ride on)</span>
+                    </label>
+                    <p className="text-xs text-muted sm:col-span-2">Cycles only ever turn at a crossing, and always by a quarter-turn.</p>
+                  </>
                 )}
                 {EFFECT_INFO[effect].hasRainStyle && (
                   <>
@@ -568,6 +723,7 @@ function describeOption(key: keyof typeof EFFECT_OPTION_RANGES, value: number, u
   }
   if (key === "emoji_spin") return value === 0 ? "none" : `${value > 0 ? "↻" : "↺"} ${Math.abs(value)}`;
   if (key === "money_wind") return value === 0 ? "calm" : value;
+  if (key === "lightning_forks") return value === 0 ? "none" : value;
   if (key === "snow_wind") return value === 0 ? "calm" : `${value < 0 ? "←" : "→"} ${Math.abs(value)}`;
   return `${value}${unit}`;
 }

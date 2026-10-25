@@ -104,8 +104,9 @@ html[data-appearance="hacker"] {
 }
 .profile-theme[data-effect="emoji"],
 .profile-theme[data-effect="money"],
-.profile-theme[data-effect="snow"] {
-  --panel-opacity: 55%;
+.profile-theme[data-effect="snow"],
+.profile-theme[data-effect="lightning"] {
+  --panel-opacity: 55%; /* for lightning: glassy enough that a strike's flash lights up the cards a little */
 }
 .profile-theme[data-effect="slogans"],
 .profile-theme[data-effect="market"] {

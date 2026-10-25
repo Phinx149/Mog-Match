@@ -47,7 +47,7 @@ MAX_PROJECTS = 20
 THEME_FIELDS = ("background", "effect", "effect_options")
 # Animated backgrounds the frontend knows how to draw (see ThemeScope.tsx). Keep in sync with
 # THEME_EFFECTS in frontend/src/types/profile.ts. Only names are stored; the animation itself is code.
-THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow")
+THEME_EFFECTS = ("matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning", "tron", "shapes")
 # Tuning shared by every effect (each reads them its own way, e.g. size = letter size or logo size,
 # and an effect ignores options that don't apply to it, like the rain and `count`).
 # Integers must be within these inclusive ranges; the frontend sliders use the same ones
@@ -66,6 +66,13 @@ EFFECT_OPTION_RANGES = {
     "money_count": (5, 80), "money_wind": (0, 10), "money_weight": (1, 10),
     # Snowfall only: how many flakes are in the air, and which way the wind blows them (negative = left, positive = right, 0 = calm).
     "snow_count": (20, 200), "snow_wind": (-10, 10),
+    # Lightning only: how often a bolt strikes (1 = now and then, 10 = a storm overhead, but never closer
+    # than about a second apart) and how many branches fork off each bolt (0 = a single clean bolt).
+    "lightning_strikes": (1, 10), "lightning_forks": (0, 10),
+    # Light cycles only: how many ride the grid, and how long the trail behind each one is.
+    "tron_cycles": (1, 10), "tron_tail": (1, 10),
+    # Spinning shapes only: how many shapes are turning.
+    "shape_count": (1, 6),
 }
 # Used for anything a profile hasn't set, and sent to clients so they never fill in gaps themselves.
 DEFAULT_EFFECT_OPTIONS = {
@@ -86,9 +93,15 @@ DEFAULT_EFFECT_OPTIONS = {
     "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
     # Snowfall only:
     "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
+    # Lightning only ("lightning_flash": the sky lights up for a moment with each strike):
+    "lightning_color": "#9ec5ff", "lightning_strikes": 6, "lightning_forks": 5, "lightning_flash": True,
+    # Light cycles only ("tron_grid": the faint grid lines the cycles ride on):
+    "tron_color": "#22d3ee", "tron_cycles": 3, "tron_tail": 5, "tron_grid": True,
+    # Spinning shapes only:
+    "shape_kind": "cube", "shape_count": 1, "shape_color": "#38bdf8",
 }
-BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label")
-COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color")
+BOOLEAN_EFFECT_OPTIONS = ("glow", "color_change", "rain_rainbow", "slogan_alternate", "chart_label", "lightning_flash", "tron_grid")
+COLOR_EFFECT_OPTIONS = ("color", "rain_color", "slogan_color", "lightning_color", "tron_color", "shape_color")
 # Options that must be one of a fixed set of names. The rain's characters themselves live in the
 # frontend (RAIN_SYMBOLS in utils/theme.ts); "wave" and "bounce" are how the emoji move (FloatingEmoji.tsx).
 RAIN_SYMBOL_SETS = ("katakana", "binary", "code", "chaos")
@@ -98,6 +111,7 @@ CHART_MOODS = ("bull", "bear", "choppy")  # which way the market tends to go; th
 CHART_PALETTES = ("classic", "swapped", "neon", "mono")  # candle colors; the frontend holds the actual colors (CHART_PALETTES in utils/theme.ts)
 MONEY_KINDS = ("bills", "coins", "mixed")  # what falls; the sprites are drawn in the browser (FallingMoney.tsx)
 SNOW_KINDS = ("dots", "crystals", "mixed")  # soft round flakes, six-armed crystals, or both; drawn in the browser (FallingSnow.tsx)
+SHAPE_KINDS = ("cube", "torus", "sphere")  # which wireframe turns; the points and lines are made in the browser (utils/wireShapes.ts)
 CHOICE_EFFECT_OPTIONS = {
     "rain_symbols": RAIN_SYMBOL_SETS,
     "emoji_path": EMOJI_PATHS,
@@ -106,6 +120,7 @@ CHOICE_EFFECT_OPTIONS = {
     "chart_palette": CHART_PALETTES,
     "money_kind": MONEY_KINDS,
     "snow_kind": SNOW_KINDS,
+    "shape_kind": SHAPE_KINDS,
 }
 TICKER_PATTERN = re.compile(r"[A-Za-z0-9]{1,8}")
 # How many emoji a profile may list, and the longest one (a family or couple with skin tones is ~10 code points).

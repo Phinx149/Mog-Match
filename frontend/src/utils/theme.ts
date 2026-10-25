@@ -6,6 +6,7 @@ import type {
   MoneyKind,
   ProfileTheme,
   RainSymbols,
+  ShapeKind,
   SloganStyle,
   SnowKind,
   ThemeEffect,
@@ -71,6 +72,17 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   snow_kind: "mixed",
   snow_count: 80,
   snow_wind: 2,
+  lightning_color: "#9ec5ff",
+  lightning_strikes: 6,
+  lightning_forks: 5,
+  lightning_flash: true,
+  tron_color: "#22d3ee",
+  tron_cycles: 3,
+  tron_tail: 5,
+  tron_grid: true,
+  shape_kind: "cube",
+  shape_count: 1,
+  shape_color: "#38bdf8",
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -92,6 +104,11 @@ export const EFFECT_OPTION_RANGES = {
   money_weight: { label: "Coin weight", min: 1, max: 10, step: 1, unit: "" },
   snow_count: { label: "How many", min: 20, max: 200, step: 10, unit: "" },
   snow_wind: { label: "Wind", min: -10, max: 10, step: 1, unit: "" },
+  lightning_strikes: { label: "Strikes", min: 1, max: 10, step: 1, unit: "" },
+  lightning_forks: { label: "Forks", min: 0, max: 10, step: 1, unit: "" },
+  tron_cycles: { label: "Cycles", min: 1, max: 10, step: 1, unit: "" },
+  tron_tail: { label: "Trail length", min: 1, max: 10, step: 1, unit: "" },
+  shape_count: { label: "How many", min: 1, max: 6, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -238,6 +255,49 @@ export const RAIN_COLOR_SWATCHES = [
   { name: "White", hex: "#ffffff" },
 ] as const;
 
+/** Quick picks for the lightning's color: electric blue first. */
+export const LIGHTNING_COLOR_SWATCHES = [
+  { name: "Electric blue", hex: "#9ec5ff" },
+  { name: "Cyan", hex: "#22d3ee" },
+  { name: "Violet", hex: "#b794ff" },
+  { name: "Magenta", hex: "#ff4de1" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Red", hex: "#ff4040" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
+/** Quick picks for the light cycles' color: the classic cyan first, then the orange of the rival program. */
+export const TRON_COLOR_SWATCHES = [
+  { name: "Grid cyan", hex: "#22d3ee" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Orange", hex: "#ff8a00" },
+  { name: "Red", hex: "#ff2a2a" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Magenta", hex: "#ff2bd6" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
+/** What can turn, as the edit form words it. */
+export const SHAPE_KIND_INFO: Record<ShapeKind, { label: string; description: string }> = {
+  cube: { label: "Cube", description: "Eight corners and twelve edges, tumbling" },
+  torus: { label: "Torus", description: "A wireframe donut, rolling over" },
+  sphere: { label: "Globe", description: "Lines of latitude and longitude, spinning" },
+};
+
+/** Quick picks for the shapes' color: sky blue first. */
+export const SHAPE_COLOR_SWATCHES = [
+  { name: "Sky", hex: "#38bdf8" },
+  { name: "Violet", hex: "#a78bfa" },
+  { name: "Magenta", hex: "#ff2bd6" },
+  { name: "Mint", hex: "#34d399" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Orange", hex: "#ff8a00" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
 /** What the edit form shows for each effect: its wording, and which of the tuning options it reads. */
 export const EFFECT_INFO: Record<
   ThemeEffect,
@@ -253,6 +313,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: boolean;
     hasMoneyStyle: boolean;
     hasSnowStyle: boolean;
+    hasLightningStyle: boolean;
+    hasTronStyle: boolean;
+    hasShapeStyle: boolean;
   }
 > = {
   matrix: {
@@ -267,6 +330,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -280,6 +346,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -293,6 +362,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -306,6 +378,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -319,6 +394,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: true,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   money: {
     label: "Money rain",
@@ -332,6 +410,9 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: true,
     hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
   },
   snow: {
     label: "Snowfall",
@@ -345,6 +426,57 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: true,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: false,
+  },
+  lightning: {
+    label: "Lightning",
+    tuneTitle: "Tune the storm",
+    sizeLabel: "Bolt thickness",
+    sliders: ["brightness", "size", "lightning_strikes", "lightning_forks"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: true,
+    hasTronStyle: false,
+    hasShapeStyle: false,
+  },
+  tron: {
+    label: "Light cycles",
+    tuneTitle: "Tune the cycles",
+    sizeLabel: "Grid size",
+    sliders: ["brightness", "size", "tron_cycles", "speed", "tron_tail"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: true,
+    hasShapeStyle: false,
+  },
+  shapes: {
+    label: "Spinning shapes",
+    tuneTitle: "Tune the shapes",
+    sizeLabel: "Shape size",
+    sliders: ["brightness", "size", "shape_count", "speed"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: true,
   },
 };
 
@@ -622,6 +754,154 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         snow_kind: "crystals",
         snow_count: 40,
         snow_wind: 1,
+      },
+    },
+  },
+  {
+    name: "Thunderstorm",
+    description: "Forked blue-white bolts over a stormy night",
+    theme: {
+      background: "#070b18",
+      effect: "lightning",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 75, size: 16, glow: true },
+    },
+  },
+  {
+    name: "Zeus",
+    description: "Fat golden bolts, struck now and then",
+    theme: {
+      background: "#0d0a05",
+      effect: "lightning",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 85,
+        size: 26,
+        glow: true,
+        lightning_color: "#ffd84a",
+        lightning_strikes: 3,
+        lightning_forks: 3,
+      },
+    },
+  },
+  {
+    name: "Plasma",
+    description: "Thin violet bolts crackling in every direction",
+    theme: {
+      background: "#0b0614",
+      effect: "lightning",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 80,
+        size: 12,
+        glow: true,
+        lightning_color: "#b794ff",
+        lightning_strikes: 9,
+        lightning_forks: 10,
+      },
+    },
+  },
+  {
+    name: "The Grid",
+    description: "Cyan light cycles on a dark grid",
+    theme: {
+      background: "#020a14",
+      effect: "tron",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 14, speed: 5, glow: true, tron_cycles: 4 },
+    },
+  },
+  {
+    name: "Rogue Program",
+    description: "A few long orange trails, fast",
+    theme: {
+      background: "#120802",
+      effect: "tron",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 18,
+        speed: 7,
+        glow: true,
+        tron_color: "#ff8a00",
+        tron_cycles: 3,
+        tron_tail: 8,
+      },
+    },
+  },
+  {
+    name: "Synthwave",
+    description: "Lots of short magenta cycles, no grid",
+    theme: {
+      background: "#0d0220",
+      effect: "tron",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 12,
+        speed: 5,
+        glow: true,
+        tron_color: "#ff2bd6",
+        tron_cycles: 8,
+        tron_tail: 3,
+        tron_grid: false,
+      },
+    },
+  },
+  {
+    name: "Wireframe Cube",
+    description: "One glowing cube, tumbling slowly",
+    theme: {
+      background: "#050816",
+      effect: "shapes",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 22, speed: 4, glow: true },
+    },
+  },
+  {
+    name: "Donut",
+    description: "A golden torus, rolling over",
+    theme: {
+      background: "#0d0a05",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 26,
+        speed: 3,
+        glow: true,
+        shape_kind: "torus",
+        shape_color: "#ffd84a",
+      },
+    },
+  },
+  {
+    name: "Globe",
+    description: "A mint-green globe, spinning",
+    theme: {
+      background: "#03120c",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 24,
+        speed: 3,
+        shape_kind: "sphere",
+        shape_color: "#34d399",
+      },
+    },
+  },
+  {
+    name: "Orbit",
+    description: "A handful of small violet cubes, all tumbling",
+    theme: {
+      background: "#0a0618",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 12,
+        speed: 6,
+        glow: true,
+        shape_count: 5,
+        shape_color: "#a78bfa",
       },
     },
   },
