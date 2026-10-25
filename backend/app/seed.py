@@ -4,7 +4,7 @@ import click
 from flask import Flask, current_app
 
 from .extensions import db
-from .demo_users import DEMO_PASSWORD, DEMO_USERS
+from .demo_users import DEMO_PASSWORD, DEMO_THEMES, DEMO_USERS
 from .models import Invite, Profile, ProfileLink, Project, Swipe, User
 from .services.auth_service import hash_password
 
@@ -400,12 +400,13 @@ def seed_database(reset: bool = False) -> dict[str, int]:
 
 
 def test_accounts() -> list[dict]:
-    """user1/user2 plus the 25 demo users (one Mog tier each, see demo_users.py), with passwords."""
+    """user1/user2 plus the 25 demo users (one Mog tier each, see demo_users.py), with passwords
+    and each one's own profile theme (DEMO_THEMES)."""
     demo = [
         {**{key: value for key, value in data.items() if key != "tier"}, "password": DEMO_PASSWORD}
         for data in DEMO_USERS
     ]
-    return TEST_USERS + demo
+    return [{**data, "theme": DEMO_THEMES.get(data["username"])} for data in TEST_USERS + demo]
 
 
 def seed_test_users(reset: bool = False) -> int:

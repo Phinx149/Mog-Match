@@ -319,3 +319,55 @@ DEMO_USERS: list[dict] = [
         "looking_for": ["Mentor"], "links": [], "projects": [],
     },
 ]
+
+
+def _theme(background: str, effect: str | None = None, **options) -> dict:
+    """A profile theme: a dark card background plus an optional animated effect and its settings."""
+    theme: dict = {"background": background}
+    if effect:
+        theme["effect"] = effect
+    if options:
+        theme["effect_options"] = options
+    return theme
+
+
+# username -> a unique look for every test account (background colors never repeat).
+# Effects and their options: THEME_EFFECTS / EFFECT_OPTION_RANGES in app/services/profile_service.py.
+DEMO_THEMES: dict[str, dict] = {
+    # 👑 Gigamogger
+    "gigachad": _theme("#1a0b2e", "matrix", rain_color="#b388ff", rain_symbols="katakana", glow=True, brightness=60),
+    "verilogvic": _theme("#001a0f", "matrix", rain_color="#22ff66", rain_symbols="binary", speed=7),
+    "lispwizard": _theme("#0f1a2e", "emoji", emojis=["🧙", "🔮", "✨", "📜"], emoji_path="wave", emoji_count=18),
+    "rustacean": _theme("#2a0f05", "emoji", emojis=["🦀", "⚙️", "🔧"], emoji_path="bounce", emoji_spin=-3),
+    "fsharpfiona": _theme("#04201c", "market", chart_mood="bull", chart_palette="neon", chart_ticker="FSHARP", chart_volatility=4),
+    # 🔥 Senior Mogger
+    "elixirella": _theme("#1e0526", "emoji", emojis=["🧪", "💜", "⚗️"], emoji_path="wave", emoji_angle=270),
+    "kotlinkai": _theme("#0b1530", "dvd", count=3, color_change=True, speed=5),
+    "seniorsam": _theme("#101418", "slogans", slogans=["SHIP IT", "NO FRIDAY DEPLOYS", "IT WORKS ON PROD"],
+                        slogan_color="#38bdf8", slogan_style="outline", slogan_tilt=-12),
+    "clojureclara": _theme("#06231a", "snow", snow_kind="crystals", snow_count=60, snow_wind=-2),
+    "swiftsofia": _theme("#2b0d0d", "emoji", emojis=["🐦", "📱", "♿"], emoji_path="bounce", emoji_count=10),
+    # 🧑‍💻 Mid Mogger
+    "midmike": _theme("#1c1208", "emoji", emojis=["☕", "🍩"], emoji_path="straight", emoji_angle=90, emoji_count=12),
+    "pythonpat": _theme("#0a1a24", "matrix", rain_color="#ffd43b", rain_symbols="code", brightness=35),
+    "javajade": _theme("#1f0f00", "slogans", slogans=["WRITE ONCE", "RUN ANYWHERE", "SPRING BOOT GANG"],
+                       slogan_color="#f89820", slogan_style="solid", slogan_tilt=6),
+    "phpphil": _theme("#120a24", "dvd", count=2, color_change=False, color="#8892bf"),
+    "csharpchris": _theme("#0a2010", "emoji", emojis=["🌱", "🪴", "🌿"], emoji_path="wave", emoji_spin=0),
+    # 🐣 Junior Mogger
+    "juniorjo": _theme("#11111f", "snow", snow_kind="dots", snow_count=120, snow_wind=3),
+    "studentstu": _theme("#1a1410", "emoji", emojis=["📚", "♟️", "☕"], emoji_count=8, speed=2),
+    "bootcampbea": _theme("#200a18", "money", money_kind="bills", money_count=15, money_wind=2),
+    "learnerlee": _theme("#0e1a12", "slogans", slogans=["STILL LEARNING", "HELLO REACT", "CTRL+Z"],
+                         slogan_color="#a3e635", slogan_style="mixed", slogan_tilt=-20),
+    "copypasta": _theme("#1a1a1a", "matrix", rain_symbols="chaos", rain_rainbow=True, speed=9),
+    # 🥚 Hello World
+    "firststep": _theme("#0d1b2a", "snow", snow_kind="mixed", snow_count=40, snow_wind=-5),
+    "newbie": _theme("#141008", "emoji", emojis=["🥚", "🐣"], emoji_count=6, speed=1),
+    "printhello": _theme("#0a0f1f", "matrix", rain_color="#60a5fa", rain_symbols="binary", brightness=25, speed=2),
+    "lurker": _theme("#0c0c0c", "dvd", count=1, color_change=False, color="#888888", speed=2),
+    "ghostdev": _theme("#050505", "emoji", emojis=["👻"], emoji_count=5, emoji_path="wave", brightness=20),
+    # user1 / user2 (TEST_USERS in seed.py)
+    "user1": _theme("#1b1035", "market", chart_mood="choppy", chart_palette="classic", chart_ticker="USER1"),
+    "user2": _theme("#052e2b", "money", money_kind="coins", money_count=40, money_weight=8),
+}
