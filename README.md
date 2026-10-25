@@ -10,7 +10,7 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 Chat and Project studio setup, API/events, and browser-test instructions: [docs/CHAT.md](docs/CHAT.md).
 
-⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, sign-up, voice, GitHub login.
+⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, password reset, voice, GitHub login.
 
 ## Tech stack
 
@@ -166,7 +166,7 @@ Open http://localhost:5173 (use `localhost`, not `127.0.0.1`, or the login cooki
 
 ## Logging in
 
-Every page except `/login` needs a login. There is no sign-up yet; use a seeded account:
+Every page except `/login` and `/signup` needs a login. New people create an account at `/signup` (full name, username, password; they land on Edit Profile to fill in the rest). To try the app with existing data, use a seeded account:
 
 | Username | Password | Notes |
 |---|---|---|
@@ -226,6 +226,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "skill_aliases": {"js": "JavaScript", ...}, "looking_for": [...]}`. Powers the Discover filter menu, the Edit Profile "Looking for" picker, and the Edit Profile check that flags an unknown skill as soon as it is added (`skill_aliases` are the nicknames the backend also accepts) |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | POST | `/api/auth/login` | `{"username", "password"}` → `{"user": {...}}` and a session cookie. `401` for a wrong username or password |
+| POST | `/api/auth/signup` | `{"full_name", "username", "password"}` (password 8-128 characters) → `201 {"user": {...}}`, a new nearly empty profile, and a session cookie (so you're logged in). `400` for invalid fields, `409` when the username is taken (any letter case) |
 | POST | `/api/auth/logout` | Ends the session → `{"user": null}` |
 | GET | `/api/auth/session` | Who am I → `{"user": {...}}`, or `{"user": null}` when logged out |
 | GET | `/api/profiles/me` | My profile (`401` when logged out, same for every `/me`, swipe and invite endpoint) |
@@ -301,7 +302,7 @@ Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL
 
 ## Known limitations (this milestone)
 
-- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
+- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, sign-up has no email verification, rate limiting or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
 - The inbox updates by polling (every 5 s), not push.
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
 - Edit Profile accepts JPEG, PNG and WebP photos up to 4 MB (Vercel rejects request bodies over 4.5 MB). Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

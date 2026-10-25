@@ -18,6 +18,16 @@ def log_in():
     return jsonify(auth_service.session_dict(profile))
 
 
+@bp.post("/signup")
+def sign_up():
+    try:
+        profile = auth_service.sign_up(request.get_json(silent=True))
+    except ValidationError as error:
+        status = 409 if error.conflict else 400  # 409 = that username is taken
+        return jsonify({"error": {"message": error.message, "fields": error.fields}}), status
+    return jsonify(auth_service.session_dict(profile)), 201
+
+
 @bp.post("/logout")
 def log_out():
     auth_service.log_out()

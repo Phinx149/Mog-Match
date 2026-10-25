@@ -1,4 +1,4 @@
-from app.models import Profile
+from app.models import Profile, User
 
 
 def credentials(app, username="jordan-dev", password=None):
@@ -59,6 +59,86 @@ def test_me_endpoints_need_a_login(anon_client):
 def test_discover_works_logged_out(anon_client):
     # Public: shows everyone, since there's no "me" to hide.
     assert anon_client.get("/api/profiles").status_code == 200
+
+
+# ---------- signing up ----------
+
+def new_account(**overrides):
+    return {"full_name": "Riley Rookie", "username": "riley-rookie", "password": "correct horse", **overrides}
+
+
+def test_sign_up_creates_an_account_and_logs_it_in(anon_client):
+    response = anon_client.post("/api/auth/signup", json=new_account())
+    assert response.status_code == 201
+    user = response.get_json()["user"]
+    assert (user["full_name"], user["username"]) == ("Riley Rookie", "riley-rookie")
+    assert "password" not in str(response.get_json())
+
+    # The session cookie was set, so "me" is the new user straight away...
+    assert anon_client.get("/api/auth/session").get_json()["user"]["username"] == "riley-rookie"
+    me = anon_client.get("/api/profiles/me").get_json()
+    assert me["bio"] == "" and me["skills"] == []  # an empty profile, to be filled in on the edit page
+    # ...and the profile can be edited like any other.
+    saved = anon_client.patch("/api/profiles/me", json={"bio": "Hi!", "favorite_ide": "Neovim"})
+    assert saved.status_code == 200 and saved.get_json()["bio"] == "Hi!"
+
+
+def test_sign_up_stores_a_hash_and_the_password_works_for_login(app, anon_client):
+    anon_client.post("/api/auth/signup", json=new_account())
+    stored = Profile.query.filter_by(username="riley-rookie").one().user.password_hash
+    assert stored and "correct horse" not in stored
+
+    anon_client.post("/api/auth/logout")
+    other_browser = app.test_client()
+    wrong = other_browser.post("/api/auth/login", json={"username": "riley-rookie", "password": "wrong password"})
+    assert wrong.status_code == 401
+    right = other_browser.post("/api/auth/login", json={"username": "Riley-Rookie", "password": "correct horse"})
+    assert right.status_code == 200
+
+
+def test_sign_up_rejects_a_taken_username_in_any_case(anon_client):
+    users_before = User.query.count()
+    for username in ("jordan-dev", "JORDAN-DEV"):
+        response = anon_client.post("/api/auth/signup", json=new_account(username=username))
+        assert response.status_code == 409
+        assert response.get_json()["error"]["fields"] == {"username": "That username is already taken."}
+    assert User.query.count() == users_before
+    assert anon_client.get("/api/auth/session").get_json() == {"user": None}  # a failed sign-up logs nobody in
+
+
+def test_sign_up_validation(anon_client):
+    users_before = User.query.count()
+    empty = anon_client.post("/api/auth/signup", json={})
+    assert empty.status_code == 400
+    assert set(empty.get_json()["error"]["fields"]) == {"full_name", "username", "password"}
+
+    bad = anon_client.post(
+        "/api/auth/signup",
+        json=new_account(username="no spaces!", password="short", full_name="  ", is_admin=True),
+    )
+    assert bad.status_code == 400
+    assert set(bad.get_json()["error"]["fields"]) == {"full_name", "username", "password", "is_admin"}
+
+    too_long = anon_client.post("/api/auth/signup", json=new_account(password="x" * 129))
+    assert too_long.status_code == 400 and "password" in too_long.get_json()["error"]["fields"]
+    not_strings = anon_client.post("/api/auth/signup", json=new_account(username=7, password=12345678))
+    assert set(not_strings.get_json()["error"]["fields"]) == {"username", "password"}
+    assert anon_client.post("/api/auth/signup", data="not json").status_code == 400
+    assert User.query.count() == users_before
+
+
+def test_sign_up_accepts_values_at_the_length_limits(anon_client):
+    # The same limits as the columns (Postgres rejects longer strings), plus the longest allowed password.
+    response = anon_client.post(
+        "/api/auth/signup", json=new_account(full_name="n" * 120, username="u" * 40, password="p" * 128)
+    )
+    assert response.status_code == 201
+
+
+def test_sign_up_while_logged_in_switches_to_the_new_account(client):
+    assert client.get("/api/auth/session").get_json()["user"]["username"] == "jordan-dev"
+    assert client.post("/api/auth/signup", json=new_account()).status_code == 201
+    assert client.get("/api/auth/session").get_json()["user"]["username"] == "riley-rookie"
 
 
 # ---------- two people, one invite ----------
