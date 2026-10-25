@@ -6,7 +6,7 @@ import warnings
 from flask import Blueprint, abort, jsonify, request, send_file
 from PIL import Image, UnidentifiedImageError
 
-from ..services import profile_service
+from ..services import profile_service, swipe_service
 from ..services.profile_service import ValidationError
 
 bp = Blueprint("profiles", __name__, url_prefix="/api/profiles")
@@ -37,6 +37,7 @@ def list_profiles():
         looking_for=_list_arg("looking_for"),
         location=request.args.get("location", ""),
         exclude_id=demo.id if demo else None,
+        hidden_ids=swipe_service.swiped_ids(demo) if demo else None,
     )
     try:
         results = profile_service.apply_mog_filters(
@@ -57,6 +58,13 @@ def get_filter_options():
 @bp.get("/me")
 def get_my_profile():
     return jsonify(profile_service.to_dict(_demo_profile_or_404()))
+
+
+@bp.get("/me/matches")
+def get_my_matches():
+    """Everyone I liked, ranked by how similar they are to me (Mog Match)."""
+    matches = swipe_service.list_matches(_demo_profile_or_404())
+    return jsonify({"matches": matches, "count": len(matches)})
 
 
 @bp.patch("/me")

@@ -39,6 +39,14 @@ class Profile(TimestampMixin, db.Model):
         cascade="all, delete-orphan",
         order_by="Project.position",
     )
+    # Deleting a profile removes its swipes in both directions (SQLite doesn't enforce
+    # ON DELETE CASCADE by default, so the ORM does it).
+    swipes_made = db.relationship(
+        "Swipe", foreign_keys="Swipe.swiper_id", back_populates="swiper", cascade="all, delete-orphan"
+    )
+    swipes_received = db.relationship(
+        "Swipe", foreign_keys="Swipe.target_id", back_populates="target", cascade="all, delete-orphan"
+    )
 
 
 class ProfileLink(db.Model):

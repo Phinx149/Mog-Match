@@ -1,10 +1,13 @@
 import type {
   FilterOptions,
   HealthResponse,
+  MatchListResponse,
   Profile,
   ProfileFilters,
   ProfileListResponse,
   ProfileUpdate,
+  SwipeDecision,
+  SwipeResult,
 } from "../types/profile";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
@@ -68,6 +71,27 @@ export function getProfile(id: string, signal?: AbortSignal) {
 
 export function getMyProfile(signal?: AbortSignal) {
   return request<Profile>("/api/profiles/me", { signal });
+}
+
+export function getMyMatches(signal?: AbortSignal) {
+  return request<MatchListResponse>("/api/profiles/me/matches", { signal });
+}
+
+export function createSwipe(targetId: string, action: SwipeDecision) {
+  return request<SwipeResult>("/api/swipes", {
+    method: "POST",
+    body: JSON.stringify({ target_id: targetId, action }),
+  });
+}
+
+/** Unlike one person: they leave my matches and come back to Discover. */
+export function removeSwipe(targetId: string) {
+  return request<{ removed: boolean }>(`/api/swipes/${encodeURIComponent(targetId)}`, { method: "DELETE" });
+}
+
+/** Forget all my likes/passes (and so all my matches). */
+export function clearSwipes() {
+  return request<{ removed: number }>("/api/swipes", { method: "DELETE" });
 }
 
 export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
