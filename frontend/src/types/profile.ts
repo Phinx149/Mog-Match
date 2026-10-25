@@ -202,6 +202,12 @@ export interface SwipeResult {
   match: MogMatch | null;
 }
 
+/** GET /api/swipes/<id>: my like/pass on one person, or null if I haven't swiped on them. */
+export interface SwipeStatus {
+  target_id: string;
+  action: SwipeDecision | null;
+}
+
 /** GET /api/profiles/me/matches: everyone I liked, most similar first. */
 export interface MatchListResponse {
   matches: MatchedProfile[];

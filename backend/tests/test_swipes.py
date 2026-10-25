@@ -113,3 +113,32 @@ def test_unlike_someone_never_liked_is_404(client):
     assert client.delete(f"/api/swipes/{profile_id(client, 'mayacodes')}").status_code == 404
     assert client.delete(f"/api/swipes/{uuid.uuid4()}").status_code == 404
     assert client.delete("/api/swipes/not-a-uuid").status_code == 404
+
+
+# ---------- GET /api/swipes/<id>: the profile page's Like button ----------
+
+def test_get_swipe_reports_like_pass_or_nothing(client):
+    maya, diego = profile_id(client, "mayacodes"), profile_id(client, "diego-rs")
+    assert client.get(f"/api/swipes/{maya}").get_json() == {"target_id": maya, "action": None}
+
+    swipe(client, "mayacodes", "like")
+    swipe(client, "diego-rs", "pass")
+    assert client.get(f"/api/swipes/{maya}").get_json()["action"] == "like"
+    assert client.get(f"/api/swipes/{diego}").get_json()["action"] == "pass"
+
+    client.delete(f"/api/swipes/{maya}")  # unlike from the profile page
+    assert client.get(f"/api/swipes/{maya}").get_json()["action"] is None
+
+
+def test_get_swipe_unknown_profile_and_logged_out(client, anon_client):
+    assert client.get(f"/api/swipes/{uuid.uuid4()}").status_code == 404
+    maya = profile_id(client, "mayacodes")
+    assert anon_client.get(f"/api/swipes/{maya}").status_code == 401
+
+
+def test_get_swipe_only_shows_my_own_likes(app, log_in):
+    jordan = log_in(app.test_client(), "jordan-dev")
+    sam = log_in(app.test_client(), "samfullstack")
+    maya = str(Profile.query.filter_by(username="mayacodes").one().id)
+    jordan.post("/api/swipes", json={"target_id": maya, "action": "like"})
+    assert sam.get(f"/api/swipes/{maya}").get_json()["action"] is None  # Sam hasn't liked Maya

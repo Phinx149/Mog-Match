@@ -121,7 +121,7 @@ def request_plan(context):
 
 
 def generate(me, invite_id, data):
-    invite = conversation(me, invite_id)
+    invite = conversation(me, invite_id, writable=True)
     if not isinstance(data, dict) or set(data) - {"brief"}:
         raise ValidationError({}, "Send an object containing an optional brief.")
     brief = data.get("brief", "")
@@ -136,8 +136,10 @@ def generate(me, invite_id, data):
             if (datetime.now(timezone.utc) - created).total_seconds() < 30:
                 abort(429, description="Please wait 30 seconds before generating another plan.")
         context, message_id = build_context(invite, brief.strip())
+        db.session.commit()  # Do not hold the connection lock during the provider call.
         with provider_errors():
             content = request_plan(context)
+        invite = conversation(me, invite_id, writable=True)
         idea = ProjectIdea(invite_id=invite.id, generated_by=me.id, brief=brief.strip(), content=content,
                            context_message_id=message_id, model=current_app.config["OPENAI_MODEL"])
         db.session.add(idea)

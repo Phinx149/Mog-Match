@@ -5,6 +5,9 @@ see them). Every account's password is DEMO_PASSWORD. Each profile is shaped to 
 Mog points come from esoteric languages used in projects, number of skills, links, projects,
 description and bio length, profile completeness and experience (see docs/MOG_SCORE.md).
 `tests/test_demo_users.py` checks every account really lands in its intended tier.
+
+Profile pictures: accounts with an `avatar_url` use that DiceBear link. Accounts with `None` get the
+cartoon in app/seed_avatars/<username>.png when seeded (drawn by scripts/make_seed_avatars.py).
 """
 
 DEMO_PASSWORD = "123"
@@ -205,12 +208,12 @@ DEMO_USERS: list[dict] = [
     },
     {
         "tier": "Mid Mogger", "username": "phpphil", "full_name": "Phil PHP",
-        "avatar_url": _avatar("phpphil"), "location": "Warsaw, PL", "education": None,
+        "avatar_url": _avatar("phpphil"), "location": "Warsaw, PL", "education": "B.Sc. Information Technology, Warsaw University of Technology",
         "bio": "Laravel developer for ten years. Still believes PHP is fine, actually, and has the happy clients to prove it.",
         "favorite_ide": "PhpStorm", "favorite_ai_agents": ["Cursor"],
         "skills": ["PHP", "Laravel", "JavaScript", "MySQL", "Backend", "Lua"],
         "interests": ["Web Dev", "Gaming"], "experience_level": "Mid-level",
-        "looking_for": ["Just vibes"], "links": [],
+        "looking_for": ["Just vibes"], "links": _links("phpphil", 1),
         "projects": [_project("Guild Board", ["PHP", "Lua"], "A raid planner for my gaming guild with a Lua addon that syncs sign-ups.")],
     },
     {
@@ -237,30 +240,30 @@ DEMO_USERS: list[dict] = [
     {
         "tier": "Junior Mogger", "username": "studentstu", "full_name": "Stu Dent",
         "avatar_url": None, "location": "Lagos, NG", "education": "B.Sc. Computer Science (2nd year), UNILAG",
-        "bio": "CS student learning Python and C. Chess club.",
+        "bio": "CS student learning Python and C. Chess club on Fridays, and always up for a study group.",
         "favorite_ide": "VS Code", "favorite_ai_agents": [],
         "skills": ["Python", "C", "Java"],
         "interests": ["Learning", "Chess"], "experience_level": "Student",
-        "looking_for": ["Mentor", "Hackathon team"], "links": [],
+        "looking_for": ["Mentor", "Hackathon team"], "links": _links("studentstu", 1),
         "projects": [_project("Chess Clock", ["Python"], "A chess clock that runs in the terminal.", url=False)],
     },
     {
         "tier": "Junior Mogger", "username": "learnerlee", "full_name": "Lee Learner",
-        "avatar_url": None, "location": None, "education": None,
-        "bio": "Former teacher, now learning React at night.",
+        "avatar_url": None, "location": "Cork, IE", "education": "B.Ed. Primary Education, University College Cork",
+        "bio": "Former teacher, now learning React at night. Building tools I wish I had in the classroom.",
         "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["JavaScript", "React"],
-        "interests": ["Education"], "experience_level": "Junior",
+        "interests": ["Education", "Teaching"], "experience_level": "Junior",
         "looking_for": ["Mentor"], "links": _links("learnerlee", 1),
         "projects": [_project("Flashcards", ["JavaScript"], "Flashcards I made for my old students.", url=False)],
     },
     {
         "tier": "Junior Mogger", "username": "copypasta", "full_name": "Cody Pasta",
-        "avatar_url": None, "location": "Phoenix, AZ", "education": None,
-        "bio": "Stack Overflow is my IDE.",
+        "avatar_url": None, "location": "Phoenix, AZ", "education": "Self-taught, mostly from forum threads",
+        "bio": "Stack Overflow is my IDE. Ctrl+C, Ctrl+V, ship it.",
         "favorite_ide": "Notepad++", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["JavaScript", "jQuery"],
-        "interests": ["Memes"], "experience_level": "Junior",
+        "interests": ["Memes", "Coffee"], "experience_level": "Junior",
         "looking_for": ["Just vibes"], "links": [],
         "projects": [_project("Todo App", ["JavaScript"], "Yet another todo app.", url=False)],
     },
@@ -271,41 +274,41 @@ DEMO_USERS: list[dict] = [
         "favorite_ide": "VS Code", "favorite_ai_agents": [],
         "skills": ["HTML", "CSS"],
         "interests": ["Design", "Travel"], "experience_level": "Student",
-        "looking_for": ["Mentor"], "links": [],
+        "looking_for": ["Mentor"], "links": _links("bootcampbea", 1),
         "projects": [_project("Landing Page", ["HTML", "CSS"], "A landing page for my mum's bakery in Madrid.", url=False)],
     },
     # ---------- 🥚 Hello World (0–24): nearly empty profiles
     {
         "tier": "Hello World", "username": "newbie", "full_name": "Nova Newbie",
-        "avatar_url": None, "location": None, "education": None,
-        "bio": "Hello world!", "favorite_ide": "Notepad", "favorite_ai_agents": [],
-        "skills": ["HTML"], "interests": [], "experience_level": "Student",
+        "avatar_url": None, "location": "Portland, OR", "education": "Intro to web development, community college",
+        "bio": "Hello world! Just bought my first laptop and I'm ready to learn.", "favorite_ide": "Notepad", "favorite_ai_agents": [],
+        "skills": ["HTML"], "interests": ["Learning", "Cats"], "experience_level": "Student",
         "looking_for": ["Mentor"], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "lurker", "full_name": "Larry Lurker",
-        "avatar_url": None, "location": None, "education": None,
-        "bio": "Just looking.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
-        "skills": [], "interests": [], "experience_level": None,
+        "avatar_url": None, "location": "Chicago, IL", "education": None,
+        "bio": "Just looking. Might say hi later.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": [], "interests": ["Reading", "Podcasts"], "experience_level": None,
         "looking_for": [], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "printhello", "full_name": "Priya Print",
-        "avatar_url": None, "location": "Delhi, IN", "education": None,
+        "avatar_url": None, "location": "Delhi, IN", "education": "Intro to Python, online course",
         "bio": "print('hello')", "favorite_ide": "IDLE", "favorite_ai_agents": [],
-        "skills": ["Python"], "interests": ["Learning"], "experience_level": "Student",
+        "skills": ["Python"], "interests": ["Learning", "Cooking"], "experience_level": "Student",
         "looking_for": [], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "ghostdev", "full_name": "Ghost Dev",
-        "avatar_url": None, "location": None, "education": None,
-        "bio": "...", "favorite_ide": "Vim", "favorite_ai_agents": [],
-        "skills": [], "interests": [], "experience_level": None,
+        "avatar_url": None, "location": "Somewhere in the cloud", "education": None,
+        "bio": "... boo.", "favorite_ide": "Vim", "favorite_ai_agents": [],
+        "skills": [], "interests": ["Haunting", "Night owls"], "experience_level": None,
         "looking_for": ["Just vibes"], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "firststep", "full_name": "Finn First",
-        "avatar_url": None, "location": "Oslo, NO", "education": None,
+        "avatar_url": None, "location": "Oslo, NO", "education": "Self-taught, one tutorial at a time",
         "bio": "Day one of coding.", "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["HTML", "CSS"], "interests": [], "experience_level": "Student",
         "looking_for": ["Mentor"], "links": [], "projects": [],
@@ -595,12 +598,12 @@ DEMO_USERS += [
         "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["Python", "Data Science", "R"],
         "interests": ["Biology", "Hackathons"], "experience_level": "Student",
-        "looking_for": ["Hackathon team", "Mentor"], "links": [],
+        "looking_for": ["Hackathon team", "Mentor"], "links": _links("hackhannah", 1),
         "projects": [_p("Petri Counter", ["Python"], "Counts bacteria colonies in a photo.", url=False)],
     },
     {
         "tier": "Junior Mogger", "username": "datadan", "full_name": "Dan Sheets",
-        "avatar_url": None, "location": "Denver, CO", "education": None,
+        "avatar_url": None, "location": "Denver, CO", "education": "B.S. Accounting, Metropolitan State University of Denver",
         "bio": "Accountant moving from Excel macros to Python. Pandas is my new best friend.",
         "favorite_ide": "Jupyter", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["Python", "SQL"],
@@ -620,17 +623,17 @@ DEMO_USERS += [
     },
     {
         "tier": "Junior Mogger", "username": "ittomas", "full_name": "Tomás Helpdesk",
-        "avatar_url": None, "location": "Buenos Aires, AR", "education": None,
+        "avatar_url": None, "location": "Buenos Aires, AR", "education": "Technical diploma in IT support, Escuela ORT",
         "bio": "IT support tech automating the boring parts of my job with PowerShell.",
         "favorite_ide": "VS Code", "favorite_ai_agents": ["Copilot"],
         "skills": ["PowerShell", "Bash"],
         "interests": ["Automation"], "experience_level": "Junior",
-        "looking_for": ["Mentor"], "links": [],
+        "looking_for": ["Mentor"], "links": _links("ittomas", 1),
         "projects": [_p("Reset Bot", ["PowerShell"], "Resets passwords without a ticket.", url=False)],
     },
     {
         "tier": "Junior Mogger", "username": "gamergus", "full_name": "Gus Level",
-        "avatar_url": None, "location": None, "education": "High school senior",
+        "avatar_url": None, "location": "Montréal, CA", "education": "High school senior",
         "bio": "Making my first platformer. The jump feels wrong and I can't stop tweaking it.",
         "favorite_ide": "Godot Editor", "favorite_ai_agents": [],
         "skills": ["GDScript", "Game Dev"],
@@ -641,15 +644,15 @@ DEMO_USERS += [
     # ---------- 🥚 Hello World
     {
         "tier": "Hello World", "username": "justjoined", "full_name": "June Joiner",
-        "avatar_url": None, "location": None, "education": None,
+        "avatar_url": None, "location": "Wellington, NZ", "education": None,
         "bio": "Signed up five minutes ago.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
-        "skills": [], "interests": [], "experience_level": None,
+        "skills": [], "interests": ["Learning", "Music"], "experience_level": None,
         "looking_for": ["Just vibes"], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "codecurious", "full_name": "Cora Curious",
-        "avatar_url": None, "location": "Vienna, AT", "education": None,
-        "bio": "What is a terminal?", "favorite_ide": "Notepad", "favorite_ai_agents": ["ChatGPT"],
+        "avatar_url": None, "location": "Vienna, AT", "education": "Curious about everything, degree pending",
+        "bio": "What is a terminal? Asking for a friend (the friend is me).", "favorite_ide": "Notepad", "favorite_ai_agents": ["ChatGPT"],
         "skills": ["HTML"], "interests": ["Learning"], "experience_level": "Student",
         "looking_for": ["Mentor"], "links": [], "projects": [],
     },
@@ -662,16 +665,16 @@ DEMO_USERS += [
     },
     {
         "tier": "Hello World", "username": "helloharper", "full_name": "Harper Hello",
-        "avatar_url": None, "location": "Auckland, NZ", "education": None,
+        "avatar_url": None, "location": "Auckland, NZ", "education": "Learning alongside my 8-year-old",
         "bio": "Learning to code with my kid.", "favorite_ide": "Scratch", "favorite_ai_agents": [],
-        "skills": ["JavaScript"], "interests": ["Family"], "experience_level": "Student",
+        "skills": ["JavaScript"], "interests": ["Family", "Scratch"], "experience_level": "Student",
         "looking_for": ["Just vibes"], "links": [], "projects": [],
     },
     {
         "tier": "Hello World", "username": "zeroxp", "full_name": "Zed Zero",
-        "avatar_url": None, "location": None, "education": None,
-        "bio": "0 XP. Level 1.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
-        "skills": ["CSS"], "interests": [], "experience_level": "Student",
+        "avatar_url": None, "location": "Spawn point", "education": None,
+        "bio": "0 XP. Level 1. Grinding.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": ["CSS"], "interests": ["Games", "Anime"], "experience_level": "Student",
         "looking_for": [], "links": [], "projects": [],
     },
 ]
@@ -711,3 +714,22 @@ DEMO_THEMES.update({
     "helloharper": _theme("#1a0f05", "emoji", emojis=["🧒", "🧑", "💻"], emoji_count=6, emoji_path="wave"),
     "zeroxp": _theme("#08080c", "snow", snow_kind="dots", snow_count=20, snow_wind=1, brightness=15),
 })
+
+
+# The look of the accounts made by `flask seed` (the demo user and the sample developers), so they
+# aren't plain default cards next to the test accounts. Same shape and rules as DEMO_THEMES, kept
+# separate because `flask seed` is what every teammate and production runs.
+SEED_THEMES: dict[str, dict] = {
+    "jordan-dev": _theme("#0b1a33", "emoji", emojis=["🦊", "🚀", "🏆"], emoji_path="bounce", emoji_count=12),
+    "mayacodes": _theme("#2b1020", "emoji", emojis=["🌸", "🎨", "✨"], emoji_path="wave", emoji_count=16, emoji_spin=2),
+    "diego-rs": _theme("#1c0f06", "matrix", rain_color="#ff8a4c", rain_symbols="code", glow=True, speed=5),
+    "priya-ml": _theme("#140f2e", "matrix", rain_color="#c4b5fd", rain_symbols="binary", brightness=45, speed=3),
+    "samfullstack": _theme("#1c1a06", "market", chart_mood="bull", chart_palette="classic", chart_ticker="MVP", chart_volatility=5),
+    "lena-gamedev": _theme("#08201a", "emoji", emojis=["🍄", "🎮", "👾"], emoji_path="bounce", emoji_count=14),
+    "m-sec": _theme("#0a0f16", "slogans", slogans=["TRY HARDER", "ROOT OR BUST", "PATCH YOUR STUFF"],
+                    slogan_color="#39ff88", slogan_style="outline", slogan_tilt=-12),
+    "aisha-data": _theme("#06232b", "snow", snow_kind="dots", snow_count=90, snow_wind=-2),
+    "kenji-mobile": _theme("#1f0c18", "emoji", emojis=["🗻", "🚄", "📱"], emoji_path="straight", emoji_angle=0, emoji_count=10),
+    "liv-devops": _theme("#041b30", "emoji", emojis=["🐳", "☁️", "📦"], emoji_path="straight", emoji_angle=90, emoji_count=12),
+    "noah-learns": _theme("#17112f", "emoji", emojis=["🐣", "🎧", "🦀"], emoji_path="wave", emoji_count=10),
+}

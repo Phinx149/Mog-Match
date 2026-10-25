@@ -8,6 +8,7 @@ import type {
   ProfileUpdate,
   SwipeDecision,
   SwipeResult,
+  SwipeStatus,
 } from "../types/profile";
 import type { SessionResponse } from "../types/auth";
 import type { InboxResponse, Invite } from "../types/invite";
@@ -82,6 +83,13 @@ export function logOut() {
   return request<SessionResponse>("/api/auth/logout", { method: "POST" });
 }
 
+export function changePassword(currentPassword: string, newPassword: string) {
+  return request<{ ok: boolean }>("/api/auth/password", {
+    method: "PATCH",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/health");
 }
@@ -113,6 +121,11 @@ export function getMyProfile(signal?: AbortSignal) {
 
 export function getMyMatches(signal?: AbortSignal) {
   return request<MatchListResponse>("/api/profiles/me/matches", { signal });
+}
+
+/** Have I liked or passed on this person? (the profile page's Like button) */
+export function getSwipe(targetId: string, signal?: AbortSignal) {
+  return request<SwipeStatus>(`/api/swipes/${encodeURIComponent(targetId)}`, { signal });
 }
 
 export function createSwipe(targetId: string, action: SwipeDecision) {
@@ -174,6 +187,10 @@ export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {
 
 export function getConversations(signal?: AbortSignal) {
   return request<{ conversations: Conversation[] }>("/api/conversations", { signal });
+}
+
+export function endConnection(id: string, action: "unmatch" | "block") {
+  return request<{ ok: boolean }>(`/api/conversations/${encodeURIComponent(id)}/${action}`, { method: "POST" });
 }
 
 export function getMessages(id: string, signal?: AbortSignal, before?: number) {

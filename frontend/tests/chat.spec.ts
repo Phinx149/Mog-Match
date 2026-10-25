@@ -186,3 +186,64 @@ test("team reveal can be skipped and dismissed with Escape", async ({ browser })
   await expect(page.getByRole("textbox", { name: /^Message / })).toBeFocused();
   await context.close();
 });
+
+
+test("unmatch pauses both chats, rematch needs acceptance, block hides both histories", async ({ browser }) => {
+  const one = await browser.newContext({ reducedMotion: "reduce" });
+  const two = await browser.newContext({ reducedMotion: "reduce" });
+  const sam = await one.newPage();
+  const maya = await two.newPage();
+  const errors: string[] = [];
+  sam.on("pageerror", error => errors.push(error.message));
+  maya.on("pageerror", error => errors.push(error.message));
+  try {
+    await login(sam, "samfullstack", "mogmatch-demo");
+    await login(maya, "mayacodes", "mogmatch-demo");
+    const target = await (await maya.request.get("http://127.0.0.1:5002/api/profiles/me")).json();
+    expect((await sam.request.post("http://127.0.0.1:5002/api/swipes", { data: { target_id: target.id, action: "like" } })).ok()).toBeTruthy();
+    const invite = await (await sam.request.post("http://127.0.0.1:5002/api/invites", { data: { recipient_id: target.id } })).json();
+    expect((await maya.request.patch(`http://127.0.0.1:5002/api/invites/${invite.id}`, { data: { status: "accepted" } })).ok()).toBeTruthy();
+    for (const page of [sam, maya]) {
+      await page.goto(`/inbox?chat=${invite.id}`);
+      const reveal = page.getByRole("dialog", { name: "Team Mog Score reveal" });
+      await expect(reveal).toBeVisible();
+      await reveal.getByRole("button", { name: "Start chatting" }).click();
+    }
+    await sam.getByRole("textbox", { name: "Message Maya Chen" }).fill("Keep this conversation history.");
+    await sam.getByRole("button", { name: "Send message", exact: true }).click();
+    await expect(maya.getByRole("log").getByText("Keep this conversation history.")).toBeVisible();
+    await sam.getByRole("complementary", { name: "Inbox navigation" }).getByLabel("Match options for Maya Chen").click();
+    await sam.getByRole("button", { name: "Unmatch", exact: true }).click();
+    for (const page of [sam, maya]) {
+      await expect(page.getByRole("textbox", { name: /^Message / })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Request rematch", exact: true })).toBeVisible();
+      await expect(page.getByRole("log").getByText("Keep this conversation history.")).toBeVisible();
+      await expect(page.getByLabel(/^Match options for /)).toHaveCount(0);
+    }
+    await sam.reload();
+    await expect(sam.getByRole("textbox", { name: /^Message / })).toBeDisabled();
+    await sam.getByRole("button", { name: "Request rematch", exact: true }).click();
+    await expect(sam.getByText(/Rematch requested. Waiting/)).toBeVisible();
+    await expect(maya.getByRole("textbox", { name: /^Message / })).toBeDisabled();
+    await maya.getByRole("button", { name: "Accept rematch", exact: true }).click();
+    for (const page of [sam, maya]) await expect(page.getByRole("textbox", { name: /^Message / })).toBeEnabled();
+    // The same actions remain reachable in an active chat on mobile.
+    await maya.setViewportSize({ width: 390, height: 844 });
+    await maya.getByRole("region", { name: "Chat with Sam Okafor" }).getByLabel("Match options for Sam Okafor").click();
+    const blockButton = await maya.getByRole("button", { name: "Block user", exact: true }).boundingBox();
+    expect(blockButton!.x).toBeGreaterThanOrEqual(16);
+    expect(blockButton!.x + blockButton!.width).toBeLessThanOrEqual(390 - 16);
+    expect(await maya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+    await maya.screenshot({ path: "test-results/connection-menu-mobile.png", fullPage: true });
+    await maya.getByRole("button", { name: "Block user", exact: true }).click();
+    for (const page of [sam, maya]) {
+      await expect(page.getByRole("log")).toHaveCount(0);
+      await expect(page.getByText("Keep this conversation history.")).toHaveCount(0);
+      const threads = await (await page.request.get("http://127.0.0.1:5002/api/conversations")).json();
+      expect(threads.conversations.some((row: { id: string }) => row.id === invite.id)).toBeFalsy();
+      await page.reload();
+      await expect(page.getByRole("log")).toHaveCount(0);
+    }
+    expect(errors).toEqual([]);
+  } finally { await one.close(); await two.close(); }
+});

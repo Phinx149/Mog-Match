@@ -24,7 +24,7 @@ export default function InviteControl({ name, invite, fromThem, onSend }: Invite
     return <Link to={`/inbox?chat=${invite.id}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/20"><MessageCircle className="size-4" aria-hidden />Open chat</Link>;
   }
 
-  if (invite && fromThem) {
+  if (invite && invite.status !== "unmatched" && fromThem) {
     const text = invite.status === "pending" ? `${name} invited you` : `You ${invite.status} their invite`;
     return (
       <Link to="/inbox" className="inline-flex items-center gap-2 text-sm text-cyan-300 hover:underline">
@@ -34,7 +34,7 @@ export default function InviteControl({ name, invite, fromThem, onSend }: Invite
     );
   }
 
-  if (invite) {
+  if (invite && invite.status !== "unmatched") {
     const STATUS = {
       pending: { icon: Clock, text: "Invite sent · waiting", tone: "text-amber-200" },
       accepted: { icon: Check, text: "Invite accepted", tone: "text-emerald-300" },

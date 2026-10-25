@@ -1,6 +1,6 @@
 // Mirrors backend/app/services/invite_service.py. Keep field names in sync with the Flask JSON.
 
-export type InviteStatus = "pending" | "accepted" | "declined";
+export type InviteStatus = "pending" | "accepted" | "declined" | "unmatched";
 
 /** Just enough of a profile to show who an invite is from/to. */
 export interface InvitePerson {

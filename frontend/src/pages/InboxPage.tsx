@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
 import ChatWorkspace from "../components/inbox/ChatWorkspace";
+import ConnectionMenu from "../components/inbox/ConnectionMenu";
 import MatchRequests from "../components/inbox/MatchRequests";
 import TeamMogReveal from "../components/inbox/TeamMogReveal";
 import Navbar from "../components/layout/Navbar";
@@ -15,7 +16,7 @@ import type { InboxResponse } from "../types/invite";
 
 export default function InboxPage() {
   const { user } = useAuth();
-  const { match: newMatch, celebrate, dismiss } = useTeamMogReveal(user?.id);
+  const { match: newMatch, celebrate, dismiss, forget } = useTeamMogReveal(user?.id);
   const [params, setParams] = useSearchParams();
   const activeId = params.get("chat");
   const [tab, setTab] = useState<"messages" | "requests">("messages");
@@ -57,18 +58,30 @@ export default function InboxPage() {
     client.on("chat:message", changed);
     client.on("chat:read", changed);
     client.on("team:matched", celebrate);
+    client.on("connection:updated", (event: { conversation_id: string }) => {
+      setConversations((old) => old.filter((item) => item.id !== event.conversation_id));
+      forget(event.conversation_id);
+      void refresh();
+    });
     window.addEventListener("focus", changed);
     void refresh();
     return () => {
       ++requestVersion.current; client.disconnect(); window.removeEventListener("focus", changed);
     };
-  }, [user?.id, refresh, celebrate]);
+  }, [user?.id, refresh, celebrate, forget]);
 
   const open = (id: string) => { setTab("messages"); setParams({ chat: id }); void refresh(); };
   const active = conversations.find((item) => item.id === activeId);
   const filtered = conversations.filter((item) => `${item.person.full_name} ${item.person.username}`.toLowerCase().includes(query.toLowerCase()));
   const unread = conversations.reduce((total, item) => total + item.unread_count, 0);
   const read = (id: string) => setConversations((old) => old.map((item) => item.id === id ? { ...item, unread_count: 0 } : item));
+  const connectionChanged = (id: string, action: "unmatch" | "block") => {
+    setConversations((old) => action === "block" ? old.filter((item) => item.id !== id) :
+      old.map((item) => item.id === id ? { ...item, can_message: false, status: "unmatched" } : item));
+    if (action === "block" && activeId === id) setParams({});
+    forget(id);
+    void refresh();
+  };
 
   return <>
     <Navbar><h1 className="truncate text-sm font-semibold">Inbox</h1>
@@ -90,18 +103,21 @@ export default function InboxPage() {
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
               {loading && <p className="p-4 text-sm text-muted">Loading conversations…</p>}
               {!loading && !filtered.length && <div className="p-5 text-center text-sm text-muted"><MessageCircle className="mx-auto mb-3 size-7 text-violet-400" />{query ? "No conversations found." : "Accept a match request to start a conversation."}<button onClick={() => setTab("requests")} className="mt-3 block w-full text-violet-300">View requests</button></div>}
-              {filtered.map((item) => <button key={item.id} onClick={() => open(item.id)} aria-pressed={activeId === item.id}
-                className={`mb-1 flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors ${activeId === item.id ? "bg-violet-500/15 ring-1 ring-inset ring-violet-400/20" : "hover:bg-surface-raised"}`}>
+              {filtered.map((item) => <div key={item.id}
+                className={`mb-1 flex w-full items-center rounded-xl pr-1 transition-colors ${activeId === item.id ? "bg-violet-500/15 ring-1 ring-inset ring-violet-400/20" : "hover:bg-surface-raised"}`}>
+                <button onClick={() => open(item.id)} aria-pressed={activeId === item.id} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-cyan-300">
                 <Avatar name={item.person.full_name} url={item.person.avatar_url} />
-                <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.person.full_name}</p><p className={`mt-1 truncate text-xs ${item.unread_count ? "text-slate-200" : "text-muted"}`}>{item.last_message?.body ?? "You matched! Say hello."}</p></div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.person.full_name}</p><p className={`mt-1 truncate text-xs ${item.unread_count ? "text-slate-200" : "text-muted"}`}>{!item.can_message ? "Unmatched · read-only" : item.last_message?.body ?? "You matched! Say hello."}</p></div>
                 {item.unread_count > 0 && <span className="rounded-full bg-fuchsia-500 px-1.5 text-xs text-white">{item.unread_count}</span>}
-              </button>)}
+                </button>
+                <ConnectionMenu conversation={item} onChanged={connectionChanged} />
+              </div>)}
             </div>
           </> : <div className="hidden space-y-3 p-5 text-sm text-muted lg:block"><Inbox className="size-8 text-violet-300" /><p>A little hello could be the start of your next big build.</p><Link to="/match" className="inline-block text-cyan-300 hover:underline">Find more collaborators →</Link></div>}
         </aside>
         <div className={`min-h-0 min-w-0 ${tab === "messages" && !activeId ? "hidden lg:block" : "block"} ${tab === "requests" ? "overflow-y-auto" : ""}`}>
           {tab === "requests" && inbox ? <MatchRequests inbox={inbox} onChange={() => void refresh()} onOpen={open} onAccepted={celebrate} /> :
-            active && user ? <ChatWorkspace key={`${user.id}:${active.id}`} conversation={active} userId={user.id} socket={socket} connected={connected} onBack={() => setParams({})} onRead={read} /> :
+            active && user ? <ChatWorkspace key={`${user.id}:${active.id}`} conversation={active} userId={user.id} socket={socket} connected={connected} onBack={() => setParams({})} onRead={read} onConnectionChanged={connectionChanged} onRefresh={() => void refresh()} /> :
               <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
                 <div className="mb-2 rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-600/20 to-cyan-500/10 p-6"><Sparkles className="size-10 text-violet-300" /></div>
                 <h2 className="text-xl font-semibold">A match is just the beginning.</h2><p className="max-w-sm text-sm leading-relaxed text-muted">Pick a conversation, trade a few ideas, and turn your shared skills into your next project.</p>

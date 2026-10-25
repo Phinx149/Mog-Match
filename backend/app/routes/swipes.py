@@ -20,6 +20,15 @@ def create_swipe():
     return jsonify(result), 201
 
 
+@bp.get("/<uuid:target_id>")
+def get_swipe(target_id):
+    """Have I liked or passed on this person? `{"action": "like" | "pass" | null}`."""
+    try:
+        return jsonify(swipe_service.get_swipe(current_profile_or_401(), target_id))
+    except NotFoundError as error:
+        abort(404, description=str(error))
+
+
 @bp.delete("/<uuid:target_id>")
 def remove_swipe(target_id):
     """Unlike (or un-pass) one person, so they show up on Discover again."""

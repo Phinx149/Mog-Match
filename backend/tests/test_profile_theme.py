@@ -1,5 +1,6 @@
 import pytest
 
+pytestmark = pytest.mark.usefixtures("blank_looks")  # these start from the default look
 
 DEFAULT_OPTIONS = {
     "brightness": 40, "size": 14, "speed": 4, "glow": False,

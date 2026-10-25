@@ -2,17 +2,19 @@ import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { Socket } from "socket.io-client";
-import { getMessages, getProjectIdeas, markConversationRead } from "../../services/api";
+import { getMessages, getProjectIdeas, markConversationRead, respondToInvite, sendInvite } from "../../services/api";
 import type { ChatMessage, Conversation, ProjectIdea } from "../../types/chat";
 import Avatar from "../profiles/Avatar";
 import ProjectPlan from "./ProjectPlan";
+import ConnectionMenu from "./ConnectionMenu";
 
 const mergeMessages = (old: ChatMessage[], next: ChatMessage[]) =>
   [...new Map([...old, ...next].map((m) => [m.id, m])).values()].sort((a, b) => a.id - b.id);
 
-export default function ChatWorkspace({ conversation, userId, socket, connected, onBack, onRead }: {
+export default function ChatWorkspace({ conversation, userId, socket, connected, onBack, onRead, onConnectionChanged, onRefresh }: {
   conversation: Conversation; userId: string; socket: Socket | null; connected: boolean;
   onBack: () => void; onRead: (id: string) => void;
+  onConnectionChanged: (id: string, action: "unmatch" | "block") => void; onRefresh: () => void;
 }) {
   const { id, person } = conversation;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -22,6 +24,7 @@ export default function ChatWorkspace({ conversation, userId, socket, connected,
   const [hasMore, setHasMore] = useState(false);
   const [olderLoading, setOlderLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [rematching, setRematching] = useState(false);
   const [studio, setStudio] = useState(false);
   const [error, setError] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
@@ -96,7 +99,7 @@ export default function ChatWorkspace({ conversation, userId, socket, connected,
 
   const send = (event?: FormEvent) => {
     event?.preventDefault();
-    if (!socket || !connected || !draft.trim() || sending) return;
+    if (!conversation.can_message || !socket || !connected || !draft.trim() || sending) return;
     setSending(true); setError("");
     socket.timeout(10000).emit("chat:send", { conversation_id: id, body: draft.trim(), client_token: token.current },
       (timeout: Error | null, ack?: { message?: ChatMessage; error?: string }) => {
@@ -108,14 +111,27 @@ export default function ChatWorkspace({ conversation, userId, socket, connected,
       });
   };
 
+  const rematch = async () => {
+    if (rematching) return;
+    setRematching(true); setError("");
+    try {
+      if (conversation.status === "pending" && conversation.rematch_requested_by !== userId) {
+        await respondToInvite(id, "accepted");
+      } else await sendInvite(person.id);
+      onRefresh();
+    } catch (err) { setError(err instanceof Error ? err.message : "Couldn't request a rematch."); }
+    finally { setRematching(false); }
+  };
+
   return <section aria-label={`Chat with ${person.full_name}`} className="flex h-full min-h-0 min-w-0 flex-col">
     <header className="flex shrink-0 items-center gap-3 border-b border-line px-3 py-2">
       <button onClick={onBack} aria-label="Back to conversations" className="rounded-lg p-1 text-muted hover:text-white lg:hidden"><ArrowLeft className="size-5" /></button>
       <Link to={`/profile/${person.id}`} className="flex min-w-0 flex-1 items-center gap-3">
         <span className="hidden sm:block"><Avatar name={person.full_name} url={person.avatar_url} /></span>
-        <div className="min-w-0"><h2 className="truncate font-semibold">{person.full_name}</h2><p className="text-xs text-muted">You matched. Make something great.</p></div>
+        <div className="min-w-0"><h2 className="truncate font-semibold">{person.full_name}</h2><p className="text-xs text-muted">{conversation.can_message ? "You matched. Make something great." : "Unmatched · conversation history"}</p></div>
       </Link>
-      <button aria-expanded={studio} onClick={() => setStudio(!studio)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold text-white shadow-lg transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 motion-safe:hover:-translate-y-0.5 sm:px-5 ${studio ? "border-cyan-300/70 bg-gradient-to-r from-violet-500 to-cyan-600 shadow-cyan-500/20" : "border-fuchsia-300/50 bg-gradient-to-r from-violet-600 to-fuchsia-500 shadow-fuchsia-500/25"}`}><Sparkles className="size-5" aria-hidden /><span>Project studio</span></button>
+      <ConnectionMenu conversation={conversation} onChanged={onConnectionChanged} />
+      <button disabled={!conversation.can_message} aria-expanded={studio && conversation.can_message} onClick={() => setStudio(!studio)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold text-white shadow-lg transition-all hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 motion-safe:hover:-translate-y-0.5 sm:px-5 ${studio ? "border-cyan-300/70 bg-gradient-to-r from-violet-500 to-cyan-600 shadow-cyan-500/20" : "border-fuchsia-300/50 bg-gradient-to-r from-violet-600 to-fuchsia-500 shadow-fuchsia-500/25"}`}><Sparkles className="size-5" aria-hidden /><span>Project studio</span></button>
     </header>
     <div className="relative flex min-h-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-gradient-to-b from-violet-500/[0.025] to-transparent">
@@ -141,18 +157,24 @@ export default function ChatWorkspace({ conversation, userId, socket, connected,
         </div>
         <form onSubmit={send} className="shrink-0 border-t border-line bg-surface p-3 sm:p-4">
           {error && <p role="alert" className="mb-2 text-xs text-rose-300">{error}</p>}
-          {!connected && <p role="status" className="mb-2 text-xs text-amber-200">Reconnecting… Your draft is safe.</p>}
+          {!conversation.can_message && <div role="status" className="mb-3 rounded-xl border border-teal-400/20 bg-teal-400/5 p-3 text-sm text-teal-100">
+            <p>You are unmatched. New messages are paused until you both agree to rematch.</p>
+            {conversation.status === "pending" && conversation.rematch_requested_by === userId ?
+              <p className="mt-2 text-xs text-muted">Rematch requested. Waiting for {person.full_name} to accept.</p> :
+              <button type="button" disabled={rematching} onClick={() => void rematch()} className="mt-2 rounded-lg bg-teal-300 px-3 py-2 text-xs font-semibold text-teal-950 hover:bg-teal-200 disabled:opacity-50">{rematching ? "Updating…" : conversation.status === "pending" ? "Accept rematch" : "Request rematch"}</button>}
+          </div>}
+          {conversation.can_message && !connected && <p role="status" className="mb-2 text-xs text-amber-200">Reconnecting… Your draft is safe.</p>}
           <div className="flex items-end gap-2 rounded-2xl border border-line bg-canvas p-2 focus-within:border-violet-500/50">
-            <textarea aria-label={`Message ${person.full_name}`} value={draft} disabled={sending} maxLength={2000} rows={2}
+            <textarea aria-label={`Message ${person.full_name}`} value={draft} disabled={sending || !conversation.can_message} maxLength={2000} rows={2}
               onChange={(e) => { setDraft(e.target.value); token.current = crypto.randomUUID(); }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
               placeholder="Say something worth matching for…" className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted disabled:opacity-60" />
-            <button type="submit" disabled={!connected || sending || !draft.trim()} aria-label="Send message" className="rounded-xl bg-violet-600 p-3 text-white hover:bg-violet-500 disabled:opacity-40">{sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</button>
+            <button type="submit" disabled={!conversation.can_message || !connected || sending || !draft.trim()} aria-label="Send message" className="rounded-xl bg-violet-600 p-3 text-white hover:bg-violet-500 disabled:opacity-40">{sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</button>
           </div>
           <p className="mt-1.5 flex justify-between px-1 text-[10px] text-muted"><span>Enter to send · Shift + Enter for a new line</span><span>{draft.length}/2000</span></p>
         </form>
       </div>
-      {studio && <ProjectPlan id={id} ideas={ideas} socket={socket} onGenerated={addIdea} onClose={() => setStudio(false)} />}
+      {studio && conversation.can_message && <ProjectPlan id={id} ideas={ideas} socket={socket} onGenerated={addIdea} onClose={() => setStudio(false)} />}
     </div>
   </section>;
 }
