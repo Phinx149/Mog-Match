@@ -35,6 +35,7 @@ def to_dict(invite: Invite) -> dict[str, Any]:
         "status": invite.status,
         "created_at": invite.created_at.isoformat(),
         "updated_at": invite.updated_at.isoformat(),
+        "team_mog": invite.team_mog,
     }
 
 
@@ -127,10 +128,16 @@ def respond_to_invite(me: Profile, invite_id: uuid.UUID, data: Any) -> dict[str,
     if invite.status != "pending":
         raise ConflictError(f"You already {invite.status} this invite.")
     invite.status = status
+    if status == "accepted":
+        from .team_mog import compute_team_mog
+        invite.team_mog = compute_team_mog(profile_service.to_dict(invite.sender), profile_service.to_dict(invite.recipient))
     db.session.commit()
     from .chat_service import notify
     notify(invite)
-    return to_dict(invite)
+    result = to_dict(invite)
+    if status == "accepted":
+        notify(invite, "team:matched", result)
+    return result
 
 
 def cancel_invite(me: Profile, invite_id: uuid.UUID) -> None:
