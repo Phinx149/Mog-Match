@@ -6,9 +6,9 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 ## Current milestone
 
-✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile (persists) · ✅ Discover page with search + skill filters · ✅ Like/Pass (in memory only) · ✅ Mog Score (on every profile, plus a Discover tier filter and sort)
+✅ Profiles stored in SQLite · ✅ Profile page · ✅ Edit profile with photo upload · ✅ Discover page with search + filters · ✅ Like/Pass (saved) · ✅ Mog Score · ✅ Mog Match (everyone you liked, ranked by similarity) · ✅ Invites + Inbox · ✅ Username + password login
 
-⏳ Later: persistent swipes & matches, Intersect Engine, Team Mog Score, chat, voice, GitHub login.
+⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, sign-up, voice, GitHub login.
 
 ## Tech stack
 
@@ -26,12 +26,12 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py          # Flask application factory + JSON error handlers
-│   │   ├── config.py            # env-driven config (DATABASE_URL, CORS_ORIGINS, DEMO_USER_EMAIL)
+│   │   ├── config.py            # env-driven config (DATABASE_URL, CORS_ORIGINS, SECRET_KEY, SEED_PASSWORD...)
 │   │   ├── extensions.py        # db, migrate (+ SQLite foreign keys on)
-│   │   ├── models/              # User, Profile, ProfileLink, Project
-│   │   ├── routes/              # health.py, profiles.py
-│   │   ├── services/            # profile_service.py: filtering, validation, serialization
-│   │   └── seed.py              # `flask seed` command + sample data
+│   │   ├── models/              # User, Profile, ProfileLink, Project, Swipe, Invite
+│   │   ├── routes/              # health, auth, profiles, swipes, invites (thin: parse → service → JSON)
+│   │   ├── services/            # the logic: auth, profile, swipe, invite, mog_score, mog_match, tech_catalog
+│   │   └── seed.py              # `flask seed` / `flask seed-test-users` commands + sample data
 │   ├── migrations/              # Alembic migrations (Flask-Migrate)
 │   ├── tests/                   # pytest
 │   ├── requirements.txt
@@ -39,11 +39,11 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 │   └── run.py
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # layout/, profiles/, discover/, forms/, common/
-│   │   ├── pages/               # Discover, Profile, EditProfile, Settings, NotFound
-│   │   ├── services/api.ts      # typed fetch wrapper for the Flask API
-│   │   ├── types/profile.ts     # TS interfaces matching API responses
-│   │   ├── hooks/
+│   │   ├── components/          # layout/, profiles/, discover/, match/, invites/, mog/, forms/, common/
+│   │   ├── pages/               # Login, Discover, Match, Inbox, Profile, EditProfile, Settings, NotFound
+│   │   ├── services/api.ts      # typed fetch wrapper for the Flask API (sends the login cookie)
+│   │   ├── types/               # profile.ts, invite.ts, auth.ts — match the API's JSON
+│   │   ├── hooks/               # useAuth.tsx (who is logged in), useDebouncedValue
 │   │   ├── App.tsx              # routes
 │   │   └── main.tsx
 │   ├── .env.example
@@ -73,7 +73,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 flask db upgrade        # create tables
-flask seed              # demo user + 10 developers
+flask seed              # demo user + 10 developers, all with the demo password
+flask seed-test-users   # optional: quick-login accounts user1 / user2
 python run.py           # http://localhost:5001
 ```
 
@@ -86,10 +87,21 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 flask db upgrade
 flask seed
+flask seed-test-users   # optional: quick-login accounts user1 / user2
 python run.py
 ```
 
 > `flask` commands find the app through `FLASK_APP=run.py` in `.env`. Run them from `backend/` with the venv active.
+
+## After you `git pull`
+
+Someone may have added a table, column or package. From `backend/` with the venv active:
+```bash
+pip install -r requirements.txt   # new Python packages
+flask db upgrade                  # new tables/columns (e.g. invites, users.password_hash)
+flask seed                        # fills in anything missing (e.g. passwords for seeded users); never overwrites edits
+```
+and from `frontend/`: `npm install`. Then restart `python run.py` and `npm run dev`.
 
 ## Frontend setup
 
@@ -109,7 +121,9 @@ npm run dev                     # http://localhost:5173
 | `FLASK_APP` | `run.py` | Lets `flask db` / `flask seed` find the app |
 | `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | SQLAlchemy URL, e.g. `postgresql://user:pass@host/db` |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origins allowed to call `/api/*` |
-| `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded user `/api/profiles/me` acts as |
+| `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded demo user (username `jordan-dev`) |
+| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. Set a long random value anywhere but your laptop |
+| `SEED_PASSWORD` | see `.env.example` | Password `flask seed` gives every seeded user |
 | `PORT` | `5001` | Port for `python run.py` (5000 clashes with AirPlay on macOS) |
 
 **`frontend/.env.local`**
@@ -134,8 +148,9 @@ flask db downgrade                       # undo the last migration
 ```bash
 flask seed           # idempotent: creates missing seed profiles, never overwrites edited ones
 flask seed --reset   # restores the demo user and all seeded profiles to their defaults
+flask seed-test-users # quick-login accounts user1 / user2 that already like each other (passwords in TEST_USERS, app/seed.py); add --reset for a clean start
 ```
-Seeds one **demo user** (Jordan Avery, the "you" of the app) plus 10 developers across frontend, backend, full-stack, AI/ML, game dev, cybersecurity, data engineering, mobile and DevOps.
+Seeds one **demo user** (Jordan Avery, `jordan-dev`) plus 10 developers across frontend, backend, full-stack, AI/ML, game dev, cybersecurity, data engineering, mobile and DevOps. Every seeded account gets the `SEED_PASSWORD` password, and three of them (Priya, Lena, Noah) have already sent Jordan an invite.
 
 ## Running locally
 
@@ -143,7 +158,46 @@ Two terminals:
 1. `backend/` → activate venv → `python run.py`
 2. `frontend/` → `npm run dev`
 
-Open http://localhost:5173. The green **ping** pill in the top bar confirms the frontend can reach the API.
+Open http://localhost:5173 (use `localhost`, not `127.0.0.1`, or the login cookie won't reach the API). The green **ping** pill in the top bar confirms the frontend can reach the API.
+
+## Logging in
+
+Every page except `/login` needs a login. There is no sign-up yet; use a seeded account:
+
+| Username | Password | Notes |
+|---|---|---|
+| `jordan-dev` | `SEED_PASSWORD` from `backend/.env.example` | The demo user. Three seeded invites are waiting in their inbox |
+| `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | |
+| `user1`, `user2` | see `TEST_USERS` in `backend/app/seed.py` | Only after `flask seed-test-users`. They already like each other |
+
+**Testing two people at once** (e.g. invites): log in as one user in a normal window and the other in an **incognito/private window**. Normal tabs share one login cookie, so logging in in a second tab switches *every* tab to that user (tabs notice and reload when you click back into them). Check the `@username` at the top right.
+
+**Clean start for a demo or a test:** `flask seed --reset && flask seed-test-users --reset` — restores every seeded account and deletes their likes and invites. Everyone gets logged out (the users are recreated).
+
+**Login trouble?**
+| Symptom | Fix |
+|---|---|
+| "Wrong username or password" for a seeded user after pulling | `flask seed` (gives seeded users their password) — or `SEED_PASSWORD` in your `.env` differs from `.env.example` |
+| `no such column: users.password_hash` / `no such table: invites` | `flask db upgrade` |
+| Logged in, but every page bounces back to `/login` | You opened `127.0.0.1:5173`; use `http://localhost:5173` |
+| Suddenly logged out | Someone ran `flask seed --reset` (it recreates users). Log in again |
+| Two tabs show the same person | Expected: normal tabs share one login. Use an incognito window for the second user |
+
+## Flask command cheat sheet
+
+Run from `backend/` with the venv active (Windows without activating: `.venv\Scriptslask ...`).
+
+| Command | What it does |
+|---|---|
+| `python run.py` | Start the API on :5001 (auto-reloads on code changes) |
+| `flask db upgrade` | Apply all migrations (do this after every pull) |
+| `flask db migrate -m "msg"` | After changing a model: generate a migration, then **read** it in `migrations/versions/` |
+| `flask db downgrade` | Undo the last migration |
+| `flask db check` | Fails if models and migrations are out of sync |
+| `flask seed` | Add missing seed data (profiles, passwords, invites). Safe to run any time |
+| `flask seed --reset` | Restore all seeded accounts to their defaults (deletes their likes/invites) |
+| `flask seed-test-users [--reset]` | Add (or recreate) `user1` / `user2` for quick two-person testing. Local only |
+| `pytest` | Backend tests |
 
 ## Tests & checks
 
@@ -163,15 +217,22 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
-| GET | `/api/profiles` | Discoverable profiles (excludes the demo user) → `{"profiles": [...], "count": n}` |
+| GET | `/api/profiles` | Discoverable profiles (excludes me and people I swiped on) → `{"profiles": [...], "count": n}` |
 | GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "looking_for": [...]}`. Powers the Discover filter menu and the Edit Profile "Looking for" picker |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
-| GET | `/api/profiles/me` | The demo user's profile |
-| PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
+| POST | `/api/auth/login` | `{"username", "password"}` → `{"user": {...}}` and a session cookie. `401` for a wrong username or password |
+| POST | `/api/auth/logout` | Ends the session → `{"user": null}` |
+| GET | `/api/auth/session` | Who am I → `{"user": {...}}`, or `{"user": null}` when logged out |
+| GET | `/api/profiles/me` | My profile (`401` when logged out, same for every `/me`, swipe and invite endpoint) |
+| PATCH | `/api/profiles/me` | Partial update of my profile |
 | GET | `/api/profiles/me/matches` | Mog Match: everyone I liked, most similar first, each with a `match` score. See `docs/MOG_MATCH.md` |
 | POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
 | DELETE | `/api/swipes/<uuid>` | Unlike one person: removes them from my matches and returns them to Discover (`404` if never swiped) |
 | DELETE | `/api/swipes` | Forget all my likes/passes → `{"removed": n}` |
+| POST | `/api/invites` | Invite someone I liked: `{"recipient_id", "message"?}` (message ≤ 280 chars) → `201` invite. `400` if I haven't liked them, `409` if either of us already invited the other |
+| GET | `/api/invites/inbox` | `{"received": [...], "sent": [...], "pending_count": n}`, newest first |
+| PATCH | `/api/invites/<uuid>` | Answer an invite sent to me: `{"status": "accepted" \| "declined"}`. `404` if it isn't mine, `409` if already answered |
+| DELETE | `/api/invites/<uuid>` | Cancel an invite I sent while it's still pending |
 
 **`GET /api/profiles` query params** (all optional, case-insensitive):
 | Param | Example | Behavior |
@@ -209,7 +270,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 
 ## Known limitations (this milestone)
 
-- No authentication: `/me` is always the server-configured demo user.
-- Likes/passes reset on page reload (React state only).
+- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
+- The inbox updates by polling (every 5 s), not push.
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
 - Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

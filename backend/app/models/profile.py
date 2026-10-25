@@ -39,13 +39,19 @@ class Profile(TimestampMixin, db.Model):
         cascade="all, delete-orphan",
         order_by="Project.position",
     )
-    # Deleting a profile removes its swipes in both directions (SQLite doesn't enforce
+    # Deleting a profile removes its swipes and invites in both directions (SQLite doesn't enforce
     # ON DELETE CASCADE by default, so the ORM does it).
     swipes_made = db.relationship(
         "Swipe", foreign_keys="Swipe.swiper_id", back_populates="swiper", cascade="all, delete-orphan"
     )
     swipes_received = db.relationship(
         "Swipe", foreign_keys="Swipe.target_id", back_populates="target", cascade="all, delete-orphan"
+    )
+    invites_sent = db.relationship(
+        "Invite", foreign_keys="Invite.sender_id", back_populates="sender", cascade="all, delete-orphan"
+    )
+    invites_received = db.relationship(
+        "Invite", foreign_keys="Invite.recipient_id", back_populates="recipient", cascade="all, delete-orphan"
     )
 
 

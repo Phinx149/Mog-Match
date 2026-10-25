@@ -6,7 +6,8 @@ import warnings
 from flask import Blueprint, abort, jsonify, request, send_file
 from PIL import Image, UnidentifiedImageError
 
-from ..services import profile_service, swipe_service
+from ..services import auth_service, profile_service, swipe_service
+from ..services.auth_service import current_profile_or_401
 from ..services.profile_service import ValidationError
 
 bp = Blueprint("profiles", __name__, url_prefix="/api/profiles")
@@ -20,24 +21,17 @@ def _list_arg(name: str) -> list[str]:
     return values
 
 
-def _demo_profile_or_404():
-    profile = profile_service.get_demo_profile()
-    if profile is None:
-        abort(404, description="Demo profile not found. Run `flask seed` in the backend folder.")
-    return profile
-
-
 @bp.get("", strict_slashes=False)
 def list_profiles():
-    demo = profile_service.get_demo_profile()
+    me = auth_service.current_profile()  # Discover hides me and people I swiped on
     profiles = profile_service.list_profiles(
         query=request.args.get("q", ""),
         skills=_list_arg("skills"),
         interests=_list_arg("interests"),
         looking_for=_list_arg("looking_for"),
         location=request.args.get("location", ""),
-        exclude_id=demo.id if demo else None,
-        hidden_ids=swipe_service.swiped_ids(demo) if demo else None,
+        exclude_id=me.id if me else None,
+        hidden_ids=swipe_service.swiped_ids(me) if me else None,
     )
     try:
         results = profile_service.apply_mog_filters(
@@ -57,19 +51,19 @@ def get_filter_options():
 
 @bp.get("/me")
 def get_my_profile():
-    return jsonify(profile_service.to_dict(_demo_profile_or_404()))
+    return jsonify(profile_service.to_dict(current_profile_or_401()))
 
 
 @bp.get("/me/matches")
 def get_my_matches():
     """Everyone I liked, ranked by how similar they are to me (Mog Match)."""
-    matches = swipe_service.list_matches(_demo_profile_or_404())
+    matches = swipe_service.list_matches(current_profile_or_401())
     return jsonify({"matches": matches, "count": len(matches)})
 
 
 @bp.patch("/me")
 def update_my_profile():
-    profile = _demo_profile_or_404()
+    profile = current_profile_or_401()
     data = request.get_json(silent=True)
     photo = None
     errors = {}

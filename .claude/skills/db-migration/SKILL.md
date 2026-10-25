@@ -43,6 +43,9 @@ class Swipe(TimestampMixin, db.Model):
 - `flask seed` must stay **idempotent**: create what's missing, skip what exists, never overwrite edits.
 - Destructive refresh only behind `flask seed --reset`.
 - Look up seeded rows by stable keys (email / username), not by generated UUIDs.
+- Seeded users get `password_hash` from `SEED_PASSWORD` (only when missing). `flask seed-test-users [--reset]` manages `user1` / `user2` separately; it's not part of `flask seed`, so tests don't see them.
+- `--reset` deletes and recreates users, so every login session ends. Tests that reset must `log_in(client)` again.
+- New table that hangs off profiles? Also add `cascade="all, delete-orphan"` relationships on `Profile` for each FK direction (see `swipes_made` / `invites_sent`), so deleting a profile (e.g. `flask seed --reset`) removes those rows too.
 
 ## Troubleshooting
 | Symptom | Fix |
@@ -51,4 +54,5 @@ class Swipe(TimestampMixin, db.Model):
 | `Target database is not up to date` | `flask db upgrade`, then migrate again |
 | `Can't locate revision` / two heads after merging `dev` | `flask db heads`; if two, `flask db merge heads -m "merge"` then `flask db upgrade` |
 | Autogenerate produced an empty migration | model not imported in `app/models/__init__.py` |
+| `flask db check` says "New upgrade operations detected" | a model changed without a migration: `flask db migrate -m "..."` |
 | Dev DB hopelessly out of sync (dev only!) | stop Flask, delete `instance/mogmatch.db`, `flask db upgrade && flask seed` |
