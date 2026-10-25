@@ -109,7 +109,9 @@ npm run dev                     # http://localhost:5173
 | `FLASK_APP` | `run.py` | Lets `flask db` / `flask seed` find the app |
 | `DATABASE_URL` | *(empty → `backend/instance/mogmatch.db`)* | SQLAlchemy URL, e.g. `postgresql://user:pass@host/db` |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origins allowed to call `/api/*` |
-| `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded user `/api/profiles/me` acts as |
+| `DEMO_USER_EMAIL` | `demo@mogmatch.dev` | The seeded demo user (username `jordan-dev`) |
+| `SECRET_KEY` | `dev-only-not-secret` | Signs the login cookie. Set a long random value anywhere but your laptop |
+| `SEED_PASSWORD` | see `.env.example` | Password `flask seed` gives every seeded user |
 | `PORT` | `5001` | Port for `python run.py` (5000 clashes with AirPlay on macOS) |
 
 **`frontend/.env.local`**
@@ -163,11 +165,14 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok", "database": "ok"}` |
-| GET | `/api/profiles` | Discoverable profiles (excludes the demo user) → `{"profiles": [...], "count": n}` |
+| GET | `/api/profiles` | Discoverable profiles (excludes me and people I swiped on) → `{"profiles": [...], "count": n}` |
 | GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "looking_for": [...]}`. Powers the Discover filter menu and the Edit Profile "Looking for" picker |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
-| GET | `/api/profiles/me` | The demo user's profile |
-| PATCH | `/api/profiles/me` | Partial update of the demo user's profile |
+| POST | `/api/auth/login` | `{"username", "password"}` → `{"user": {...}}` and a session cookie. `401` for a wrong username or password |
+| POST | `/api/auth/logout` | Ends the session → `{"user": null}` |
+| GET | `/api/auth/session` | Who am I → `{"user": {...}}`, or `{"user": null}` when logged out |
+| GET | `/api/profiles/me` | My profile (`401` when logged out, same for every `/me`, swipe and invite endpoint) |
+| PATCH | `/api/profiles/me` | Partial update of my profile |
 | GET | `/api/profiles/me/matches` | Mog Match: everyone I liked, most similar first, each with a `match` score. See `docs/MOG_MATCH.md` |
 | POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
 | DELETE | `/api/swipes/<uuid>` | Unlike one person: removes them from my matches and returns them to Discover (`404` if never swiped) |
@@ -213,7 +218,7 @@ Every profile includes a read-only `mog` object (`score`, `tier`, `emoji`, `roas
 
 ## Known limitations (this milestone)
 
-- No authentication: `/me` is always the server-configured demo user.
+- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up. Test two users at once with a normal and an incognito window. Open the app at `localhost:5173` (not `127.0.0.1`) so the login cookie reaches the API on `localhost:5001`.
 - Likes/passes reset on page reload (React state only).
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
 - Edit Profile accepts JPEG, PNG and WebP photos up to 5 MB. Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

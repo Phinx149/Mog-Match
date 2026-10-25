@@ -27,13 +27,13 @@ Frontend (from `frontend/`):
 - Backend: routes stay thin; logic + validation + serialization live in `app/services/`. JSON field names are snake_case and match `frontend/src/types/profile.ts` — change both together.
 - Errors: `{"error": {"message", "fields?"}}` with proper status codes (400 validation, 404, 409 conflict).
 - Models use `db.Uuid` primary keys and `db.JSON` list columns (portable to Postgres). Assign a new list when updating JSON columns. Schema change → `flask db migrate`, review the generated file, commit it.
-- `/api/profiles/me` resolves the user from server config (`DEMO_USER_EMAIL`). Never trust a client-supplied user id for "who am I".
+- "Me" is the logged-in user from the signed Flask session: use `auth_service.current_profile_or_401()` in every "me" route. Never trust a client-supplied user id for "who am I". Login is username + password; every seeded user shares `SEED_PASSWORD` (demo only, no sign-up). Tests: the `client` fixture is logged in as the demo user, `anon_client` is not, `log_in(client, username)` switches.
 - Seed must stay idempotent; destructive behavior only behind `--reset`.
 - Frontend: pages in `src/pages/`, reusable UI in `src/components/<area>/`, all HTTP in `src/services/api.ts`. Handle loading/error/empty states.
 - Every backend change keeps `pytest` green; every frontend change keeps `npm run build` green.
 
 ## Out of scope for the current milestone
-Intersect Engine / AI recommendations, Team Mog Score, persistent swipes/matching, chat, voice, GitHub OAuth, real auth, payments.
+Intersect Engine / AI recommendations, Team Mog Score, persistent swipes/matching, chat, voice, GitHub OAuth, sign-up / password reset, payments.
 
 ## Team
 Some contributors are beginners. Explain *why*, keep changes small, prefer readable code.

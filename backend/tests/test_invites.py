@@ -136,7 +136,7 @@ def test_cant_cancel_someone_elses_invite(client):
 
 # ---------- seed ----------
 
-def test_seed_keeps_invite_answers_and_does_not_duplicate(client):
+def test_seed_keeps_invite_answers_and_does_not_duplicate(client, log_in):
     invite_id = inbox(client)["received"][0]["id"]
     client.patch(f"/api/invites/{invite_id}", json={"status": "accepted"})
 
@@ -145,4 +145,5 @@ def test_seed_keeps_invite_answers_and_does_not_duplicate(client):
     assert inbox(client)["pending_count"] == len(SEED_INVITES) - 1
 
     seed_database(reset=True)  # reset puts every seeded invite back to pending
+    log_in(client)  # and recreates users, which logs everyone out
     assert inbox(client)["pending_count"] == len(SEED_INVITES)

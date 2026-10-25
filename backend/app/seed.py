@@ -5,6 +5,7 @@ from flask import Flask, current_app
 
 from .extensions import db
 from .models import Invite, Profile, ProfileLink, Project, User
+from .services.auth_service import hash_password
 
 SEED_EMAIL_DOMAIN = "seed.mogmatch.dev"
 
@@ -326,6 +327,14 @@ def _seed_one(email: str, data: dict, reset: bool) -> str:
     return outcome
 
 
+def _seed_passwords(emails: list[str]) -> None:
+    """Give seeded users the shared SEED_PASSWORD so you can log in as any of them.
+    Only fills in missing passwords, so a changed one is never overwritten."""
+    password_hash = hash_password(current_app.config["SEED_PASSWORD"])
+    for user in User.query.filter(User.email.in_(emails), User.password_hash.is_(None)):
+        user.password_hash = password_hash
+
+
 def _seed_invites(demo: Profile) -> None:
     """Add any missing seeded invites to the demo user. Existing ones (and their status) are kept."""
     for username, message in SEED_INVITES:
@@ -344,6 +353,7 @@ def seed_database(reset: bool = False) -> dict[str, int]:
         email = f"{data['username']}@{SEED_EMAIL_DOMAIN}"
         counts[_seed_one(email, data, reset)] += 1
     db.session.flush()  # so the new profiles can be found by username below
+    _seed_passwords([demo_email] + [f"{d['username']}@{SEED_EMAIL_DOMAIN}" for d in SEED_PROFILES])
     demo = User.query.filter_by(email=demo_email).one().profile
     _seed_invites(demo)
     db.session.commit()

@@ -9,6 +9,7 @@ import type {
   SwipeDecision,
   SwipeResult,
 } from "../types/profile";
+import type { SessionResponse } from "../types/auth";
 import type { InboxResponse, Invite } from "../types/invite";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
@@ -25,11 +26,15 @@ export class ApiError extends Error {
   }
 }
 
+/** Fired when the API says we're not logged in (e.g. the session ended), so the app can show the login page. */
+export const LOGGED_OUT_EVENT = "mogmatch:logged-out";
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
+      credentials: "include", // send the login cookie to the API (it's on another port)
       headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...init.headers },
     });
   } catch (error) {
@@ -40,9 +45,28 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message = body?.error?.message ?? `Request failed (${response.status})`;
+    // A wrong password is also a 401, but that's the login form's error to show, not a logout.
+    if (response.status === 401 && path !== "/api/auth/login") {
+      window.dispatchEvent(new Event(LOGGED_OUT_EVENT));
+    }
     throw new ApiError(message, response.status, body?.error?.fields ?? {});
   }
   return body as T;
+}
+
+export function getSession(signal?: AbortSignal) {
+  return request<SessionResponse>("/api/auth/session", { signal });
+}
+
+export function logIn(username: string, password: string) {
+  return request<SessionResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function logOut() {
+  return request<SessionResponse>("/api/auth/logout", { method: "POST" });
 }
 
 export function getHealth(): Promise<HealthResponse> {

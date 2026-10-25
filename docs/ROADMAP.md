@@ -22,6 +22,7 @@ Three devs, 24 hours. Split work by **vertical feature** so each person ships en
 - [x] `invites` table + migration (sender, recipient, optional message, pending/accepted/declined)
 - [x] Invite button on Match cards (only people you liked), Inbox page with Received/Sent, nav badge
 - [x] Seed: three seeded profiles have already invited the demo user
+- [x] Username + password login (seeded users, shared demo password) so two people can test invites
 - [ ] Next: chat for accepted invites, ending in a generated project idea for the pair
 
 ## Milestone 3 — Intersect Engine (the differentiator)

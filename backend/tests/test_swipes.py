@@ -85,11 +85,12 @@ def test_swipe_on_unknown_profile_is_404(client):
     assert response.status_code == 404
 
 
-def test_seed_reset_clears_swipes(app, client):
+def test_seed_reset_clears_swipes(app, client, log_in):
     from app.seed import seed_database
 
     swipe(client, "mayacodes")
     seed_database(reset=True)
+    log_in(client)  # reset recreates users, which logs everyone out
     assert client.get("/api/profiles/me/matches").get_json()["count"] == 0
 
 

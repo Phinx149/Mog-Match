@@ -49,7 +49,7 @@ messages (id, match_id → matches, sender_id → profiles, body, created_at)
 **Edit profile:** `EditProfilePage` loads `GET /me` → form state → `PATCH /me` with the full form → `validate_update` cleans/validates → links/projects replaced → commit → returns updated profile.
 
 ## Identity (for now)
-No auth. The backend reads `DEMO_USER_EMAIL` from config and treats that user as "me". The frontend never sends a user id for "me". When auth arrives, `get_demo_profile()` is replaced by "profile of the logged-in user" — routes don't change.
+Login: `POST /api/auth/login` checks the password hash (`werkzeug.security`) and stores the user id in Flask's signed session cookie. Every "me" route calls `auth_service.current_profile_or_401()`, so "me" always comes from the server-signed cookie; the frontend never sends a user id for "me". Frontend: `AuthProvider` (`hooks/useAuth.tsx`) asks `GET /api/auth/session` on load, `RequireAuth` sends logged-out visitors to `/login`, and any `401` from the API logs the app out.
 
 ## Frontend structure
 - `pages/` — route-level components (Discover, Profile, EditProfile, Settings, NotFound)

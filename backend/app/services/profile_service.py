@@ -6,11 +6,11 @@ import uuid
 from typing import Any
 from urllib.parse import urlparse
 
-from flask import current_app, url_for
+from flask import url_for
 from sqlalchemy.orm import selectinload
 
 from ..extensions import db
-from ..models import Profile, ProfileLink, Project, User
+from ..models import Profile, ProfileLink, Project
 from .mog_score import compute_mog_score, tier_floor
 from .tech_catalog import ALL_TECHNOLOGIES, normalize_technology
 
@@ -59,11 +59,6 @@ def _profile_query():
 
 def get_profile(profile_id: uuid.UUID) -> Profile | None:
     return _profile_query().filter(Profile.id == profile_id).one_or_none()
-
-
-def get_demo_profile() -> Profile | None:
-    email = current_app.config["DEMO_USER_EMAIL"]
-    return _profile_query().join(User).filter(User.email == email).one_or_none()
 
 
 def _lower_set(values: list[str]) -> set[str]:

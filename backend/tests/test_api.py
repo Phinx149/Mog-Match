@@ -146,7 +146,7 @@ def test_update_rejects_taken_username(client):
     assert "username" in response.get_json()["error"]["fields"]
 
 
-def test_seed_is_idempotent_and_reset_restores(app, client):
+def test_seed_is_idempotent_and_reset_restores(app, client, log_in):
     client.patch("/api/profiles/me", json={"full_name": "Edited"})
 
     counts = seed_database()
@@ -155,5 +155,6 @@ def test_seed_is_idempotent_and_reset_restores(app, client):
     assert client.get("/api/profiles").get_json()["count"] == len(SEED_PROFILES)
 
     seed_database(reset=True)
+    log_in(client)  # reset recreates users, which logs everyone out
     assert client.get("/api/profiles/me").get_json()["full_name"] == "Jordan Avery"
 
