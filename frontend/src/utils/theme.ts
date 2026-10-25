@@ -6,6 +6,7 @@ import type {
   MoneyKind,
   ProfileTheme,
   RainSymbols,
+  ShapeKind,
   SloganStyle,
   SnowKind,
   ThemeEffect,
@@ -79,6 +80,9 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   tron_cycles: 3,
   tron_tail: 5,
   tron_grid: true,
+  shape_kind: "cube",
+  shape_count: 1,
+  shape_color: "#38bdf8",
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -104,6 +108,7 @@ export const EFFECT_OPTION_RANGES = {
   lightning_forks: { label: "Forks", min: 0, max: 10, step: 1, unit: "" },
   tron_cycles: { label: "Cycles", min: 1, max: 10, step: 1, unit: "" },
   tron_tail: { label: "Trail length", min: 1, max: 10, step: 1, unit: "" },
+  shape_count: { label: "How many", min: 1, max: 6, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -274,6 +279,25 @@ export const TRON_COLOR_SWATCHES = [
   { name: "White", hex: "#ffffff" },
 ] as const;
 
+/** What can turn, as the edit form words it. */
+export const SHAPE_KIND_INFO: Record<ShapeKind, { label: string; description: string }> = {
+  cube: { label: "Cube", description: "Eight corners and twelve edges, tumbling" },
+  torus: { label: "Torus", description: "A wireframe donut, rolling over" },
+  sphere: { label: "Globe", description: "Lines of latitude and longitude, spinning" },
+};
+
+/** Quick picks for the shapes' color: sky blue first. */
+export const SHAPE_COLOR_SWATCHES = [
+  { name: "Sky", hex: "#38bdf8" },
+  { name: "Violet", hex: "#a78bfa" },
+  { name: "Magenta", hex: "#ff2bd6" },
+  { name: "Mint", hex: "#34d399" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Orange", hex: "#ff8a00" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
 /** What the edit form shows for each effect: its wording, and which of the tuning options it reads. */
 export const EFFECT_INFO: Record<
   ThemeEffect,
@@ -291,6 +315,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: boolean;
     hasLightningStyle: boolean;
     hasTronStyle: boolean;
+    hasShapeStyle: boolean;
   }
 > = {
   matrix: {
@@ -307,6 +332,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -322,6 +348,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -337,6 +364,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -352,6 +380,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -367,6 +396,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   money: {
     label: "Money rain",
@@ -382,6 +412,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   snow: {
     label: "Snowfall",
@@ -397,6 +428,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: true,
     hasLightningStyle: false,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   lightning: {
     label: "Lightning",
@@ -412,6 +444,7 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: true,
     hasTronStyle: false,
+    hasShapeStyle: false,
   },
   tron: {
     label: "Light cycles",
@@ -427,6 +460,23 @@ export const EFFECT_INFO: Record<
     hasSnowStyle: false,
     hasLightningStyle: false,
     hasTronStyle: true,
+    hasShapeStyle: false,
+  },
+  shapes: {
+    label: "Spinning shapes",
+    tuneTitle: "Tune the shapes",
+    sizeLabel: "Shape size",
+    sliders: ["brightness", "size", "shape_count", "speed"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: false,
+    hasTronStyle: false,
+    hasShapeStyle: true,
   },
 };
 
@@ -793,6 +843,65 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         tron_cycles: 8,
         tron_tail: 3,
         tron_grid: false,
+      },
+    },
+  },
+  {
+    name: "Wireframe Cube",
+    description: "One glowing cube, tumbling slowly",
+    theme: {
+      background: "#050816",
+      effect: "shapes",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 60, size: 22, speed: 4, glow: true },
+    },
+  },
+  {
+    name: "Donut",
+    description: "A golden torus, rolling over",
+    theme: {
+      background: "#0d0a05",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 26,
+        speed: 3,
+        glow: true,
+        shape_kind: "torus",
+        shape_color: "#ffd84a",
+      },
+    },
+  },
+  {
+    name: "Globe",
+    description: "A mint-green globe, spinning",
+    theme: {
+      background: "#03120c",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 24,
+        speed: 3,
+        shape_kind: "sphere",
+        shape_color: "#34d399",
+      },
+    },
+  },
+  {
+    name: "Orbit",
+    description: "A handful of small violet cubes, all tumbling",
+    theme: {
+      background: "#0a0618",
+      effect: "shapes",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 60,
+        size: 12,
+        speed: 6,
+        glow: true,
+        shape_count: 5,
+        shape_color: "#a78bfa",
       },
     },
   },

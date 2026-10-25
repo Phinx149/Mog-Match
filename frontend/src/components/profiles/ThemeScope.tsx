@@ -9,6 +9,7 @@ import LightCycles from "./LightCycles";
 import LightningStorm from "./LightningStorm";
 import MatrixRain from "./MatrixRain";
 import ScrollingSlogans from "./ScrollingSlogans";
+import SpinningShapes from "./SpinningShapes";
 import VolatileMarket from "./VolatileMarket";
 
 /** What to draw for each effect name. Adding an effect = a component here + its name in THEME_EFFECTS. */
@@ -22,6 +23,7 @@ const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = 
   snow: FallingSnow,
   lightning: LightningStorm,
   tron: LightCycles,
+  shapes: SpinningShapes,
 };
 
 interface ThemeScopeProps {

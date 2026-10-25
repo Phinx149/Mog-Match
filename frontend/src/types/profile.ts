@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning", "tron"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning", "tron", "shapes"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -71,11 +71,15 @@ export type MoneyKind = (typeof MONEY_KINDS)[number];
 export const SNOW_KINDS = ["dots", "crystals", "mixed"] as const;
 export type SnowKind = (typeof SNOW_KINDS)[number];
 
+/** Which wireframe the spinning shapes are. Keep in sync with SHAPE_KINDS in the backend. */
+export const SHAPE_KINDS = ["cube", "torus", "sphere"] as const;
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+
 /** How the animated effect looks, shared by every effect. The server fills in defaults, so every field is always present. */
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money), flake size (snow), bolt thickness (lightning) or grid size (tron), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money), flake size (snow), bolt thickness (lightning), grid size (tron) or shape size (shapes), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -153,6 +157,12 @@ export interface EffectOptions {
   tron_tail: number;
   /** Whether the faint grid the cycles ride on is drawn (tron only). */
   tron_grid: boolean;
+  /** Which wireframe turns (shapes only). */
+  shape_kind: ShapeKind;
+  /** How many shapes are turning, 1-6 (shapes only). */
+  shape_count: number;
+  /** The wireframe's color as `#rrggbb` (shapes only). */
+  shape_color: string;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

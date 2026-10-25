@@ -6,6 +6,7 @@ import {
   EMOJI_PATHS,
   MONEY_KINDS,
   RAIN_SYMBOL_SETS,
+  SHAPE_KINDS,
   SLOGAN_STYLES,
   SNOW_KINDS,
   THEME_EFFECTS,
@@ -27,6 +28,8 @@ import {
   RAIN_COLOR_SWATCHES,
   RAIN_SYMBOLS,
   sameTheme,
+  SHAPE_COLOR_SWATCHES,
+  SHAPE_KIND_INFO,
   SLOGAN_COLOR_SWATCHES,
   SLOGAN_STYLE_INFO,
   SNOW_KIND_INFO,
@@ -312,6 +315,60 @@ export default function ThemePicker({ theme, onChange, error, effectError, previ
                     <p className="text-xs text-muted sm:col-span-2">
                       Strikes are always at least a second apart and flash at most twice, so the storm never strobes.
                     </p>
+                  </>
+                )}
+                {EFFECT_INFO[effect].hasShapeStyle && (
+                  <>
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Shape</span>
+                      <div role="group" aria-label="Kind of shape" className="flex flex-wrap gap-2">
+                        {SHAPE_KINDS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            aria-pressed={options.shape_kind === name}
+                            onClick={() => setOption({ shape_kind: name })}
+                            className={chipClass(options.shape_kind === name)}
+                          >
+                            {SHAPE_KIND_INFO[name].label}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">{SHAPE_KIND_INFO[options.shape_kind].description}.</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="mb-1.5 block text-sm text-slate-300">Line color</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div role="group" aria-label="Line color quick picks" className="flex flex-wrap gap-2">
+                          {SHAPE_COLOR_SWATCHES.map(({ name, hex }) => {
+                            const selected = options.shape_color.toLowerCase() === hex;
+                            return (
+                              <button
+                                key={hex}
+                                type="button"
+                                title={name}
+                                aria-label={name}
+                                aria-pressed={selected}
+                                onClick={() => setOption({ shape_color: hex })}
+                                style={{ backgroundColor: hex }}
+                                className={`size-7 rounded-full border border-white/20 transition ${
+                                  selected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-surface" : "hover:scale-110"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="color"
+                          aria-label="Custom line color"
+                          className="h-8 w-12 cursor-pointer rounded-lg border border-line bg-canvas p-1"
+                          value={options.shape_color}
+                          onChange={(e) => setOption({ shape_color: e.target.value })}
+                        />
+                      </div>
+                      <span className="mt-1 block text-xs text-muted">Lines nearer to you are drawn brighter and thicker, which is what makes it look 3D.</span>
+                    </div>
                   </>
                 )}
                 {EFFECT_INFO[effect].hasTronStyle && (
