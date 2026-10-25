@@ -1,0 +1,64 @@
+name: CI
+
+# Runs on every pull request, and on pushes to the two long-lived branches.
+# (Feature branches get checked through their PR, so pushes there don't run twice.)
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# A new push to the same branch/PR cancels the run that's still going.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      # `python -m pytest` (not bare `pytest`) puts backend/ on sys.path so tests can `import app`.
+      # Tests use a throwaway SQLite file and need no secrets or .env.
+      - run: python -m pytest
+
+  frontend:
+    name: Frontend (TypeScript + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Same build Vercel runs; catches bundler errors that tsc alone doesn't.
+      - name: Build
+        run: npm run build
