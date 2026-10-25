@@ -1,4 +1,5 @@
 import { GraduationCap, Link as LinkIcon, MapPin, Pencil } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Profile } from "../../types/profile";
 import Avatar from "./Avatar";
@@ -6,9 +7,11 @@ import Avatar from "./Avatar";
 interface ProfileHeaderProps {
   profile: Profile;
   editable?: boolean;
+  /** Shown where "Edit Profile" goes on your own profile, e.g. the Like button on someone else's. */
+  action?: ReactNode;
 }
 
-export default function ProfileHeader({ profile, editable }: ProfileHeaderProps) {
+export default function ProfileHeader({ profile, editable, action }: ProfileHeaderProps) {
   return (
     <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6 sm:p-8">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-violet-600/25 via-fuchsia-500/10 to-cyan-500/25" />
@@ -54,7 +57,7 @@ export default function ProfileHeader({ profile, editable }: ProfileHeaderProps)
           )}
         </div>
 
-        {editable && (
+        {editable ? (
           <Link
             to="/profile/edit"
             className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
@@ -62,6 +65,8 @@ export default function ProfileHeader({ profile, editable }: ProfileHeaderProps)
             <Pencil className="size-4" aria-hidden />
             Edit Profile
           </Link>
+        ) : (
+          action
         )}
       </div>
     </section>

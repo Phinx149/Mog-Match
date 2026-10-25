@@ -4,15 +4,18 @@ import { Link, useParams } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import Navbar from "../components/layout/Navbar";
 import MogScoreCard from "../components/mog/MogScoreCard";
+import LikeButton from "../components/profiles/LikeButton";
 import ProfileHeader from "../components/profiles/ProfileHeader";
 import ProjectCard from "../components/profiles/ProjectCard";
 import SkillBadge from "../components/profiles/SkillBadge";
 import ThemeScope from "../components/profiles/ThemeScope";
+import { useAuth } from "../hooks/useAuth";
 import { ApiError, getMyProfile, getProfile } from "../services/api";
 import type { Profile } from "../types/profile";
 
 export default function ProfilePage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const isMe = !id;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +57,12 @@ export default function ProfilePage() {
           // not the navbar above it.
           <ThemeScope theme={profile.theme} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div className="flex min-w-0 flex-col gap-5">
-              <ProfileHeader profile={profile} editable={isMe} />
+              <ProfileHeader
+                profile={profile}
+                editable={isMe}
+                // No Like button on your own profile, even when opened through /profile/<your id>.
+                action={profile.id !== user?.id && <LikeButton profileId={profile.id} name={profile.full_name} />}
+              />
 
               <Section title="About">
                 {profile.bio ? (

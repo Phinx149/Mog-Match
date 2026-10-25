@@ -233,6 +233,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | PATCH | `/api/profiles/me` | Partial update of my profile |
 | GET | `/api/profiles/me/matches` | Mog Match: everyone I liked, most similar first, each with a `match` score. See `docs/MOG_MATCH.md` |
 | POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
+| GET | `/api/swipes/<uuid>` | Have I liked or passed on this person? `{"target_id", "action": "like" \| "pass" \| null}` (`404` for an unknown profile). Powers the Like button on profile pages |
 | DELETE | `/api/swipes/<uuid>` | Unlike one person: removes them from my matches and returns them to Discover (`404` if never swiped) |
 | DELETE | `/api/swipes` | Forget all my likes/passes → `{"removed": n}` |
 | POST | `/api/invites` | Invite someone I liked: `{"recipient_id", "message"?}` (message ≤ 280 chars) → `201` invite. `400` if I haven't liked them, `409` if either of us already invited the other |

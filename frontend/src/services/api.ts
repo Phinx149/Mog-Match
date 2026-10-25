@@ -8,6 +8,7 @@ import type {
   ProfileUpdate,
   SwipeDecision,
   SwipeResult,
+  SwipeStatus,
 } from "../types/profile";
 import type { SessionResponse } from "../types/auth";
 import type { InboxResponse, Invite } from "../types/invite";
@@ -113,6 +114,11 @@ export function getMyProfile(signal?: AbortSignal) {
 
 export function getMyMatches(signal?: AbortSignal) {
   return request<MatchListResponse>("/api/profiles/me/matches", { signal });
+}
+
+/** Have I liked or passed on this person? (the profile page's Like button) */
+export function getSwipe(targetId: string, signal?: AbortSignal) {
+  return request<SwipeStatus>(`/api/swipes/${encodeURIComponent(targetId)}`, { signal });
 }
 
 export function createSwipe(targetId: string, action: SwipeDecision) {
