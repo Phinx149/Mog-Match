@@ -19,7 +19,7 @@ Backend (from `backend/`, venv active — Windows: `.venv\Scripts\...`):
 - `pytest`
 - `flask db migrate -m "msg"` / `flask db upgrade`
 - `flask seed` / `flask seed --reset`
-- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other, plus 50 demo users (password `123`, `app/demo_users.py`), 10 per Mog tier. `tests/test_demo_users.py` checks each lands in its tier: rescore them if you change Mog Score weights
+- `flask seed-test-users [--reset]` — quick-login `user1` / `user2` (passwords in `TEST_USERS`, `app/seed.py`) that already like each other, plus 50 demo users (password `123`, `app/demo_users.py`), 10 per Mog tier. `tests/test_demo_users.py` checks each lands in its tier: rescore them if you change Mog Score weights. Every seeded account gets a profile picture (`app/seed_avatars/<username>.png`, redrawn by `scripts/make_seed_avatars.py`) and a theme; tests that need a plain default profile use the `blank_looks` fixture
 - `flask db check` — fails if models and migrations disagree
 - `TEST_DATABASE_URL=postgresql://... pytest` — same suite on Postgres (drops all tables in that DB; throwaway DBs only)
 - After pulling: `pip install -r requirements.txt`, `flask db upgrade`, `flask seed`
@@ -44,17 +44,17 @@ Frontend (from `frontend/`):
 - Vercel limits: read-only disk (never write files at runtime), 4.5 MB request bodies (photos capped by `MAX_PHOTO_BYTES`), cold starts. `create_app` refuses to start on Vercel (`VERCEL=1`) without `DATABASE_URL` or with the default `SECRET_KEY`.
 
 ## Auth (how "me" works)
-- Login is username + password: `app/services/auth_service.py`, routes in `app/routes/auth.py` (`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`). Passwords are `werkzeug.security` hashes in `users.password_hash`; the session is Flask's signed cookie holding `user_id` (`SECRET_KEY` in config).
+- Login and sign-up are username + password: `app/services/auth_service.py`, routes in `app/routes/auth.py` (`POST /api/auth/login`, `POST /api/auth/signup`, `POST /api/auth/logout`, `GET /api/auth/session`). Sign-up creates a `User` plus a nearly empty `Profile` and logs the browser in; the frontend then sends the new user to `/profile/edit`. Passwords are `werkzeug.security` hashes in `users.password_hash`; the session is Flask's signed cookie holding `user_id` (`SECRET_KEY` in config).
 - New "me" route: `me = current_profile_or_401()` (from `..services.auth_service`), then pass `me` to a service. Logged out → `401 {"error": {"message": "Log in first."}}`. Don't read identity from the request body or query string, and don't reintroduce `DEMO_USER_EMAIL` lookups (`DEMO_USER_EMAIL` only marks which seeded account is the demo user).
 - Tests (`tests/conftest.py`): `client` is logged in as `jordan-dev`, `anon_client` is logged out, `log_in(client, "samfullstack")` logs a client in as anyone seeded. For two users, make two clients: `a = log_in(app.test_client(), "jordan-dev")`, `b = log_in(app.test_client(), "samfullstack")`. `flask seed --reset` recreates users, so log in again after it (see `test_api.py`). Password checks are slow on purpose (~0.1 s per login), so the suite takes ~30 s.
-- Frontend: `useAuth()` (`src/hooks/useAuth.tsx`) gives `user`, `logIn`, `logOut`. Routes inside `<RequireAuth />` in `App.tsx` need a login; `/login` is outside it. `request()` in `api.ts` sends the cookie (`credentials: "include"`) and fires `LOGGED_OUT_EVENT` on any `401`.
+- Frontend: `useAuth()` (`src/hooks/useAuth.tsx`) gives `user`, `logIn`, `signUp`, `logOut`. Routes inside `<RequireAuth />` in `App.tsx` need a login; `/login` and `/signup` are outside it. `request()` in `api.ts` sends the cookie (`credentials: "include"`) and fires `LOGGED_OUT_EVENT` on any `401`.
 - Gotchas: open the app at `localhost:5173`, not `127.0.0.1` (the cookie is per host). On Vercel the cookie is also `Secure` (HTTPS only). Normal browser tabs share one login, so test two users with a normal and an incognito window. Seeded passwords and the default `SECRET_KEY` are demo-only.
 
 ## Verifying a change end-to-end
 `flask seed --reset && flask seed-test-users --reset` gives a known state. Then exercise the running API with two cookie jars (two users), or log in at http://localhost:5173 as `user1` (normal window) and `user2` (incognito). Reset again afterwards so teammates aren't left with your test data.
 
 ## Out of scope for the current milestone
-Intersect Engine / AI recommendations, Team Mog Score, voice, GitHub OAuth, sign-up / password reset, payments. (Chat for accepted invites is the next planned feature; see `docs/ROADMAP.md`.)
+Intersect Engine / AI recommendations, Team Mog Score, voice, GitHub OAuth, password reset / email verification, payments. (Chat for accepted invites is the next planned feature; see `docs/ROADMAP.md`.)
 
 ## Team
 Some contributors are beginners. Explain *why*, keep changes small, prefer readable code.

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { getSession, LOGGED_OUT_EVENT, logIn as apiLogIn, logOut as apiLogOut } from "../services/api";
+import { getSession, LOGGED_OUT_EVENT, logIn as apiLogIn, logOut as apiLogOut, signUp as apiSignUp } from "../services/api";
 import type { SessionUser } from "../types/auth";
 
 interface AuthState {
@@ -8,6 +8,8 @@ interface AuthState {
   /** True until we've asked the server who we are. */
   checking: boolean;
   logIn: (username: string, password: string) => Promise<void>;
+  /** Creates an account and logs it in. */
+  signUp: (fullName: string, username: string, password: string) => Promise<void>;
   logOut: () => Promise<void>;
   updateUser: (user: SessionUser) => void;
 }
@@ -46,12 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((await apiLogIn(username, password)).user);
   }, []);
 
+  const signUp = useCallback(async (fullName: string, username: string, password: string) => {
+    setUser((await apiSignUp(fullName, username, password)).user);
+  }, []);
+
   const logOut = useCallback(async () => {
     await apiLogOut();
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, checking, logIn, logOut, updateUser: setUser }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, checking, logIn, signUp, logOut, updateUser: setUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

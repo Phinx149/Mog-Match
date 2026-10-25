@@ -56,12 +56,14 @@ An accepted invite is the "connection" two people chat in; the Intersect Engine'
 
 **Log in:** `LoginPage` → `POST /api/auth/login {username, password}` → `auth_service.log_in` (case-insensitive username, `check_password_hash`) → `session["user_id"] = ...` → signed `HttpOnly; SameSite=Lax` cookie → `{"user": {...}}`. On load `AuthProvider` calls `GET /api/auth/session`; `RequireAuth` sends logged-out visitors to `/login`.
 
+**Sign up:** `SignUpPage` → `POST /api/auth/signup {full_name, username, password}` → `auth_service.sign_up` (name and username validated by `profile_service.validate_update`, case-insensitive uniqueness check → `409`, password stored with `generate_password_hash`) → creates a `User` and an almost empty `Profile` → same session cookie as login → `201 {"user": {...}}`. The page then sends the new user to `/profile/edit` to fill in the rest.
+
 **Invite:** Match card **Invite** → `POST /api/invites {recipient_id, message?}` → `invite_service.send_invite` (must have liked them; one invite per pair either way) → row in `invites`. The recipient's `InboxPage` polls `GET /api/invites/inbox` every 5 s (rows where they're recipient/sender) → Accept/Decline → `PATCH /api/invites/<id> {status}` (recipient only, once). The sender can `DELETE` while pending.
 
 **Edit profile:** `EditProfilePage` loads `GET /me` → form state → `PATCH /me` with the full form → `validate_update` cleans/validates → links/projects replaced → commit → returns updated profile.
 
 ## Identity (who is "me")
-Login: `POST /api/auth/login` checks the password hash (`werkzeug.security`) and stores the user id in Flask's signed session cookie. Every "me" route calls `auth_service.current_profile_or_401()`, so "me" always comes from the server-signed cookie; the frontend never sends a user id for "me". Frontend: `AuthProvider` (`hooks/useAuth.tsx`) asks `GET /api/auth/session` on load, `RequireAuth` sends logged-out visitors to `/login`, and any `401` from the API logs the app out.
+Login and sign-up: `POST /api/auth/login` checks the password hash (`werkzeug.security`) and stores the user id in Flask's signed session cookie (`POST /api/auth/signup` creates the account first, then does the same). Every "me" route calls `auth_service.current_profile_or_401()`, so "me" always comes from the server-signed cookie; the frontend never sends a user id for "me". Frontend: `AuthProvider` (`hooks/useAuth.tsx`) asks `GET /api/auth/session` on load, `RequireAuth` sends logged-out visitors to `/login`, and any `401` from the API logs the app out.
 
 ## Frontend structure
 - `pages/` — route-level components (Login, Discover, Match, Inbox, Profile, EditProfile, Settings, NotFound)

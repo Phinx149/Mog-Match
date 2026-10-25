@@ -10,7 +10,7 @@ Built for the Social Coding Hackathon — theme **Connect & Intersect**. Our hea
 
 Chat and Project studio setup, API/events, and browser-test instructions: [docs/CHAT.md](docs/CHAT.md).
 
-⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, sign-up, voice, GitHub login.
+⏳ Later: chat for accepted invites, Intersect Engine, Team Mog Score, password reset, voice, GitHub login.
 
 ## Tech stack
 
@@ -34,7 +34,8 @@ Chat and Project studio setup, API/events, and browser-test instructions: [docs/
 │   │   ├── models/              # User, Profile, ProfileLink, Project, Swipe, Invite
 │   │   ├── routes/              # health, auth, profiles, swipes, invites (thin: parse → service → JSON)
 │   │   ├── services/            # the logic: auth, profile, swipe, invite, mog_score, mog_match, tech_catalog
-│   │   └── seed.py              # `flask seed` / `flask seed-test-users` commands + sample data
+│   │   ├── seed.py              # `flask seed` / `flask seed-test-users` commands + sample data
+│   │   └── seed_avatars/        # cartoon profile pictures for seeded accounts (drawn by scripts/make_seed_avatars.py)
 │   ├── migrations/              # Alembic migrations (Flask-Migrate)
 │   ├── tests/                   # pytest
 │   ├── requirements.txt
@@ -166,18 +167,20 @@ Open http://localhost:5173 (use `localhost`, not `127.0.0.1`, or the login cooki
 
 ## Logging in
 
-Every page except `/login` needs a login. There is no sign-up yet; use a seeded account:
+Every page except `/login` and `/signup` needs a login. New people create an account at `/signup` (full name, username, password; they land on Edit Profile to fill in the rest). To try the app with existing data, use a seeded account:
 
 | Username | Password | Notes |
 |---|---|---|
 | `jordan-dev` | `SEED_PASSWORD` from `backend/.env.example` | The demo user. Three seeded invites are waiting in their inbox |
-| `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | |
+| `samfullstack`, `priya-ml`, `mayacodes`, … (all 10 seeded devs) | same `SEED_PASSWORD` | Each has a cartoon profile picture and its own profile theme |
 | `user1`, `user2` | see `TEST_USERS` in `backend/app/seed.py` | Only after `flask seed-test-users`. They already like each other |
-| 50 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Ten per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5), each with its own profile theme (background + effect). Full list: `backend/app/demo_users.py` |
+| 50 demo users, e.g. `gigachad`, `seniorsam`, `midmike`, `juniorjo`, `newbie` | `123` | Only after `flask seed-test-users`. Ten per Mog tier, from 👑 Gigamogger (100) down to 🥚 Hello World (5), each with its own profile theme (background + effect) and a profile picture (a DiceBear avatar, or a cartoon animal, flower or object from `backend/app/seed_avatars/`). Full list: `backend/app/demo_users.py` |
 
 **Testing two people at once** (e.g. invites): log in as one user in a normal window and the other in an **incognito/private window**. Normal tabs share one login cookie, so logging in in a second tab switches *every* tab to that user (tabs notice and reload when you click back into them). Check the `@username` at the top right.
 
 **Clean start for a demo or a test:** `flask seed --reset && flask seed-test-users --reset` — restores every seeded account and deletes their likes and invites. Everyone gets logged out (the users are recreated).
+
+**Accounts you already have:** plain `flask seed` / `flask seed-test-users` still never overwrite anything, but they do add a missing profile picture or theme to the seeded accounts (never replacing one someone chose). Newer profile text (bios, links…) only arrives with `--reset`.
 
 **Login trouble?**
 | Symptom | Fix |
@@ -226,6 +229,7 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | GET | `/api/profiles/filter-options` | Every allowed value for the list fields → `{"skills": [...], "skill_aliases": {"js": "JavaScript", ...}, "looking_for": [...]}`. Powers the Discover filter menu, the Edit Profile "Looking for" picker, and the Edit Profile check that flags an unknown skill as soon as it is added (`skill_aliases` are the nicknames the backend also accepts) |
 | GET | `/api/profiles/<uuid>` | One profile, `404` if missing |
 | POST | `/api/auth/login` | `{"username", "password"}` → `{"user": {...}}` and a session cookie. `401` for a wrong username or password |
+| POST | `/api/auth/signup` | `{"full_name", "username", "password"}` (password 8-128 characters) → `201 {"user": {...}}`, a new nearly empty profile, and a session cookie (so you're logged in). `400` for invalid fields, `409` when the username is taken (any letter case) |
 | POST | `/api/auth/logout` | Ends the session → `{"user": null}` |
 | GET | `/api/auth/session` | Who am I → `{"user": {...}}`, or `{"user": null}` when logged out |
 | GET | `/api/profiles/me` | My profile (`401` when logged out, same for every `/me`, swipe and invite endpoint) |
@@ -301,7 +305,7 @@ Local dev stays on SQLite; to try Postgres locally, put a Postgres `DATABASE_URL
 
 ## Known limitations (this milestone)
 
-- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, no sign-up or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
+- Demo login only: username + password, every seeded user shares `SEED_PASSWORD`, sign-up has no email verification, rate limiting or password reset. Fine for a local demo; never deploy with the default `SECRET_KEY` or seeded passwords.
 - The inbox updates by polling (every 5 s), not push.
 - Filtering runs in Python after loading all profiles — fine for hackathon scale.
 - Edit Profile accepts JPEG, PNG and WebP photos up to 4 MB (Vercel rejects request bodies over 4.5 MB). Uploads are saved with the profile, stored as bytes on the user record, and served through `/api/profiles/<id>/photo`. Uploaded photos take priority over the optional avatar URL, with initials as a fallback.

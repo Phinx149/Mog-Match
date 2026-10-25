@@ -71,6 +71,13 @@ export function logIn(username: string, password: string) {
   });
 }
 
+export function signUp(fullName: string, username: string, password: string) {
+  return request<SessionResponse>("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ full_name: fullName, username, password }),
+  });
+}
+
 export function logOut() {
   return request<SessionResponse>("/api/auth/logout", { method: "POST" });
 }

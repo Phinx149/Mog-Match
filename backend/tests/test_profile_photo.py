@@ -3,9 +3,12 @@ import uuid
 from io import BytesIO
 from urllib.parse import urlsplit
 
+import pytest
 from PIL import Image
 
 from app.models import User
+
+pytestmark = pytest.mark.usefixtures("blank_looks")  # seeded accounts already have a photo
 
 
 def photo_file():
