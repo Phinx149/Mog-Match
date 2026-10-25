@@ -172,6 +172,10 @@ All responses are JSON. Errors look like `{"error": {"message": "...", "fields":
 | POST | `/api/swipes` | Like or pass: `{"target_id", "action": "like" \| "pass"}` → `201` with the match score for a like. Swiped profiles leave Discover |
 | DELETE | `/api/swipes/<uuid>` | Unlike one person: removes them from my matches and returns them to Discover (`404` if never swiped) |
 | DELETE | `/api/swipes` | Forget all my likes/passes → `{"removed": n}` |
+| POST | `/api/invites` | Invite someone I liked: `{"recipient_id", "message"?}` (message ≤ 280 chars) → `201` invite. `400` if I haven't liked them, `409` if either of us already invited the other |
+| GET | `/api/invites/inbox` | `{"received": [...], "sent": [...], "pending_count": n}`, newest first |
+| PATCH | `/api/invites/<uuid>` | Answer an invite sent to me: `{"status": "accepted" \| "declined"}`. `404` if it isn't mine, `409` if already answered |
+| DELETE | `/api/invites/<uuid>` | Cancel an invite I sent while it's still pending |
 
 **`GET /api/profiles` query params** (all optional, case-insensitive):
 | Param | Example | Behavior |

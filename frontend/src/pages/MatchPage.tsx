@@ -4,12 +4,14 @@ import { Link } from "react-router-dom";
 import { EmptyState, ErrorState, LoadingState } from "../components/common/States";
 import Navbar from "../components/layout/Navbar";
 import MatchCard from "../components/match/MatchCard";
-import { getMyMatches, removeSwipe } from "../services/api";
+import { getInbox, getMyMatches, removeSwipe, sendInvite } from "../services/api";
+import type { Invite } from "../types/invite";
 import type { MatchedProfile } from "../types/profile";
 
 /** Mog Match: everyone I liked, ranked by how similar their profile is to mine. */
 export default function MatchPage() {
   const [matches, setMatches] = useState<MatchedProfile[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -18,8 +20,12 @@ export default function MatchPage() {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    getMyMatches(controller.signal)
-      .then(({ matches }) => setMatches(matches))
+    // Load matches and invites together, so each card knows whether an invite already exists.
+    Promise.all([getMyMatches(controller.signal), getInbox(controller.signal)])
+      .then(([{ matches }, inbox]) => {
+        setMatches(matches);
+        setInvites([...inbox.sent, ...inbox.received]);
+      })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Failed to load matches.");
@@ -45,6 +51,17 @@ export default function MatchPage() {
         setNotice(err instanceof Error ? err.message : "Couldn't unlike, try again.");
       });
   };
+
+  /** The invite between me and this person, whoever sent it. */
+  const inviteWith = (profileId: string) =>
+    invites.find((invite) => invite.sender.id === profileId || invite.recipient.id === profileId) ?? null;
+
+  // Errors are re-thrown so the invite form can show them next to the button.
+  const invite = (profile: MatchedProfile, message: string) =>
+    sendInvite(profile.id, message).then((created) => {
+      setInvites((current) => [created, ...current]);
+      setNotice(`Invite sent to ${profile.full_name}. It's in their inbox.`);
+    });
 
   return (
     <>
@@ -83,7 +100,13 @@ export default function MatchPage() {
           <ol className={`flex flex-col gap-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
             {matches.map((profile, index) => (
               <li key={profile.id}>
-                <MatchCard profile={profile} rank={index + 1} onUnlike={unlike} />
+                <MatchCard
+                  profile={profile}
+                  rank={index + 1}
+                  onUnlike={unlike}
+                  invite={inviteWith(profile.id)}
+                  onInvite={invite}
+                />
               </li>
             ))}
           </ol>

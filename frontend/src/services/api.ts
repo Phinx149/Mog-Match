@@ -9,6 +9,7 @@ import type {
   SwipeDecision,
   SwipeResult,
 } from "../types/profile";
+import type { InboxResponse, Invite } from "../types/invite";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5001").replace(/\/$/, "");
 
@@ -92,6 +93,36 @@ export function removeSwipe(targetId: string) {
 /** Forget all my likes/passes (and so all my matches). */
 export function clearSwipes() {
   return request<{ removed: number }>("/api/swipes", { method: "DELETE" });
+}
+
+/** Fired after I answer an invite, so the nav badge can re-count without a page change. */
+export const INVITES_CHANGED_EVENT = "mogmatch:invites-changed";
+
+export function getInbox(signal?: AbortSignal) {
+  return request<InboxResponse>("/api/invites/inbox", { signal });
+}
+
+/** Invite someone I liked. `message` is optional. */
+export function sendInvite(recipientId: string, message?: string) {
+  return request<Invite>("/api/invites", {
+    method: "POST",
+    body: JSON.stringify({ recipient_id: recipientId, ...(message?.trim() ? { message } : {}) }),
+  });
+}
+
+/** Accept or decline an invite sent to me. */
+export async function respondToInvite(inviteId: string, status: "accepted" | "declined") {
+  const invite = await request<Invite>(`/api/invites/${encodeURIComponent(inviteId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+  window.dispatchEvent(new Event(INVITES_CHANGED_EVENT));
+  return invite;
+}
+
+/** Take back an invite I sent that hasn't been answered yet. */
+export function cancelInvite(inviteId: string) {
+  return request<{ removed: boolean }>(`/api/invites/${encodeURIComponent(inviteId)}`, { method: "DELETE" });
 }
 
 export function updateMyProfile(update: ProfileUpdate, photo?: File | null) {

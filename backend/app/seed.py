@@ -4,7 +4,7 @@ import click
 from flask import Flask, current_app
 
 from .extensions import db
-from .models import Profile, ProfileLink, Project, User
+from .models import Invite, Profile, ProfileLink, Project, User
 
 SEED_EMAIL_DOMAIN = "seed.mogmatch.dev"
 
@@ -281,6 +281,15 @@ SEED_PROFILES = [
 ]
 
 
+# Invites seeded profiles have already sent the demo user, so the inbox isn't empty in a demo.
+# (Seeded people can't log in, so this is the only way the demo user receives anything.)
+SEED_INVITES = [
+    ("priya-ml", "Your full-stack skills + my ML models = a demo that actually ships. Build something?"),
+    ("lena-gamedev", "Saw you're into startups. Want to jam on a tiny multiplayer game this weekend?"),
+    ("noah-learns", None),
+]
+
+
 def _build_profile(user: User, data: dict) -> Profile:
     fields = {k: v for k, v in data.items() if k not in ("links", "projects")}
     profile = Profile(user=user, **fields)
@@ -317,6 +326,16 @@ def _seed_one(email: str, data: dict, reset: bool) -> str:
     return outcome
 
 
+def _seed_invites(demo: Profile) -> None:
+    """Add any missing seeded invites to the demo user. Existing ones (and their status) are kept."""
+    for username, message in SEED_INVITES:
+        sender = Profile.query.filter_by(username=username).one_or_none()
+        if sender is None:
+            continue
+        if Invite.query.filter_by(sender_id=sender.id, recipient_id=demo.id).first() is None:
+            db.session.add(Invite(sender_id=sender.id, recipient_id=demo.id, message=message))
+
+
 def seed_database(reset: bool = False) -> dict[str, int]:
     counts = {"created": 0, "reset": 0, "skipped": 0}
     demo_email = current_app.config["DEMO_USER_EMAIL"]
@@ -324,6 +343,9 @@ def seed_database(reset: bool = False) -> dict[str, int]:
     for data in SEED_PROFILES:
         email = f"{data['username']}@{SEED_EMAIL_DOMAIN}"
         counts[_seed_one(email, data, reset)] += 1
+    db.session.flush()  # so the new profiles can be found by username below
+    demo = User.query.filter_by(email=demo_email).one().profile
+    _seed_invites(demo)
     db.session.commit()
     return counts
 
