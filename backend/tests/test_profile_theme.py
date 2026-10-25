@@ -13,6 +13,7 @@ DEFAULT_OPTIONS = {
     "chart_volatility": 6, "chart_mood": "choppy", "chart_palette": "classic", "chart_ticker": "MOG", "chart_label": True,
     "money_kind": "bills", "money_count": 30, "money_wind": 5, "money_weight": 5,
     "snow_kind": "mixed", "snow_count": 80, "snow_wind": 2,
+    "lightning_color": "#9ec5ff", "lightning_strikes": 6, "lightning_forks": 5, "lightning_flash": True,
 }
 DEFAULT_THEME = {"background": None, "effect": None, "effect_options": DEFAULT_OPTIONS}
 
@@ -145,6 +146,7 @@ CRANKED = {
     "chart_volatility": 10, "chart_mood": "bull", "chart_palette": "neon", "chart_ticker": "GIGA42", "chart_label": False,
     "money_kind": "mixed", "money_count": 80, "money_wind": 10, "money_weight": 10,
     "snow_kind": "crystals", "snow_count": 200, "snow_wind": -10,
+    "lightning_color": "#ffd84a", "lightning_strikes": 10, "lightning_forks": 10, "lightning_flash": False,
 }
 
 
@@ -732,6 +734,72 @@ def test_snow_options_out_of_range_or_wrong_type_are_rejected(client, option, va
 def test_snow_options_do_not_change_the_mog_score(client):
     before = client.get("/api/profiles/me").get_json()["mog"]
     client.patch("/api/profiles/me", json={"theme": {"effect": "snow", "effect_options": CRANKED}})
+
+    assert client.get("/api/profiles/me").get_json()["mog"] == before
+
+
+# ---------- lightning ----------
+
+def test_lightning_effect_persists_with_its_own_tuning(client):
+    options = {
+        **DEFAULT_OPTIONS, "brightness": 80, "size": 20, "glow": True,
+        "lightning_color": "#b794ff", "lightning_strikes": 3, "lightning_forks": 8, "lightning_flash": False,
+    }
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"background": "#070b18", "effect": "lightning", "effect_options": options}}
+    )
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["theme"] == {"background": "#070b18", "effect": "lightning", "effect_options": options}
+
+    me = client.get("/api/profiles/me").get_json()
+    assert client.get(f"/api/profiles/{me['id']}").get_json()["theme"] == me["theme"]
+
+
+def test_lightning_defaults_are_forked_electric_blue_bolts_that_light_up_the_sky(client):
+    options = _theme(client)["effect_options"]
+    assert (options["lightning_color"], options["lightning_strikes"], options["lightning_forks"], options["lightning_flash"]) == (
+        "#9ec5ff", 6, 5, True,
+    )
+
+
+@pytest.mark.parametrize("option, value", [("lightning_strikes", 1), ("lightning_strikes", 10), ("lightning_forks", 0), ("lightning_forks", 10),
+                                           ("lightning_flash", True), ("lightning_flash", False)])
+def test_lightning_option_values_are_accepted_and_persist(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": {option: value}}})
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"][option] == value
+
+
+def test_lightning_color_is_trimmed_and_lowercased_and_may_be_any_brightness(client):
+    response = client.patch(
+        "/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": {"lightning_color": " #FFFFFF "}}}
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert _theme(client)["effect_options"]["lightning_color"] == "#ffffff"
+
+
+@pytest.mark.parametrize(
+    "option, value",
+    [
+        ("lightning_strikes", 0), ("lightning_strikes", 11), ("lightning_strikes", 5.5), ("lightning_strikes", "5"), ("lightning_strikes", True), ("lightning_strikes", None),
+        ("lightning_forks", -1), ("lightning_forks", 11), ("lightning_forks", 2.5), ("lightning_forks", "2"), ("lightning_forks", False), ("lightning_forks", None),
+        ("lightning_flash", 1), ("lightning_flash", "true"), ("lightning_flash", None),
+        ("lightning_color", "blue"), ("lightning_color", "#fff"), ("lightning_color", "#12345g"), ("lightning_color", "url(x)"), ("lightning_color", 5), ("lightning_color", None),
+    ],
+)
+def test_lightning_options_out_of_range_or_wrong_type_are_rejected(client, option, value):
+    response = client.patch("/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": {option: value}}})
+
+    assert response.status_code == 400
+    assert f"theme.effect_options.{option}" in response.get_json()["error"]["fields"]
+    assert _theme(client) == DEFAULT_THEME  # nothing was saved
+
+
+def test_lightning_options_do_not_change_the_mog_score(client):
+    before = client.get("/api/profiles/me").get_json()["mog"]
+    client.patch("/api/profiles/me", json={"theme": {"effect": "lightning", "effect_options": CRANKED}})
 
     assert client.get("/api/profiles/me").get_json()["mog"] == before
 

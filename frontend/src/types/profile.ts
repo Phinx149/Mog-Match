@@ -40,7 +40,7 @@ export const MOG_TIERS = ["Hello World", "Junior Mogger", "Mid Mogger", "Senior 
 export type MogTier = (typeof MOG_TIERS)[number];
 
 /** Animated card backgrounds. Keep in sync with THEME_EFFECTS in backend/app/services/profile_service.py. */
-export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow"] as const;
+export const THEME_EFFECTS = ["matrix", "dvd", "emoji", "slogans", "market", "money", "snow", "lightning"] as const;
 export type ThemeEffect = (typeof THEME_EFFECTS)[number];
 
 /** What the matrix rain is made of. Keep in sync with RAIN_SYMBOL_SETS in the backend. */
@@ -75,7 +75,7 @@ export type SnowKind = (typeof SNOW_KINDS)[number];
 export interface EffectOptions {
   /** How opaque the effect is, 10-100 (%). */
   brightness: number;
-  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money) or flake size (snow), 10-48. */
+  /** Letter size (rain), logo size (DVD), emoji size, text size (slogans), candle width (market), bill size (money), flake size (snow) or bolt thickness (lightning), 10-48. */
   size: number;
   /** How fast it moves, 1-10. */
   speed: number;
@@ -137,6 +137,14 @@ export interface EffectOptions {
   snow_count: number;
   /** Which way the wind blows the flakes, -10 to 10: negative is left, positive is right, 0 is calm (snow only). */
   snow_wind: number;
+  /** The bolts' glow (and the flash of the sky) as `#rrggbb`; the core of a bolt is always white (lightning only). */
+  lightning_color: string;
+  /** How often a bolt strikes, 1-10: never closer than about a second apart (lightning only). */
+  lightning_strikes: number;
+  /** How many branches fork off each bolt, 0-10: 0 is a single clean bolt (lightning only). */
+  lightning_forks: number;
+  /** Whether the sky lights up for a moment with each strike (lightning only). */
+  lightning_flash: boolean;
 }
 
 /** Cosmetic look of a profile's card and page. A `null` background or effect means the default look. */

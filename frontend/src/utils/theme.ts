@@ -71,6 +71,10 @@ export const DEFAULT_EFFECT_OPTIONS: EffectOptions = {
   snow_kind: "mixed",
   snow_count: 80,
   snow_wind: 2,
+  lightning_color: "#9ec5ff",
+  lightning_strikes: 6,
+  lightning_forks: 5,
+  lightning_flash: true,
 };
 
 /** The theme of a profile that hasn't customized anything. */
@@ -92,6 +96,8 @@ export const EFFECT_OPTION_RANGES = {
   money_weight: { label: "Coin weight", min: 1, max: 10, step: 1, unit: "" },
   snow_count: { label: "How many", min: 20, max: 200, step: 10, unit: "" },
   snow_wind: { label: "Wind", min: -10, max: 10, step: 1, unit: "" },
+  lightning_strikes: { label: "Strikes", min: 1, max: 10, step: 1, unit: "" },
+  lightning_forks: { label: "Forks", min: 0, max: 10, step: 1, unit: "" },
 } as const;
 
 /** How many emoji a profile may list. Keep in sync with MAX_EMOJIS in the backend. */
@@ -238,6 +244,18 @@ export const RAIN_COLOR_SWATCHES = [
   { name: "White", hex: "#ffffff" },
 ] as const;
 
+/** Quick picks for the lightning's color: electric blue first. */
+export const LIGHTNING_COLOR_SWATCHES = [
+  { name: "Electric blue", hex: "#9ec5ff" },
+  { name: "Cyan", hex: "#22d3ee" },
+  { name: "Violet", hex: "#b794ff" },
+  { name: "Magenta", hex: "#ff4de1" },
+  { name: "Gold", hex: "#ffd84a" },
+  { name: "Lime", hex: "#a3ff12" },
+  { name: "Red", hex: "#ff4040" },
+  { name: "White", hex: "#ffffff" },
+] as const;
+
 /** What the edit form shows for each effect: its wording, and which of the tuning options it reads. */
 export const EFFECT_INFO: Record<
   ThemeEffect,
@@ -253,6 +271,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: boolean;
     hasMoneyStyle: boolean;
     hasSnowStyle: boolean;
+    hasLightningStyle: boolean;
   }
 > = {
   matrix: {
@@ -267,6 +286,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   dvd: {
     label: "Bouncing DVD",
@@ -280,6 +300,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   emoji: {
     label: "Floating emoji",
@@ -293,6 +314,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   slogans: {
     label: "Scrolling slogans",
@@ -306,6 +328,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   market: {
     label: "Volatile market",
@@ -319,6 +342,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: true,
     hasMoneyStyle: false,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   money: {
     label: "Money rain",
@@ -332,6 +356,7 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: true,
     hasSnowStyle: false,
+    hasLightningStyle: false,
   },
   snow: {
     label: "Snowfall",
@@ -345,6 +370,21 @@ export const EFFECT_INFO: Record<
     hasMarketStyle: false,
     hasMoneyStyle: false,
     hasSnowStyle: true,
+    hasLightningStyle: false,
+  },
+  lightning: {
+    label: "Lightning",
+    tuneTitle: "Tune the storm",
+    sizeLabel: "Bolt thickness",
+    sliders: ["brightness", "size", "lightning_strikes", "lightning_forks"],
+    hasLogoColor: false,
+    hasRainStyle: false,
+    hasEmojiStyle: false,
+    hasSloganStyle: false,
+    hasMarketStyle: false,
+    hasMoneyStyle: false,
+    hasSnowStyle: false,
+    hasLightningStyle: true,
   },
 };
 
@@ -622,6 +662,49 @@ export const THEME_PRESETS: readonly { name: string; description: string; theme:
         snow_kind: "crystals",
         snow_count: 40,
         snow_wind: 1,
+      },
+    },
+  },
+  {
+    name: "Thunderstorm",
+    description: "Forked blue-white bolts over a stormy night",
+    theme: {
+      background: "#070b18",
+      effect: "lightning",
+      effect_options: { ...DEFAULT_EFFECT_OPTIONS, brightness: 75, size: 16, glow: true },
+    },
+  },
+  {
+    name: "Zeus",
+    description: "Fat golden bolts, struck now and then",
+    theme: {
+      background: "#0d0a05",
+      effect: "lightning",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 85,
+        size: 26,
+        glow: true,
+        lightning_color: "#ffd84a",
+        lightning_strikes: 3,
+        lightning_forks: 3,
+      },
+    },
+  },
+  {
+    name: "Plasma",
+    description: "Thin violet bolts crackling in every direction",
+    theme: {
+      background: "#0b0614",
+      effect: "lightning",
+      effect_options: {
+        ...DEFAULT_EFFECT_OPTIONS,
+        brightness: 80,
+        size: 12,
+        glow: true,
+        lightning_color: "#b794ff",
+        lightning_strikes: 9,
+        lightning_forks: 10,
       },
     },
   },

@@ -5,6 +5,7 @@ import BouncingDvd from "./BouncingDvd";
 import FallingMoney from "./FallingMoney";
 import FallingSnow from "./FallingSnow";
 import FloatingEmoji from "./FloatingEmoji";
+import LightningStorm from "./LightningStorm";
 import MatrixRain from "./MatrixRain";
 import ScrollingSlogans from "./ScrollingSlogans";
 import VolatileMarket from "./VolatileMarket";
@@ -18,6 +19,7 @@ const EFFECTS: Record<ThemeEffect, ComponentType<{ options: EffectOptions }>> = 
   market: VolatileMarket,
   money: FallingMoney,
   snow: FallingSnow,
+  lightning: LightningStorm,
 };
 
 interface ThemeScopeProps {
