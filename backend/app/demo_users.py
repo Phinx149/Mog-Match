@@ -22,11 +22,12 @@ def _long(text: str, length: int) -> str:
     return out[:length].rstrip()
 
 
-def _project(title: str, technologies: list[str], about: str, length: int = 120, url: bool = True) -> dict:
+def _project(title: str, technologies: list[str], about: str, length: int | None = 120, url: bool = True) -> dict:
+    """length=None keeps `about` exactly as written (used by the hand-written second batch)."""
     slug = title.lower().replace(" ", "-")
     return {
         "title": title,
-        "description": _long(about, length),
+        "description": about if length is None else _long(about, length),
         "project_url": f"https://example.com/{slug}" if url else None,
         "technologies": technologies,
     }
@@ -371,3 +372,352 @@ DEMO_THEMES: dict[str, dict] = {
     "user1": _theme("#1b1035", "market", chart_mood="choppy", chart_palette="classic", chart_ticker="USER1"),
     "user2": _theme("#052e2b", "money", money_kind="coins", money_count=40, money_weight=8),
 }
+
+
+# ---------------------------------------------------------------------------------------------
+# Second batch: 25 more accounts with hand-written stories (no repeated filler), 5 per tier.
+# ---------------------------------------------------------------------------------------------
+def _p(title: str, technologies: list[str], about: str, url: bool = True) -> dict:
+    return _project(title, technologies, about, length=None, url=url)
+
+
+DEMO_USERS += [
+    # ---------- 👑 Gigamogger
+    {
+        "tier": "Gigamogger", "username": "assemblyamy", "full_name": "Amy Register",
+        "avatar_url": _avatar("assemblyamy"), "location": "Houston, TX", "education": "B.S. Aerospace Engineering, Rice University",
+        "bio": "Spent twenty years writing flight software where a single bit flip could end a mission. Now retired from the space program "
+               "and restoring the guidance code of old satellites for fun. I still count cycles by hand, and I still think 4 KB of RAM is plenty "
+               "if you respect it.",
+        "favorite_ide": "Vim", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Assembly", "Fortran", "Ada", "C", "Embedded", "Systems Programming", "Python", "MATLAB", "Robotics", "Pascal"],
+        "interests": ["Space", "Retro Computing", "Electronics"], "experience_level": "Lead",
+        "looking_for": ["Mentee", "Open source"], "links": _links("assemblyamy", 3),
+        "projects": [
+            _p("Apollo Replay", ["Assembly", "Fortran"], "A cycle-accurate emulator of a 1960s guidance computer that runs the original landing program. "
+               "It replays the famous 1202 alarms in real time and explains, line by line, why the computer kept going instead of crashing. "
+               "Used by two museums for their interactive exhibits."),
+            _p("SafeLoop", ["Ada", "C"], "A small control-loop library for hobby rockets, written in Ada with every timing guarantee written down and checked. "
+               "It refuses to compile if a loop could overrun its deadline. Includes a C wrapper so Arduino projects can use it too."),
+            _p("Pascal Pilot", ["Pascal"], "A flight-simulator autopilot written in Turbo Pascal, because I wanted to prove that 1990s tools can still "
+               "fly a modern plane. Talks to the simulator over a serial cable and holds altitude to within ten feet."),
+        ],
+    },
+    {
+        "tier": "Gigamogger", "username": "prologpete", "full_name": "Pete Horn",
+        "avatar_url": _avatar("prologpete"), "location": "Edinburgh, UK", "education": "PhD Artificial Intelligence, University of Edinburgh",
+        "bio": "Old-school AI researcher. Before neural networks were cool, I taught computers to reason with logic, and I still think the best "
+               "explanation is one a program can prove. These days I mix symbolic reasoning with language models so the answers come with receipts.",
+        "favorite_ide": "Emacs", "favorite_ai_agents": ["Claude Code", "Cursor"],
+        "skills": ["Prolog", "Lisp", "Haskell", "Python", "AI", "Machine Learning", "Scheme", "Racket", "Backend", "Erlang"],
+        "interests": ["Logic", "AI Safety", "Board Games"], "experience_level": "Lead",
+        "looking_for": ["Cofounder", "Mentee"], "links": _links("prologpete", 3),
+        "projects": [
+            _p("Proof Buddy", ["Prolog", "Python"], "A homework helper that checks logic proofs step by step and tells students exactly which rule they broke. "
+               "The language model writes friendly hints; the Prolog engine decides whether the proof is actually right, so it can't be sweet-talked."),
+            _p("Lisp Machine Lite", ["Lisp", "Scheme"], "A tiny Lisp interpreter that runs in the browser, with a time-travel debugger that lets you step "
+               "backwards through any evaluation. Built to teach recursion to first-year students who think it's magic."),
+            _p("Rulebook", ["Haskell", "Erlang"], "Turns the rules of a board game into a checker that spots impossible moves and loopholes. "
+               "It found two infinite-combo bugs in a published card game before the expansion shipped."),
+        ],
+    },
+    {
+        "tier": "Gigamogger", "username": "soliditysara", "full_name": "Sara Ledger",
+        "avatar_url": _avatar("soliditysara"), "location": "Singapore", "education": "B.Comp. Computer Science, NUS",
+        "bio": "Smart-contract auditor. I read other people's code for a living and break it before attackers do. Found my first critical bug at "
+               "nineteen and have been paranoid ever since. Outside work I teach security workshops and write very long threads about integer overflows.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Solidity", "Haskell", "Rust", "OCaml", "Blockchain", "Security", "TypeScript", "Go", "Reverse Engineering", "Python"],
+        "interests": ["Security", "Cryptography", "Teaching"], "experience_level": "Senior",
+        "looking_for": ["Hackathon team", "Open source"], "links": _links("soliditysara", 3),
+        "projects": [
+            _p("Overflow Hunter", ["Solidity", "Haskell"], "A static analyzer that reads Solidity contracts and flags arithmetic that can wrap around. "
+               "The core is written in Haskell so the analysis itself can't have the bug it looks for. Caught issues in three audits last year."),
+            _p("Vault Game", ["Solidity", "TypeScript"], "A capture-the-flag game made of deliberately broken contracts. Each level teaches one real attack "
+               "that has cost someone money, with a write-up of the original incident after you solve it."),
+            _p("Rusty Signer", ["Rust", "OCaml"], "A hardware-wallet companion app that explains, in plain words, what a transaction will actually do "
+               "before you sign it. The parser is fuzzed for days with every malformed input we could think of."),
+        ],
+    },
+    {
+        "tier": "Gigamogger", "username": "shadershiro", "full_name": "Shiro Pixel",
+        "avatar_url": _avatar("shadershiro"), "location": "Osaka, JP", "education": "B.A. Media Arts, Kyoto Seika University",
+        "bio": "Graphics programmer and demoscener. I make real-time visuals for concerts and squeeze whole worlds into 4 KB executables for "
+               "demo parties. My favourite bug turned into an art piece that toured three galleries, so I no longer fix bugs I find beautiful.",
+        "favorite_ide": "Visual Studio", "favorite_ai_agents": ["Cursor"],
+        "skills": ["GLSL", "HLSL", "WebAssembly", "C++", "Game Dev", "Rust", "Zig", "AR/VR", "TypeScript", "Lua"],
+        "interests": ["Generative Art", "Music", "Demoscene"], "experience_level": "Senior",
+        "looking_for": ["Side project", "Hackathon team"], "links": _links("shadershiro", 3),
+        "projects": [
+            _p("Neon Tide", ["GLSL", "WebAssembly"], "Concert visuals that react to the band's audio in real time: an ocean of light that swells with the bass. "
+               "Runs in a browser tab on the venue's laptop, with every shader hand-tuned to stay at 60 frames per second on old GPUs."),
+            _p("Four Kilobytes", ["HLSL", "Zig"], "A 4 KB demo with a full city fly-through, synthesized music and a sunset, all generated from math at "
+               "start-up. Placed second at a European demo party, losing only to a team that has been doing this since 1997."),
+            _p("Glitch Garden", ["GLSL", "Rust"], "An interactive installation where visitors grow digital plants by walking around. The plants were "
+               "born from a rendering bug I decided to keep. It has been shown in Osaka, Seoul and Berlin."),
+        ],
+    },
+    {
+        "tier": "Gigamogger", "username": "cobolcarl", "full_name": "Carl Batch",
+        "avatar_url": _avatar("cobolcarl"), "location": "Frankfurt, DE", "education": "Diplom Informatik, TU Darmstadt",
+        "bio": "Mainframe whisperer. Banks call me when the code that moves billions overnight was written before their CTO was born. I translate "
+               "between 1980s COBOL and modern teams without judging either of them, and I am the only person I know with a favourite JCL card.",
+        "favorite_ide": "IntelliJ IDEA", "favorite_ai_agents": ["Copilot", "Claude Code"],
+        "skills": ["COBOL", "Pascal", "Ada", "Java", "Backend", "SQL", "Kotlin", "Clojure", "Cloud", "Security"],
+        "interests": ["Banking", "History of Computing", "Chess"], "experience_level": "Lead",
+        "looking_for": ["Mentee", "Cofounder"], "links": _links("cobolcarl", 3),
+        "projects": [
+            _p("Batch to Cloud", ["COBOL", "Java"], "A step-by-step migration kit that moves overnight COBOL batch jobs onto cloud schedulers without "
+               "changing a single result. Every run is compared to the mainframe's output to the last cent before anything is switched over."),
+            _p("Copybook Viewer", ["COBOL", "Kotlin"], "Turns COBOL copybooks, the data layouts nobody can read anymore, into searchable diagrams. "
+               "New developers at two banks now use it on their first day instead of asking the one person who remembers."),
+            _p("Pascal Ledger", ["Pascal", "Ada"], "A double-entry bookkeeping engine written in Pascal and Ada for a charity, designed to run "
+               "untouched for the next thirty years. It already survived two operating-system upgrades without a recompile."),
+        ],
+    },
+    # ---------- 🔥 Senior Mogger
+    {
+        "tier": "Senior Mogger", "username": "gophergwen", "full_name": "Gwen Gopher",
+        "avatar_url": _avatar("gophergwen"), "location": "Amsterdam, NL", "education": "B.Sc. Computer Science, VU Amsterdam",
+        "bio": "Platform engineer at a bike-sharing startup. Our bikes report in every five seconds, so I care a lot about queues, "
+               "back-pressure and what happens when half the city rides home at once.",
+        "favorite_ide": "GoLand", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Go", "Rust", "Backend", "DevOps", "Cloud", "Kafka", "PostgreSQL"],
+        "interests": ["Cycling", "Cities"], "experience_level": "Senior",
+        "looking_for": ["Side project"], "links": _links("gophergwen", 2),
+        "projects": [
+            _p("Rush Hour", ["Go", "Rust"], "A load simulator that replays a rainy Friday rush hour against our bike API so we find the slow parts before riders do."),
+            _p("Dock Map", ["Go"], "A live map of empty and full docks that rebalancing vans use to decide where to drive next."),
+        ],
+    },
+    {
+        "tier": "Senior Mogger", "username": "dartdana", "full_name": "Dana Flutter",
+        "avatar_url": _avatar("dartdana"), "location": "Cape Town, ZA", "education": "B.Sc. Computer Science, University of Cape Town",
+        "bio": "Runs a two-person app studio. We build Flutter apps for local clinics and schools, usually for phones that are "
+               "five years old with a cracked screen and a slow connection, so offline-first is a way of life.",
+        "favorite_ide": "Android Studio", "favorite_ai_agents": ["Gemini"],
+        "skills": ["Dart", "Flutter", "Kotlin", "Mobile", "Firebase", "Swift"],
+        "interests": ["Health Tech", "Education"], "experience_level": "Senior",
+        "looking_for": ["Hackathon team"], "links": _links("dartdana", 2),
+        "projects": [
+            _p("Clinic Queue", ["Dart", "Kotlin"], "Lets patients take a number by SMS and wait at home instead of outside the clinic all morning."),
+            _p("Offline Classroom", ["Dart", "Swift"], "Homework that syncs over Bluetooth between phones when there's no internet in the village."),
+        ],
+    },
+    {
+        "tier": "Senior Mogger", "username": "scalasteve", "full_name": "Steve Spark",
+        "avatar_url": _avatar("scalasteve"), "location": "Dublin, IE", "education": "M.Sc. Data Analytics, UCD",
+        "bio": "Data engineer at a music-streaming company. I build the pipelines that decide what plays next, and "
+               "I take it personally when the shuffle button isn't random enough.",
+        "favorite_ide": "IntelliJ IDEA", "favorite_ai_agents": ["Copilot"],
+        "skills": ["Scala", "Spark", "Data Engineering", "Python", "SQL", "Kotlin", "Kafka"],
+        "interests": ["Music", "Data"], "experience_level": "Senior",
+        "looking_for": ["Open source"], "links": _links("scalasteve", 2),
+        "projects": [
+            _p("Fair Shuffle", ["Scala", "Kotlin"], "A shuffle that feels random to humans: no artist twice in a row, no three sad songs in a row."),
+            _p("Skip Radar", ["Scala", "Python"], "Spots songs people skip in the first five seconds so playlists stop recommending them."),
+        ],
+    },
+    {
+        "tier": "Senior Mogger", "username": "lualuna", "full_name": "Luna Moddy",
+        "avatar_url": _avatar("lualuna"), "location": "Montreal, CA", "education": "B.Sc. Software Engineering, Concordia",
+        "bio": "Game modder turned tools programmer. My first mod got two million downloads; now I build the "
+               "scripting systems that let players make mods for the games I work on.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Cursor"],
+        "skills": ["Lua", "C++", "Game Dev", "C#", "Python", "Ruby"],
+        "interests": ["Modding", "Indie Games"], "experience_level": "Mid-level",
+        "looking_for": ["Side project", "Mentee"], "links": _links("lualuna", 2),
+        "projects": [
+            _p("Mod Forge", ["Lua", "C++"], "A sandboxed Lua scripting layer for a game engine, so player mods can't crash the game or read your files."),
+            _p("Quest Writer", ["Lua", "Ruby"], "A small language for writing branching quests that compiles to Lua tables."),
+        ],
+    },
+    {
+        "tier": "Senior Mogger", "username": "rubyruth", "full_name": "Ruth Rails",
+        "avatar_url": _avatar("rubyruth"), "location": "Portland, OR", "education": "B.A. English, Reed College",
+        "bio": "English major who fell into Rails in 2009 and never left. Founded a tiny bookshop-inventory SaaS "
+               "that pays the bills, and I mentor career changers who think they are too late to start.",
+        "favorite_ide": "RubyMine", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Ruby", "Rails", "PostgreSQL", "Elixir", "Full-stack", "JavaScript"],
+        "interests": ["Books", "Small Business"], "experience_level": "Lead",
+        "looking_for": ["Mentee"], "links": _links("rubyruth", 2),
+        "projects": [
+            _p("Shelf Life", ["Ruby", "Elixir"], "Inventory software for independent bookshops, with a barcode scanner that works on any phone."),
+            _p("First Commit", ["Ruby"], "A mentoring tracker that pairs career changers with volunteers for a first open-source pull request."),
+        ],
+    },
+    # ---------- 🧑‍💻 Mid Mogger
+    {
+        "tier": "Mid Mogger", "username": "reactrita", "full_name": "Rita Hooks",
+        "avatar_url": _avatar("reactrita"), "location": "São Paulo, BR", "education": "B.Sc. Information Systems, USP",
+        "bio": "Frontend dev at a fintech. I turn Figma files into React components and argue about loading spinners.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Copilot"],
+        "skills": ["React", "TypeScript", "Frontend", "Tailwind CSS", "Go"],
+        "interests": ["Design Systems", "Samba"], "experience_level": "Mid-level",
+        "looking_for": ["Side project"], "links": _links("reactrita", 1),
+        "projects": [_p("Spinner Zoo", ["TypeScript", "Go"], "A gallery of loading states with a vote on which one feels fastest to users.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "nodenate", "full_name": "Nate Express",
+        "avatar_url": _avatar("nodenate"), "location": "Atlanta, GA", "education": "B.S. Computer Science, Georgia State",
+        "bio": "Backend dev for a food-delivery app. Node.js all day, mostly making sure your fries arrive warm.",
+        "favorite_ide": "WebStorm", "favorite_ai_agents": ["Cursor"],
+        "skills": ["Node.js", "JavaScript", "Backend", "MongoDB", "Ruby"],
+        "interests": ["Food", "Basketball"], "experience_level": "Mid-level",
+        "looking_for": ["Hackathon team"], "links": _links("nodenate", 1),
+        "projects": [_p("Warm Fries", ["JavaScript", "Ruby"], "Predicts when a courier should leave so food spends less time waiting on the counter.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "djangodeb", "full_name": "Deb Models",
+        "avatar_url": None, "location": "Accra, GH", "education": "B.Sc. Computer Science, University of Ghana",
+        "bio": "Django developer building tools for farmers' cooperatives. Python and spreadsheets, mostly.",
+        "favorite_ide": "PyCharm", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Python", "Django", "Backend", "PostgreSQL", "Go"],
+        "interests": ["Agriculture", "Open Data"], "experience_level": "Mid-level",
+        "looking_for": ["Open source"], "links": _links("djangodeb", 1),
+        "projects": [_p("Harvest Ledger", ["Python", "Go"], "Tracks how much each farmer delivered so cooperative payouts are fair and on time.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "angularal", "full_name": "Al Directive",
+        "avatar_url": _avatar("angularal"), "location": "Madrid, ES", "education": "Grado en Ingeniería Informática, UPM",
+        "bio": "Angular developer at an airline. Builds the screens gate agents use when your flight is delayed.",
+        "favorite_ide": "WebStorm", "favorite_ai_agents": ["Copilot"],
+        "skills": ["Angular", "TypeScript", "Frontend", "Java", "Swift"],
+        "interests": ["Aviation", "Travel"], "experience_level": "Junior",
+        "looking_for": ["Mentor"], "links": _links("angularal", 1),
+        "projects": [_p("Gate Calm", ["TypeScript", "Swift"], "A rebooking screen that offers the three best options first instead of a list of forty.")],
+    },
+    {
+        "tier": "Mid Mogger", "username": "vuevera", "full_name": "Vera View",
+        "avatar_url": _avatar("vuevera"), "location": "Kyiv, UA", "education": "B.Sc. Applied Mathematics, KPI",
+        "bio": "Vue developer and part-time illustrator. Makes dashboards that are actually nice to look at.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Claude Code"],
+        "skills": ["Vue", "JavaScript", "Frontend", "Figma", "Kotlin"],
+        "interests": ["Illustration", "Data Viz"], "experience_level": "Mid-level",
+        "looking_for": ["Side project"], "links": [],
+        "projects": [_p("Pretty Metrics", ["JavaScript", "Kotlin"], "A dashboard kit where every chart is hand-drawn style but still readable at a glance.")],
+    },
+    # ---------- 🐣 Junior Mogger
+    {
+        "tier": "Junior Mogger", "username": "hackhannah", "full_name": "Hannah Hack",
+        "avatar_url": None, "location": "Leeds, UK", "education": "B.Sc. Biology (final year), University of Leeds",
+        "bio": "Biology student at my first hackathon. Learning Python to analyse lab data.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["Python", "Data Science", "R"],
+        "interests": ["Biology", "Hackathons"], "experience_level": "Student",
+        "looking_for": ["Hackathon team", "Mentor"], "links": [],
+        "projects": [_p("Petri Counter", ["Python"], "Counts bacteria colonies in a photo.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "datadan", "full_name": "Dan Sheets",
+        "avatar_url": None, "location": "Denver, CO", "education": None,
+        "bio": "Accountant moving from Excel macros to Python. Pandas is my new best friend.",
+        "favorite_ide": "Jupyter", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["Python", "SQL"],
+        "interests": ["Finance", "Hiking"], "experience_level": "Junior",
+        "looking_for": ["Mentor"], "links": [],
+        "projects": [_p("Expense Sorter", ["Python"], "Sorts my bank export into categories.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "designdina", "full_name": "Dina Kern",
+        "avatar_url": _avatar("designdina"), "location": "Paris, FR", "education": "Master Design Graphique, ENSAD",
+        "bio": "Graphic designer learning to code my own portfolio. CSS grid made me cry, then made me happy.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": ["HTML", "CSS", "UI/UX Design"],
+        "interests": ["Typography", "Design"], "experience_level": "Junior",
+        "looking_for": ["Side project"], "links": [],
+        "projects": [_p("Folio", ["HTML", "CSS"], "My portfolio site, coded by hand.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "ittomas", "full_name": "Tomás Helpdesk",
+        "avatar_url": None, "location": "Buenos Aires, AR", "education": None,
+        "bio": "IT support tech automating the boring parts of my job with PowerShell.",
+        "favorite_ide": "VS Code", "favorite_ai_agents": ["Copilot"],
+        "skills": ["PowerShell", "Bash"],
+        "interests": ["Automation"], "experience_level": "Junior",
+        "looking_for": ["Mentor"], "links": [],
+        "projects": [_p("Reset Bot", ["PowerShell"], "Resets passwords without a ticket.", url=False)],
+    },
+    {
+        "tier": "Junior Mogger", "username": "gamergus", "full_name": "Gus Level",
+        "avatar_url": None, "location": None, "education": "High school senior",
+        "bio": "Making my first platformer. The jump feels wrong and I can't stop tweaking it.",
+        "favorite_ide": "Godot Editor", "favorite_ai_agents": [],
+        "skills": ["GDScript", "Game Dev"],
+        "interests": ["Games", "Pixel Art"], "experience_level": "Student",
+        "looking_for": ["Mentor", "Hackathon team"], "links": [],
+        "projects": [_p("Jump Test", ["GDScript"], "A one-level platformer from my first game jam.", url=False)],
+    },
+    # ---------- 🥚 Hello World
+    {
+        "tier": "Hello World", "username": "justjoined", "full_name": "June Joiner",
+        "avatar_url": None, "location": None, "education": None,
+        "bio": "Signed up five minutes ago.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": [], "interests": [], "experience_level": None,
+        "looking_for": ["Just vibes"], "links": [], "projects": [],
+    },
+    {
+        "tier": "Hello World", "username": "codecurious", "full_name": "Cora Curious",
+        "avatar_url": None, "location": "Vienna, AT", "education": None,
+        "bio": "What is a terminal?", "favorite_ide": "Notepad", "favorite_ai_agents": ["ChatGPT"],
+        "skills": ["HTML"], "interests": ["Learning"], "experience_level": "Student",
+        "looking_for": ["Mentor"], "links": [], "projects": [],
+    },
+    {
+        "tier": "Hello World", "username": "nullnick", "full_name": "Nick Null",
+        "avatar_url": None, "location": None, "education": None,
+        "bio": "null", "favorite_ide": "Vim", "favorite_ai_agents": [],
+        "skills": [], "interests": [], "experience_level": None,
+        "looking_for": [], "links": [], "projects": [],
+    },
+    {
+        "tier": "Hello World", "username": "helloharper", "full_name": "Harper Hello",
+        "avatar_url": None, "location": "Auckland, NZ", "education": None,
+        "bio": "Learning to code with my kid.", "favorite_ide": "Scratch", "favorite_ai_agents": [],
+        "skills": ["JavaScript"], "interests": ["Family"], "experience_level": "Student",
+        "looking_for": ["Just vibes"], "links": [], "projects": [],
+    },
+    {
+        "tier": "Hello World", "username": "zeroxp", "full_name": "Zed Zero",
+        "avatar_url": None, "location": None, "education": None,
+        "bio": "0 XP. Level 1.", "favorite_ide": "VS Code", "favorite_ai_agents": [],
+        "skills": ["CSS"], "interests": [], "experience_level": "Student",
+        "looking_for": [], "links": [], "projects": [],
+    },
+]
+
+DEMO_THEMES.update({
+    # 👑 Gigamogger
+    "assemblyamy": _theme("#030b1a", "snow", snow_kind="dots", snow_count=200, snow_wind=0, brightness=70),  # a starfield
+    "prologpete": _theme("#1a1405", "matrix", rain_color="#e6c86e", rain_symbols="code", speed=3, glow=True),
+    "soliditysara": _theme("#0c0a24", "market", chart_mood="choppy", chart_palette="neon", chart_ticker="AUDIT", chart_volatility=9),
+    "shadershiro": _theme("#14001f", "matrix", rain_rainbow=True, rain_symbols="katakana", glow=True, speed=6),
+    "cobolcarl": _theme("#00140a", "matrix", rain_color="#33ff99", rain_symbols="binary", brightness=30, speed=1),
+    # 🔥 Senior Mogger
+    "gophergwen": _theme("#07202a", "emoji", emojis=["🚲", "🌧️", "🐹"], emoji_path="straight", emoji_angle=0, emoji_count=10),
+    "dartdana": _theme("#0a1f33", "emoji", emojis=["🎯", "💙", "📱"], emoji_path="bounce", emoji_count=12),
+    "scalasteve": _theme("#1f0a14", "emoji", emojis=["🎵", "🎧", "🔀"], emoji_path="wave", emoji_count=16),
+    "lualuna": _theme("#0e0b26", "emoji", emojis=["🌙", "🎮", "🧩"], emoji_path="wave", emoji_spin=4),
+    "rubyruth": _theme("#2a0508", "slogans", slogans=["READ MORE BOOKS", "RAILS IS FINE", "NEVER TOO LATE"],
+                       slogan_color="#e11d48", slogan_style="solid", slogan_tilt=-6),
+    # 🧑‍💻 Mid Mogger
+    "reactrita": _theme("#04161f", "dvd", count=2, color_change=True, color="#61dafb"),
+    "nodenate": _theme("#0f1a05", "emoji", emojis=["🍟", "🛵", "🍔"], emoji_path="straight", emoji_angle=180, emoji_count=10),
+    "djangodeb": _theme("#062012", "emoji", emojis=["🌽", "🌾", "🥭"], emoji_path="straight", emoji_angle=90, speed=2),
+    "angularal": _theme("#240a0a", "emoji", emojis=["✈️", "☁️"], emoji_path="straight", emoji_angle=0, emoji_count=8),
+    "vuevera": _theme("#041a14", "slogans", slogans=["MAKE IT PRETTY", "DATA IS ART"], slogan_color="#42b883",
+                      slogan_style="outline", slogan_tilt=10),
+    # 🐣 Junior Mogger
+    "hackhannah": _theme("#0a1424", "emoji", emojis=["🧫", "🔬", "🧬"], emoji_path="wave", emoji_count=9),
+    "datadan": _theme("#101a0a", "money", money_kind="coins", money_count=20, money_wind=1, money_weight=3),
+    "designdina": _theme("#1f0d1a", "slogans", slogans=["KERNING MATTERS", "CSS GRID FOREVER"], slogan_color="#f472b6",
+                         slogan_style="mixed", slogan_tilt=-30),
+    "ittomas": _theme("#0a0e14", "matrix", rain_color="#5391fe", rain_symbols="code", brightness=20, speed=3),
+    "gamergus": _theme("#16082a", "emoji", emojis=["🕹️", "👾", "⭐"], emoji_path="bounce", emoji_count=14),
+    # 🥚 Hello World
+    "justjoined": _theme("#0f0f14", "dvd", count=1, color_change=True, speed=1),
+    "codecurious": _theme("#0a141a", "emoji", emojis=["❓", "🤔"], emoji_count=5, speed=1),
+    "nullnick": _theme("#000000"),  # null: no effect at all
+    "helloharper": _theme("#1a0f05", "emoji", emojis=["🧒", "🧑", "💻"], emoji_count=6, emoji_path="wave"),
+    "zeroxp": _theme("#08080c", "snow", snow_kind="dots", snow_count=20, snow_wind=1, brightness=15),
+})

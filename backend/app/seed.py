@@ -400,7 +400,7 @@ def seed_database(reset: bool = False) -> dict[str, int]:
 
 
 def test_accounts() -> list[dict]:
-    """user1/user2 plus the 25 demo users (one Mog tier each, see demo_users.py), with passwords
+    """user1/user2 plus the 50 demo users (one Mog tier each, see demo_users.py), with passwords
     and each one's own profile theme (DEMO_THEMES)."""
     demo = [
         {**{key: value for key, value in data.items() if key != "tier"}, "password": DEMO_PASSWORD}
@@ -456,7 +456,7 @@ def register_commands(app: Flask) -> None:
     @app.cli.command("seed-test-users")
     @click.option("--reset", is_flag=True, help="Delete and recreate them (clears their likes and invites).")
     def seed_test_users_command(reset: bool) -> None:
-        """Add quick-login test accounts: user1, user2 and 25 demo users across every Mog tier (local only)."""
+        """Add quick-login test accounts: user1, user2 and 50 demo users across every Mog tier (local only)."""
         created = seed_test_users(reset=reset)
         click.echo(
             f"Test users ready ({created} created): user1, user2 (passwords in TEST_USERS, app/seed.py) "
