@@ -5,8 +5,8 @@ import { cancelInvite, respondToInvite } from "../../services/api";
 import type { InboxResponse, Invite } from "../../types/invite";
 import Avatar from "../profiles/Avatar";
 
-export default function MatchRequests({ inbox, onChange, onOpen }: {
-  inbox: InboxResponse; onChange: () => void; onOpen: (id: string) => void;
+export default function MatchRequests({ inbox, onChange, onOpen, onAccepted }: {
+  inbox: InboxResponse; onChange: () => void; onOpen: (id: string) => void; onAccepted: (invite: Invite) => void;
 }) {
   const [tab, setTab] = useState<"received" | "sent">("received");
   const [busy, setBusy] = useState<string | null>(null);
@@ -17,7 +17,10 @@ export default function MatchRequests({ inbox, onChange, onOpen }: {
     setError("");
     try {
       if (action === "cancel") await cancelInvite(invite.id);
-      else await respondToInvite(invite.id, action);
+      else {
+        const updated = await respondToInvite(invite.id, action);
+        if (action === "accepted") onAccepted(updated);
+      }
       onChange();
       if (action === "accepted") onOpen(invite.id);
     } catch (err) { setError(err instanceof Error ? err.message : "Couldn't update request."); }

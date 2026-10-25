@@ -62,17 +62,34 @@ def scaled(value, saturate_at, max_points):
 ### Discover
 `GET /api/profiles?min_tier=Mid%20Mogger` keeps profiles at or above a tier; `sort=mog` puts the highest scores first. The Discover page exposes both ("Anyone with a pulse" … "Gigamoggers (good luck)", "Biggest moggers first").
 
-## Team Mog Score (max 1000) — not implemented yet
+## Team Mog Score (max 1000)
 
 A great team isn't two clones. The team score rewards **complementarity** with enough **overlap** to communicate — the same idea the Intersect Engine uses.
 
 | Component | Max | How |
 |---|---|---|
-| **Combined strength** | 400 | average of members' scores × 0.4 |
-| **Specialty coverage** | 250 | distinct specialty tags across the team (Frontend, Backend, Machine Learning, DevOps, Mobile, …) |
-| **Skill complementarity** | 200 | Jaccard *distance* of skill sets, peaks around 0.65 |
-| **Shared ground** | 100 | ≥ 1 shared skill = 60, shared `looking_for` = 40 |
-| **Experience balance** | 50 | penalty for Student + Lead unless one is looking for Mentor and the other for Mentee |
+| **Combined strength** | 400 | average of members' current 0–100 Mog Scores × 4 |
+| **Specialty coverage** | 250 | 50 per distinct specialty tag across the team, capped at five (Frontend, Backend, Machine Learning, DevOps, Mobile, …) |
+| **Skill complementarity** | 200 | Jaccard *distance* of skill sets, peaks around 0.65; both profiles must list skills |
+| **Shared ground** | 100 | ≥ 1 shared skill = 60; shared `looking_for` or complementary Mentor/Mentee goals = 40 |
+| **Experience balance** | 50 | Same/adjacent levels = 50, gap 2 = 35, gap 3 = 20, gap 4 = 0; Mentor/Mentee pairing restores 50. Missing levels = 0. |
+
+Implemented in `backend/app/services/team_mog.py`. Skills are normalized for aliases, case and
+duplicates before coverage/complementarity calculations. Input order does not affect the result.
+The five contributions sum exactly to the final score. Display tiers: Fresh spark (0–399),
+Rising duo (400–599), Power duo (600–799), Inferno alliance (800–1000).
+
+Accepting a request saves the score, individual scores, member icons/names, and explanations
+as a JSON snapshot on that invite. Both participants receive `team:matched` in their private
+Socket.IO rooms. Later profile edits do not change that accepted-match snapshot; old accepted
+invites without a snapshot are left unchanged.
+
+The inbox presents two profile icons spiraling into a collision, an amber explosion, then a
+warm cream/amber score dialog with a pulsating flame and the full point breakdown. It can be
+skipped or dismissed with Escape. Reduced-motion users go straight to a static score card.
+The reveal is shown once per user/match/browser (localStorage), including on the sender's next
+inbox visit if they were offline. Repeated HTTP/socket notifications and refreshes do not replay
+it. Dialog focus is trapped natively and restored on dismissal; the chat opens behind the reveal.
 
 ```python
 def complementarity(a_skills: list[str], b_skills: list[str]) -> int:

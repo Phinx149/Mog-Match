@@ -4,15 +4,18 @@ import { Link, useSearchParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
 import ChatWorkspace from "../components/inbox/ChatWorkspace";
 import MatchRequests from "../components/inbox/MatchRequests";
+import TeamMogReveal from "../components/inbox/TeamMogReveal";
 import Navbar from "../components/layout/Navbar";
 import Avatar from "../components/profiles/Avatar";
 import { useAuth } from "../hooks/useAuth";
+import { useTeamMogReveal } from "../hooks/useTeamMogReveal";
 import { API_URL, getConversations, getInbox, INVITES_CHANGED_EVENT } from "../services/api";
 import type { Conversation } from "../types/chat";
 import type { InboxResponse } from "../types/invite";
 
 export default function InboxPage() {
   const { user } = useAuth();
+  const { match: newMatch, celebrate, dismiss } = useTeamMogReveal(user?.id);
   const [params, setParams] = useSearchParams();
   const activeId = params.get("chat");
   const [tab, setTab] = useState<"messages" | "requests">("messages");
@@ -31,11 +34,13 @@ export default function InboxPage() {
       const [threads, requests] = await Promise.all([getConversations(), getInbox()]);
       if (version !== requestVersion.current) return;
       setConversations(threads.conversations); setInbox(requests); setError("");
+      [...requests.received, ...requests.sent].filter((invite) => invite.status === "accepted" && invite.team_mog)
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at)).forEach(celebrate);
       window.dispatchEvent(new Event(INVITES_CHANGED_EVENT));
     } catch (err) {
       if (version === requestVersion.current) setError(err instanceof Error ? err.message : "Couldn't load your inbox.");
     } finally { if (version === requestVersion.current) setLoading(false); }
-  }, []);
+  }, [celebrate]);
 
   useEffect(() => {
     if (!user) return;
@@ -51,12 +56,13 @@ export default function InboxPage() {
     client.on("inbox:updated", changed);
     client.on("chat:message", changed);
     client.on("chat:read", changed);
+    client.on("team:matched", celebrate);
     window.addEventListener("focus", changed);
     void refresh();
     return () => {
       ++requestVersion.current; client.disconnect(); window.removeEventListener("focus", changed);
     };
-  }, [user?.id, refresh]);
+  }, [user?.id, refresh, celebrate]);
 
   const open = (id: string) => { setTab("messages"); setParams({ chat: id }); void refresh(); };
   const active = conversations.find((item) => item.id === activeId);
@@ -94,7 +100,7 @@ export default function InboxPage() {
           </> : <div className="hidden space-y-3 p-5 text-sm text-muted lg:block"><Inbox className="size-8 text-violet-300" /><p>A little hello could be the start of your next big build.</p><Link to="/match" className="inline-block text-cyan-300 hover:underline">Find more collaborators →</Link></div>}
         </aside>
         <div className={`min-h-0 min-w-0 ${tab === "messages" && !activeId ? "hidden lg:block" : "block"} ${tab === "requests" ? "overflow-y-auto" : ""}`}>
-          {tab === "requests" && inbox ? <MatchRequests inbox={inbox} onChange={() => void refresh()} onOpen={open} /> :
+          {tab === "requests" && inbox ? <MatchRequests inbox={inbox} onChange={() => void refresh()} onOpen={open} onAccepted={celebrate} /> :
             active && user ? <ChatWorkspace key={`${user.id}:${active.id}`} conversation={active} userId={user.id} socket={socket} connected={connected} onBack={() => setParams({})} onRead={read} /> :
               <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
                 <div className="mb-2 rounded-3xl border border-violet-500/20 bg-gradient-to-br from-violet-600/20 to-cyan-500/10 p-6"><Sparkles className="size-10 text-violet-300" /></div>
@@ -105,5 +111,6 @@ export default function InboxPage() {
         </div>
       </div>
     </main>
+    {newMatch && <TeamMogReveal key={newMatch.id} invite={newMatch} onDismiss={dismiss} onContinue={() => { open(newMatch.id); dismiss(); }} />}
   </>;
 }
