@@ -398,9 +398,16 @@ def seed_database(reset: bool = False) -> dict[str, int]:
     return counts
 
 
-def seed_test_users() -> int:
-    """Create user1/user2 if missing and make them like each other. Returns how many were created."""
+def seed_test_users(reset: bool = False) -> int:
+    """Create user1/user2 if missing and make them like each other. Returns how many were created.
+    `reset` deletes them first (with their likes and invites) for a clean start."""
     created = 0
+    if reset:
+        for data in TEST_USERS:
+            existing = Profile.query.filter_by(username=data["username"]).one_or_none()
+            if existing is not None:
+                db.session.delete(existing.user)  # cascades to profile, swipes and invites
+        db.session.flush()
     for data in TEST_USERS:
         if Profile.query.filter_by(username=data["username"]).one_or_none() is not None:
             continue  # already there (and maybe edited): leave it alone
@@ -435,8 +442,9 @@ def register_commands(app: Flask) -> None:
         )
 
     @app.cli.command("seed-test-users")
-    def seed_test_users_command() -> None:
+    @click.option("--reset", is_flag=True, help="Delete and recreate them (clears their likes and invites).")
+    def seed_test_users_command(reset: bool) -> None:
         """Add quick-login test accounts user1 and user2 (local testing only)."""
-        created = seed_test_users()
+        created = seed_test_users(reset=reset)
         names = ", ".join(d["username"] for d in TEST_USERS)
         click.echo(f"Test users ready ({created} created): {names}. Passwords are in TEST_USERS in app/seed.py.")

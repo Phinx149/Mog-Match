@@ -109,3 +109,19 @@ def test_seed_test_users_can_log_in_and_already_like_each_other(app, anon_client
     assert anon_client.post("/api/auth/login", json=login).status_code == 200
     matches = anon_client.get("/api/profiles/me/matches").get_json()["matches"]
     assert [m["username"] for m in matches] == [second["username"]]
+
+
+def test_seed_test_users_reset_clears_their_invites(app):
+    from app.models import Invite
+    from app.seed import TEST_USERS, seed_test_users
+
+    seed_test_users()
+    first, second = TEST_USERS
+    client = app.test_client()
+    client.post("/api/auth/login", json={"username": first["username"], "password": first["password"]})
+    other_id = str(Profile.query.filter_by(username=second["username"]).one().id)
+    assert client.post("/api/invites", json={"recipient_id": other_id}).status_code == 201
+
+    assert seed_test_users(reset=True) == 2
+    sender = Profile.query.filter_by(username=first["username"]).one()
+    assert Invite.query.filter_by(sender_id=sender.id).count() == 0
