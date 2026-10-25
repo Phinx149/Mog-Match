@@ -35,6 +35,7 @@ Frontend (from `frontend/`):
 - "Me" is the logged-in user from the signed session: `current_profile_or_401()` in every "me" route. Never trust a client-supplied user id for "who am I". Details in **Auth** below.
 - Seed must stay idempotent; destructive behavior only behind `--reset`.
 - Frontend: pages in `src/pages/`, reusable UI in `src/components/<area>/`, all HTTP in `src/services/api.ts`. Handle loading/error/empty states.
+- Site color schemes ("Appearance" in Settings: Default and Hacker) work by re-pointing Tailwind's color variables under `html[data-appearance="..."]` in `src/index.css`; `src/utils/appearance.ts` holds the list and the switch. So style with palette/token classes (`bg-violet-600`, `bg-surface`, `text-muted`), never raw hex, or the new color won't follow the scheme. Violet/cyan/fuchsia are the brand accents and slate is the neutral; rose/emerald/amber keep their meaning in every scheme. In Hacker the `500`/`600` shades are dark on purpose (white button text sits on them). Don't confuse this with *profile* themes (`utils/theme.ts`), which only restyle one profile's cards.
 - Every backend change keeps `pytest` green; every frontend change keeps `npm run build` green.
 
 ## Database portability (SQLite locally, Postgres in production)
